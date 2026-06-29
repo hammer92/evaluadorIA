@@ -8,12 +8,8 @@
     "rootDir": "./src",
     "noEmit": false,
     "declaration": true,
-    "sourceMap": true,
-    "baseUrl": ".",
-    "paths": {
-      "@shared/*": ["../../packages/shared/src/*"]
-    }
+    "sourceMap": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "lib", "../../packages"]
+  "exclude": ["node_modules", "lib", "**/__tests__/**"]
 }

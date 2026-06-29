@@ -1,21 +1,29 @@
-import { clearSession } from './auth/clear-session.js';
-import { createSession } from './auth/create-session.js';
-import { createUser } from './auth/create-user.js';
-import { inviteUser } from './auth/invite-user.js';
-import { setUserRole } from './auth/set-custom-claims.js';
+// =============================================================================
+// Firebase Cloud Functions (v2) — entrypoint (SDD-06).
+// =============================================================================
+// Estructura:
+//   v1/auth/    — endpoints de autenticación (sign-up público, session cookie)
+//   v1/users/   — endpoints de usuarios (admin)
+//   v1/reports/ — endpoints de generación de reportes
+//   shared/     — wrappers reutilizables (onCallAuth, validateInput, etc.)
+//
+// Naming convention: <v1DomainAction> (camelCase) — el nombre del export
+// es el nombre de la función desplegada.
+// =============================================================================
 
-/**
- * Firebase Cloud Functions (v2) — entrypoint.
- *
- * Exporta:
- *   - v1_auth_create_session  (onRequest) — set httpOnly cookie
- *   - v1_auth_clear_session   (onRequest) — clear cookie
- *   - v1_users_create         (onCall)    — first-user-admin bootstrap
- *   - v1_users_invite         (onCall)    — admin invite
- *   - setUserRole             (utility)   — set custom claims (auth helper)
- *
- * SDD-05: implementa el flujo de autenticación + autorización client-side
- * (cookie session, custom claims, primer-user-admin).
- */
+// v1/auth
+export { v1AuthSignUp } from './v1/auth/sign-up.js';
+export { v1AuthCreateSession } from './v1/auth/create-session.js';
+export { v1AuthClearSession } from './v1/auth/clear-session.js';
 
-export { setUserRole, createSession, clearSession, createUser, inviteUser };
+// v1/users
+export { v1UsersCreate } from './v1/users/create-user.js';
+export { v1UsersList } from './v1/users/list-users.js';
+// export { v1UsersUpdate } from './v1/users/update-user.js'; // TODO SDD-07
+// export { v1UsersDelete } from './v1/users/delete-user.js'; // TODO SDD-07
+
+// v1/reports
+export { v1ReportsGenerate } from './v1/reports/generate-report.js';
+
+// Utility (no se deploya como endpoint — uso interno desde otras CFs)
+export { setUserRole } from './v1/users/set-role.js';

@@ -81,6 +81,8 @@
 - [x] Build and Test — 2026-06-29 (stitch-redesign-auth) — typecheck/lint/test 71/71/build PASS
 - [x] Bugfix — 2026-06-29 (tailwind content features/)
 - [x] Bugfix — 2026-06-29 (eager SESSION_COOKIE_SECRET for middleware)
+- [x] Code Generation — 2026-06-29 (sdd-06-cloud-functions)
+- [x] Build and Test — 2026-06-29 (sdd-06-cloud-functions) — typecheck/lint/test 87/87/build PASS
 
 ### OPERATIONS PHASE
 

@@ -17,7 +17,7 @@ import {
 //
 // El flow de signup es SIMPLE:
 //   1. signUpWithEmail({ email, password, displayName })
-//      → Llama CF v1_users_create (pública, no requiere auth previa) con el
+//      → Llama CF v1AuthSignUp (pública, no requiere auth previa) con el
 //        form data. La CF crea el user en Auth via Admin SDK + setea claims
 //        (admin si first-user, rejected si no).
 //   2. Si la CF retorna OK → signInWithEmailAndPassword (login normal)
@@ -43,11 +43,11 @@ function getFunctionsBase(): string {
 }
 
 function getSessionEndpoint(): string {
-  return `${getFunctionsBase()}/createSession`;
+  return `${getFunctionsBase()}/v1AuthCreateSession`;
 }
 
 function getLogoutEndpoint(): string {
-  return `${getFunctionsBase()}/clearSession`;
+  return `${getFunctionsBase()}/v1AuthClearSession`;
 }
 
 export class AuthApiError extends Error {
@@ -69,12 +69,12 @@ export async function signInWithEmail(email: string, password: string): Promise<
 }
 
 /**
- * SignUp público: delega TODO a la Cloud Function createUser (que es
+ * SignUp público: delega TODO a la Cloud Function v1AuthSignUp (que es
  * server-authoritative para first-user-admin y para crear el Auth user
  * con Admin SDK).
  *
  * Flow:
- *   1. CF createUser({ email, password, displayName }) - pública, no auth
+ *   1. CF v1AuthSignUp({ email, password, displayName }) - pública, no auth
  *   2. Si OK → signInWithEmailAndPassword (login normal)
  *   3. createSession (cookie httpOnly)
  */
@@ -84,14 +84,14 @@ export async function signUpWithEmail(input: {
   displayName: string;
 }): Promise<{ user: User; isFirstUser: boolean }> {
   // 1. Crear user via CF (server-authoritative)
-  const createUserFn = httpsCallable<
+  const signUpFn = httpsCallable<
     { email: string; password: string; displayName: string },
     { uid: string; role: string; isFirstUser: boolean }
-  >(functions, 'createUser');
+  >(functions, 'v1AuthSignUp');
 
   let result: { uid: string; role: string; isFirstUser: boolean };
   try {
-    const cfResult = await createUserFn({
+    const cfResult = await signUpFn({
       email: input.email,
       password: input.password,
       displayName: input.displayName,
@@ -99,7 +99,7 @@ export async function signUpWithEmail(input: {
     result = cfResult.data;
   } catch (e) {
     const err = e as { code?: string; message?: string; details?: unknown };
-    console.error('[signUpWithEmail] createUser CF failed:', {
+    console.error('[signUpWithEmail] v1AuthSignUp CF failed:', {
       code: err.code,
       message: err.message,
       details: err.details,
@@ -118,7 +118,7 @@ export async function signUpWithEmail(input: {
 
 /**
  * Crea la cookie de sesión httpOnly. Llama a la Cloud Function onRequest
- * v1_auth_create_session que verifica el idToken contra Firebase Admin SDK,
+ * v1AuthCreateSession que verifica el idToken contra Firebase Admin SDK,
  * firma un JWT con jose HS256, y setea la cookie via Set-Cookie.
  */
 export async function createSession(user: User): Promise<boolean> {

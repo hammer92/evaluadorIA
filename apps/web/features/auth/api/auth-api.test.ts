@@ -29,7 +29,7 @@ vi.mock('@/lib/firebase/auth', () => {
   };
   const httpsCallableMock = vi.fn((_fns: unknown, name: string) => {
     return vi.fn(async (data: unknown) => {
-      if (name === 'createUser') {
+      if (name === 'v1AuthSignUp') {
         const d = data as { email?: string };
         if (d.email?.includes('second')) {
           throw { code: 'functions/permission-denied', message: 'invitación' };
@@ -68,7 +68,7 @@ describe('signInWithEmail', () => {
 });
 
 describe('signUpWithEmail', () => {
-  it('CF createUser returns isFirstUser=true → returns isFirstUser=true', async () => {
+  it('CF v1AuthSignUp returns isFirstUser=true → returns isFirstUser=true', async () => {
     const result = await signUpWithEmail({
       email: 'first@example.com',
       password: '12345678',
@@ -78,7 +78,7 @@ describe('signUpWithEmail', () => {
     expect(result.user.uid).toBe('u_fake');
   });
 
-  it('CF createUser returns isFirstUser=false → returns isFirstUser=false', async () => {
+  it('CF v1AuthSignUp returns isFirstUser=false → returns isFirstUser=false', async () => {
     // El mock de httpsCallable retorna isFirstUser=true por default; este test
     // verifica el shape. La logica first-user se delega 100% a la CF.
     const result = await signUpWithEmail({
@@ -104,7 +104,7 @@ describe('signOutCurrent', () => {
   it('signs out from Firebase and calls logout endpoint', async () => {
     fetchMock.mockResolvedValueOnce({ ok: true });
     await signOutCurrent();
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/clearSession'), {
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/v1AuthClearSession'), {
       method: 'POST',
       credentials: 'include',
     });
