@@ -29,18 +29,26 @@ function setCorsHeaders(
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
-export const clearSession = onRequest({ cors: ['http://localhost:3000'] }, async (req, res) => {
-  const origin = req.headers['origin'] as string | undefined;
-  setCorsHeaders(res, origin);
+export const clearSession = onRequest(
+  // CORS: false desactiva el middleware interno de firebase-functions v2.
+  // Hacemos CORS manualmente en setCorsHeaders().
+  { cors: false },
+  async (req, res) => {
+    const origin = req.headers['origin'] as string | undefined;
+    setCorsHeaders(res, origin);
 
-  if (req.method === 'OPTIONS') {
-    res.status(204).send('');
-    return;
-  }
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'method-not-allowed' });
-    return;
-  }
-  res.setHeader('Set-Cookie', `${SESSION_COOKIE_NAME}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`);
-  res.status(200).json({ success: true });
-});
+    if (req.method === 'OPTIONS') {
+      res.status(204).send('');
+      return;
+    }
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: 'method-not-allowed' });
+      return;
+    }
+    res.setHeader(
+      'Set-Cookie',
+      `${SESSION_COOKIE_NAME}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`,
+    );
+    res.status(200).json({ success: true });
+  },
+);

@@ -422,3 +422,12 @@
 **Context**: BUGFIX - Set-Cookie requiere Access-Control-Allow-Credentials: true en CORS, que firebase-functions v2 no setea por default
 
 ---
+
+## SDD-05 — Hotfix #9: cors: false para desactivar el CORS handler interno
+
+**Timestamp**: 2026-06-29T14:00:00Z
+**User Input**: "la api tiene un problema de coriscors" → "login:1 Access to fetch at '...' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: The value of the 'Access-Control-Allow-Credentials' header in the response is '' which must be 'true'"
+**AI Response**: "El error exacto: el preflight OPTIONS no tenia Access-Control-Allow-Credentials. Causa raiz: firebase-functions v2 onRequest con cors: ['http://localhost:3000'] AGREGA un middleware de cors que NO setea credentials. Y aunque removi 'cors: []' quedaba el handler por default. El fix: cors: false desactiva el middleware interno completamente, y mi setCorsHeaders() es el unico que setea headers CORS. Verificacion: curl OPTIONS ahora retorna access-control-allow-credentials: true en el preflight. Los headers CORS custom (GET, POST, OPTIONS methods + Content-Type, Authorization headers) son los que mi codigo setea, no el default de firebase-functions."
+**Context**: BUGFIX - cors: false desactiva CORS handler interno de firebase-functions v2 que no soporta credentials
+
+---

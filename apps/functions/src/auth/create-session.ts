@@ -48,59 +48,65 @@ function setCorsHeaders(
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
-export const createSession = onRequest({ cors: ['http://localhost:3000'] }, async (req, res) => {
-  const origin = req.headers['origin'] as string | undefined;
-  setCorsHeaders(res, origin);
+export const createSession = onRequest(
+  // CORS: false desactiva el middleware interno de firebase-functions v2
+  // (que no setea Access-Control-Allow-Credentials). Hacemos CORS manualmente
+  // en setCorsHeaders() para incluir credentials=true (necesario para Set-Cookie).
+  { cors: false },
+  async (req, res) => {
+    const origin = req.headers['origin'] as string | undefined;
+    setCorsHeaders(res, origin);
 
-  // Preflight: responder sin invocar la lógica
-  if (req.method === 'OPTIONS') {
-    res.status(204).send('');
-    return;
-  }
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'method-not-allowed' });
-    return;
-  }
-  const idToken = (req.body as { idToken?: unknown })?.idToken;
-  if (typeof idToken !== 'string') {
-    res.status(400).json({ error: 'idToken required' });
-    return;
-  }
+    // Preflight: responder sin invocar la lógica
+    if (req.method === 'OPTIONS') {
+      res.status(204).send('');
+      return;
+    }
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: 'method-not-allowed' });
+      return;
+    }
+    const idToken = (req.body as { idToken?: unknown })?.idToken;
+    if (typeof idToken !== 'string') {
+      res.status(400).json({ error: 'idToken required' });
+      return;
+    }
 
-  const auth = getAdminAuth();
-  let decoded;
-  try {
-    decoded = await auth.verifyIdToken(idToken, true);
-  } catch {
-    res.status(401).json({ error: 'invalid-id-token' });
-    return;
-  }
+    const auth = getAdminAuth();
+    let decoded;
+    try {
+      decoded = await auth.verifyIdToken(idToken, true);
+    } catch {
+      res.status(401).json({ error: 'invalid-id-token' });
+      return;
+    }
 
-  const role = decoded['role'];
-  const organizationId = decoded['organizationId'] ?? null;
-  const sessionJwt = await new SignJWT({
-    uid: decoded.uid,
-    email: decoded.email ?? '',
-    role: role ?? 'expert',
-    organizationId,
-  })
-    .setProtectedHeader({ alg: ALG })
-    .setIssuedAt()
-    .setIssuer(ISSUER)
-    .setExpirationTime(`${MAX_AGE_SECONDS}s`)
-    .sign(getSecret());
+    const role = decoded['role'];
+    const organizationId = decoded['organizationId'] ?? null;
+    const sessionJwt = await new SignJWT({
+      uid: decoded.uid,
+      email: decoded.email ?? '',
+      role: role ?? 'expert',
+      organizationId,
+    })
+      .setProtectedHeader({ alg: ALG })
+      .setIssuedAt()
+      .setIssuer(ISSUER)
+      .setExpirationTime(`${MAX_AGE_SECONDS}s`)
+      .sign(getSecret());
 
-  res.setHeader(
-    'Set-Cookie',
-    `${COOKIE_NAME}=${sessionJwt}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${MAX_AGE_SECONDS}` +
-      (process.env['NODE_ENV'] === 'production' ? '; Secure' : ''),
-  );
-  res.status(200).json({
-    success: true,
-    uid: decoded.uid,
-    role: role ?? 'expert',
-  });
-});
+    res.setHeader(
+      'Set-Cookie',
+      `${COOKIE_NAME}=${sessionJwt}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${MAX_AGE_SECONDS}` +
+        (process.env['NODE_ENV'] === 'production' ? '; Secure' : ''),
+    );
+    res.status(200).json({
+      success: true,
+      uid: decoded.uid,
+      role: role ?? 'expert',
+    });
+  },
+);
 
 export const SESSION_COOKIE_NAME = COOKIE_NAME;
 export const SESSION_MAX_AGE_SECONDS = MAX_AGE_SECONDS;
