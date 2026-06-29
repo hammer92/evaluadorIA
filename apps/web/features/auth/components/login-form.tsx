@@ -58,7 +58,7 @@ export function LoginForm({ nextUrl }: { nextUrl?: string }) {
         <CardDescription>Ingresá con tu email y contraseña</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-4" noValidate>
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
             <Input

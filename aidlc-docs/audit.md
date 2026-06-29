@@ -359,3 +359,12 @@
 **Context**: BUGFIX - Cliente auth flow no funcionaba por falta de Authorization header en llamada a CF onCall
 
 ---
+
+## SDD-05 — Hotfix #2: Input forwardRef + form noValidate
+
+**Timestamp**: 2026-06-29T10:45:00Z
+**User Input**: "con los campos diligenciados sale error de campo requerido en los formularios"
+**AI Response**: "Bug #2 en UI: el componente Input de shadcn no usaba React.forwardRef. Cuando react-hook-form llama form.register('email'), retorna {name, onChange, onBlur, ref}. Sin forwardRef, el 'ref' se pierde en el spread y RHF no puede trackear el <input> underlying. Resultado: form values quedan vacios, Zod valida '' y muestra 'Required' (que el browser localiza como 'campo requerido' en ES). Fix: (1) components/ui/input.tsx: convertir a React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>. (2) signup-form.tsx y login-form.tsx: agregar atributo noValidate al <form> para que el browser no use HTML5 validation nativa (que muestra su propio tooltip 'campo requerido' antes que Zod). (3) input.test.tsx (NUEVO): 2 tests que verifican que (a) el ref se forwarda al <input> underlying, (b) props adicionales (name, onChange, placeholder) se spreadan. Resultado: typecheck PASS, lint PASS, 66/66 unit tests PASS (2 nuevos), build PASS. Ahora el form submit deberia leer los values reales y mostrar los mensajes Zod correctos."
+**Context**: BUGFIX - Forms no trackeaban inputs por falta de forwardRef + browser native validation interfería
+
+---
