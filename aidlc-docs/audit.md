@@ -152,3 +152,57 @@
 **Context**: CONSTRUCTION - Apply Compliance Recommendations + Git Init + Commit Policy
 
 ---
+
+## Remediation Sprint — Code Generation
+
+**Timestamp**: 2026-06-28T22:46:00Z
+**User Input**: (continuacion)
+**AI Response**: "Aplicados 7 fixes: (1) apps/web/package.json: shadcn removido, (2) apps/web/tsconfig.json: exactOptionalPropertyTypes documentado (override justificado por shadcn), env.ts migrado a bracket notation, (3) apps/web/.eslintrc.json eliminado, (4) vitest.setup.ts raiz reparado, (5) apps/web/lib/helpers.test.ts nuevo con 9 tests, (6) README documenta prereq emuladores, (7) components/error-boundary.tsx stub creado. Verificacion: typecheck PASS, lint FAIL (interface vs type), test FAIL (formato Intl es-ES) - corregidos en misma iteracion."
+**Context**: CONSTRUCTION - Code Generation (sdd-remediation unit)
+
+---
+
+## Remediation Sprint — Build & Test
+
+**Timestamp**: 2026-06-28T22:47:30Z
+**User Input**: (continuacion)
+**AI Response**: "Verificacion final: typecheck OK, lint OK, test 12/12 OK (3 utils + 9 helpers nuevos), build OK (First Load JS 87.4 kB), coverage: 4 archivos > 90% (utils.ts, utils.test.ts, helpers.ts, helpers.test.ts - los 2 nuevos al 100%)."
+**Context**: CONSTRUCTION - Build & Test complete
+
+---
+
+## Git Init + First Commit
+
+**Timestamp**: 2026-06-28T22:48:31Z
+**User Input**: (continuacion)
+**AI Response**: "git init -b main OK. Configurado AI-DLC Bot como user (user.email=user.name heredados del repo). pnpm prepare ejecuto husky init correctamente. git add -A staged 153 files (30062 insertions). git commit 'feat(tooling): apply SDD-01/SDD-02 compliance recommendations' paso pre-commit hook (lint-staged + typecheck) y commit-msg hook (commitlint). Hash: ac2ed9a."
+**Context**: CONSTRUCTION - First Git Commit (SDD-01/SDD-02 compliance remediation)
+
+---
+
+## Hooks Validation — commitlint rejects non-conventional
+
+**Timestamp**: 2026-06-28T22:48:50Z
+**User Input**: (validacion manual)
+**AI Response**: "Validacion en vivo: commit con mensaje 'mensaje random sin conventional' fue RECHAZADO por commit-msg hook con errores 'subject may not be empty [subject-empty]' y 'type may not be empty [type-empty]'. Husky v9 + commitlint funcionando correctamente. Commit de prueba reseteado con git reset HEAD~1."
+**Context**: VERIFICATION - Husky + commitlint working as expected
+
+---
+
+## Commit Policy — Documented in AGENTS.md
+
+**Timestamp**: 2026-06-28T22:49:30Z
+**User Input**: (politica solicitada por el usuario)
+**AI Response**: "Politica 'commit al cerrar cada SDD' documentada en .agents/AGENTS.md con: triggers, formato Conventional Commits (type(scope): subject), footer recomendado, secuencia obligatoria (verificar build -> audit.md -> aidlc-state.md -> git commit), hooks activos y out-of-scope. README.md actualizado con referencia."
+**Context**: INCEPTION - Policy Documentation
+
+---
+
+## Remediation Sprint — Closure Commit
+
+**Timestamp**: 2026-06-28T22:50:00Z
+**User Input**: (continuacion)
+**AI Response**: "Segundo commit 'docs(tooling): document git commit policy per SDD' ejecutado OK: pre-commit hook ejecuto lint-staged (prettier sobre AGENTS.md y README.md) + typecheck (PASS), commit-msg hook valido formato conventional. Hash: ba93db5. Sprint sdd-remediation CERRADO."
+**Context**: CONSTRUCTION - Sprint Closure Commit
+
+---

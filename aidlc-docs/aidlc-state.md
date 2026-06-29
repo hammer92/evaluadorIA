@@ -81,3 +81,14 @@
 ## Latest Activity
 
 - **2026-06-28T22:42Z — Compliance Review SDD-01/02**: reporte en `aidlc-docs/inception/reports/SDD-01-SDD-02-compliance-review.md`. Cumplimiento global **84.6%** (SDD-01 81.8% + SDD-02 86.7%). 1 test suite con >90% cobertura (`utils.ts` 100%). 12 gaps documentados con recomendaciones priorizadas.
+- **2026-06-28T22:50Z — Remediation Sprint `sdd-remediation` COMPLETE**:
+  - 7 fixes aplicados (HIGH: shadcn dep + tsconfig flags; MED: legacy eslintrc; LOW: vitest setup + helpers tests + README + error-boundary stub)
+  - Verificacion: typecheck PASS, lint PASS, test 12/12 PASS (3 utils + 9 helpers), build PASS (87.4 kB)
+  - Coverage: 4 archivos > 90% (`utils.ts` 100%, `utils.test.ts` 100%/80%branch, `helpers.ts` 100%, `helpers.test.ts` 100%)
+  - **Git inicializado** + Husky v9 hooks validados en vivo (pre-commit + commit-msg)
+  - **2 commits** realizados: `ac2ed9a` (feat fixes) + `ba93db5` (docs policy)
+  - **Politica de commit por SDD** documentada en `.agents/AGENTS.md`
+
+## Commit Policy (desde 2026-06-28)
+
+Cada SDD o sprint cierra con un commit Conventional Commits. Pre-commit + commit-msg hooks enforced. Ver `.agents/AGENTS.md` para detalles.
