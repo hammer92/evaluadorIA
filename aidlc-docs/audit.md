@@ -251,3 +251,21 @@
 **Context**: CONSTRUCTION - Build and Test for SDD-03 complete
 
 ---
+
+## Emulator Runtime Validation — Rules + Storage
+
+**Timestamp**: 2026-06-29T04:30:00Z
+**User Input**: "levanta el emulador y verifica que todos se este ejecurtando dorrectament las reglas de store y furestore"
+**AI Response**: "Detectado: Java JRE no instalado en Arch Linux. Usuario instalo jre-openjdk-headless via pacman y firebase-tools via npm. Emuladores arrancados via setsid para evitar SIGTERM en shutdown del bash tool. Verificados los 4 emuladores escuchando: auth(9099), firestore(8080 java), functions(5001), storage(9199), UI(4000), Hub(4400). Descubierto BUG CRITICO en firestore.rules del commit anterior: faltaba el wrapper `match /databases/{database}/documents` - sin el, ninguna regla matcheaba requests del cliente SDK y todo caia al catch-all deny. Agregado el wrapper + comentario explicativo + agregado 'expert' a la lista de roles que pueden leer otros users (la regla original era inconsistente con SDD-03 spec seccion 6.1). Reescrito script verify-rules.ts que ejecuta 25 tests runtime contra los emuladores (auth admin/expert/recruiter con custom claims via Admin SDK; verifica CRUD por rol; valida auditLogs append-only; valida storage avatars/{uid} con size limit y reports/ admin-only). Resultado FINAL: 25/25 PASS contra emuladores reales."
+**Context**: VERIFICATION - Runtime Rules Validation against live emulators
+
+---
+
+## Emulator Runtime Validation — Rules Bug Fix + Commit
+
+**Timestamp**: 2026-06-29T05:00:00Z
+**User Input**: (continuacion)
+**AI Response**: "Limpieza de scripts debug (debug-rules.ts, check-claims.ts, inspect-token.ts). verify-rules.ts lint-clean (removidos imports unused y ajustada estructura de imports). typecheck OK, lint OK, test 14/14 OK, build OK. Reglas firestore.rules con wrapper correcto + lista de roles read actualizada. Storage rules sin cambios. Scripts debug se reemplazan por verify-rules.ts que queda en repo (util para CI futura cuando se agregue emulators:test)."
+**Context**: VERIFICATION - Rules bug fix + final cleanup
+
+---

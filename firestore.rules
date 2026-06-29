@@ -9,97 +9,105 @@ rules_version = '2';
 //   - Strict createdAt: el cliente no puede falsificar fechas (Q2-A)
 //   - Modelo de capacidades ortogonal por rol (no jerárquico)
 // =============================================================================
+// IMPORTANTE: el wrapper `match /databases/{database}/documents` es OBLIGATORIO.
+// Sin él, las reglas no matchean requests del cliente SDK en el emulador
+// (ni en producción con iOS/Android/JS SDK v9+). Validado con verify-rules.ts.
+// =============================================================================
 
 service cloud.firestore {
-  match /{document=**} {
-    // DENEGACIÓN POR DEFECTO
-    allow read, write: if false;
-  }
-
-  // ============ USERS ============
-  // Modelo de capacidades por rol: ver ADR-0006.
-  //   admin     → superuser (puede todo)
-  //   recruiter → gestiona candidatos (CRUD users OK, settings NO)
-  //   expert    → edita technical tests (puede leer users, NO modificarlos)
-  match /users/{uid} {
-    // Lectura: el propio user, admin, o recruiter (necesita ver candidatos que invites)
-    allow read: if isSignedIn() && (isSelf(uid) || hasAnyRole(['admin', 'recruiter']));
-
-    // Creación: admin o recruiter (ambos pueden invitar)
-    allow create: if isSignedIn() && hasAnyRole(['admin', 'recruiter'])
-      && request.resource.data.keys().hasAll(['email', 'role', 'status', 'createdAt'])
-      && request.resource.data.role in ['admin', 'recruiter', 'expert']
-      && request.resource.data.status in ['active', 'invited', 'suspended']
-      && request.resource.data.createdAt == request.time;
-
-    // Update: admin total, recruiter puede editar excepto cambiar role,
-    //         user solo displayName/photoURL propios.
-    // Defense in depth: el código (services) ya valida esto, pero las reglas
-    // son la última línea.
-    allow update: if isSignedIn() && (
-      hasRole('admin')
-      || (hasRole('recruiter') && onlyAffects(['displayName', 'photoURL', 'status']))
-      || (isSelf(uid) && onlyAffects(['displayName', 'photoURL']))
-    );
-
-    // Delete (soft): solo admin
-    allow delete: if isSignedIn() && hasRole('admin');
-
-    // Listado: admin, recruiter (gestiona candidatos), expert (necesita ver otros para asignar)
-    allow list: if isSignedIn() && hasAnyRole(['admin', 'recruiter', 'expert']);
-  }
-
-  // ============ ORGANIZATIONS ============
-  match /organizations/{orgId} {
-    // Lectura: miembros de la org (admin siempre)
-    allow read: if isSignedIn() && isMemberOfOrg(orgId);
-
-    // Settings/billing: solo admin (con strict createdAt al crear)
-    allow create: if isSignedIn() && hasRole('admin')
-      && request.resource.data.keys().hasAll(['name', 'slug', 'plan', 'createdAt'])
-      && request.resource.data.plan in ['free', 'pro', 'enterprise']
-      && request.resource.data.createdAt == request.time;
-    allow update, delete: if isSignedIn() && hasRole('admin');
-
-    // Subcollection memberships
-    match /memberships/{membershipId} {
-      allow read: if isSignedIn() && isMemberOfOrg(orgId);
-      allow write: if isSignedIn() && hasAnyRole(['admin', 'recruiter']);
+  match /databases/{database}/documents {
+    // DENEGACIÓN POR DEFECTO (cubre cualquier path no declarado explícitamente)
+    match /{document=**} {
+      allow read, write: if false;
     }
-  }
 
-  // ============ AUDIT LOGS ============
-  // Append-only. Lectura: admin (todas), recruiter/expert (filtrado a su org).
-  // Escritura: SOLO desde Cloud Functions (Admin SDK bypassa reglas).
-  match /auditLogs/{logId} {
-    allow read: if isSignedIn() && (
-      hasRole('admin')
-      || (resource != null && resource.data.organizationId == request.auth.token.organizationId)
-    );
-    allow write: if false;
-  }
+    // ============ USERS ============
+    // Modelo de capacidades por rol: ver ADR-0006.
+    //   admin     → superuser (puede todo)
+    //   recruiter → gestiona candidatos (CRUD users OK, settings NO)
+    //   expert    → edita technical tests (puede leer users, NO modificarlos)
+    match /users/{uid} {
+      // Lectura: el propio user, admin, recruiter (necesita ver candidatos que invites)
+      // o expert (necesita ver otros para asignar a candidatos).
+      // Ver SDD-03 spec sección 6.1.
+      allow read: if isSignedIn() && (isSelf(uid) || hasAnyRole(['admin', 'recruiter', 'expert']));
 
-  // ============ TEMPLATES (technical test recipes) ============
-  // TODO Sprint futuro (SDD-10 templates): crear reglas cuando se agregue la colección.
-  // Por ahora referenciar la matriz del ADR-0006.
+      // Creación: admin o recruiter (ambos pueden invitar)
+      allow create: if isSignedIn() && hasAnyRole(['admin', 'recruiter'])
+        && request.resource.data.keys().hasAll(['email', 'role', 'status', 'createdAt'])
+        && request.resource.data.role in ['admin', 'recruiter', 'expert']
+        && request.resource.data.status in ['active', 'invited', 'suspended']
+        && request.resource.data.createdAt == request.time;
 
-  // ============ Helpers ============
-  function isSignedIn() {
-    return request.auth != null;
-  }
-  function isSelf(uid) {
-    return request.auth.uid == uid;
-  }
-  function hasRole(role) {
-    return request.auth.token.role == role;
-  }
-  function hasAnyRole(roles) {
-    return request.auth.token.role in roles;
-  }
-  function isMemberOfOrg(orgId) {
-    return request.auth.token.organizationId == orgId || hasRole('admin');
-  }
-  function onlyAffects(fields) {
-    return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+      // Update: admin total, recruiter puede editar excepto cambiar role,
+      //         user solo displayName/photoURL propios.
+      // Defense in depth: el código (services) ya valida esto, pero las reglas
+      // son la última línea.
+      allow update: if isSignedIn() && (
+        hasRole('admin')
+        || (hasRole('recruiter') && onlyAffects(['displayName', 'photoURL', 'status']))
+        || (isSelf(uid) && onlyAffects(['displayName', 'photoURL']))
+      );
+
+      // Delete (soft): solo admin
+      allow delete: if isSignedIn() && hasRole('admin');
+
+      // Listado: admin, recruiter (gestiona candidatos), expert (necesita ver otros para asignar)
+      allow list: if isSignedIn() && hasAnyRole(['admin', 'recruiter', 'expert']);
+    }
+
+    // ============ ORGANIZATIONS ============
+    match /organizations/{orgId} {
+      // Lectura: miembros de la org (admin siempre)
+      allow read: if isSignedIn() && isMemberOfOrg(orgId);
+
+      // Settings/billing: solo admin (con strict createdAt al crear)
+      allow create: if isSignedIn() && hasRole('admin')
+        && request.resource.data.keys().hasAll(['name', 'slug', 'plan', 'createdAt'])
+        && request.resource.data.plan in ['free', 'pro', 'enterprise']
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if isSignedIn() && hasRole('admin');
+
+      // Subcollection memberships
+      match /memberships/{membershipId} {
+        allow read: if isSignedIn() && isMemberOfOrg(orgId);
+        allow write: if isSignedIn() && hasAnyRole(['admin', 'recruiter']);
+      }
+    }
+
+    // ============ AUDIT LOGS ============
+    // Append-only. Lectura: admin (todas), recruiter/expert (filtrado a su org).
+    // Escritura: SOLO desde Cloud Functions (Admin SDK bypassa reglas).
+    match /auditLogs/{logId} {
+      allow read: if isSignedIn() && (
+        hasRole('admin')
+        || (resource != null && resource.data.organizationId == request.auth.token.organizationId)
+      );
+      allow write: if false;
+    }
+
+    // ============ TEMPLATES (technical test recipes) ============
+    // TODO Sprint futuro (SDD-10 templates): crear reglas cuando se agregue la colección.
+    // Por ahora referenciar la matriz del ADR-0006.
+
+    // ============ Helpers ============
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isSelf(uid) {
+      return request.auth.uid == uid;
+    }
+    function hasRole(role) {
+      return request.auth.token.role == role;
+    }
+    function hasAnyRole(roles) {
+      return request.auth.token.role in roles;
+    }
+    function isMemberOfOrg(orgId) {
+      return request.auth.token.organizationId == orgId || hasRole('admin');
+    }
+    function onlyAffects(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
   }
 }
