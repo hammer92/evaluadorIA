@@ -94,7 +94,12 @@ export async function signUpWithEmail(input: {
   } catch (e) {
     // Rollback: borrar el user recién creado.
     await cred.user.delete().catch(() => undefined);
-    const err = e as { code?: string; message?: string };
+    const err = e as { code?: string; message?: string; details?: unknown };
+    console.error('[signUpWithEmail] createUser CF failed:', {
+      code: err.code,
+      message: err.message,
+      details: err.details,
+    });
     throw new AuthApiError(
       err.code ?? 'signup-rejected',
       err.message ?? 'No se pudo completar el registro',

@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { createSession, signInWithEmail } from '../api/auth-api';
 import { loginSchema, type LoginInput } from '../schemas';
 
-import { getAuthErrorCode, mapAuthErrorMessage } from './auth-error';
+import { getAuthErrorMessage } from './auth-error';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,8 +46,8 @@ export function LoginForm({ nextUrl }: { nextUrl?: string }) {
       router.push(nextUrl || '/admin');
       router.refresh();
     } catch (e) {
-      const code = getAuthErrorCode(e);
-      setServerError(mapAuthErrorMessage(code));
+      console.error('[login] error:', e);
+      setServerError(getAuthErrorMessage(e));
     }
   });
 

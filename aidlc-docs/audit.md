@@ -368,3 +368,12 @@
 **Context**: BUGFIX - Forms no trackeaban inputs por falta de forwardRef + browser native validation interfería
 
 ---
+
+## SDD-05 — Hotfix #3: better error surfacing for "Error: unknown"
+
+**Timestamp**: 2026-06-29T11:00:00Z
+**User Input**: "Error: unknown"
+**AI Response**: "El error 'Error: unknown' venia de mapAuthErrorMessage cuando el catch block del form encontraba un error sin .code property. Mejoras: (1) auth-error.ts: nuevo getAuthErrorMessage(error) que devuelve (a) friendly message si hay code conocido, (b) error.message original si no, (c) 'Ocurrio un error inesperado' como ultimo recurso. Tambien distingue TypeError (network errors) y agrega codes de Firebase Functions (permission-denied, unauthenticated, internal, unavailable, not-found). (2) login-form.tsx y signup-form.tsx: ahora usan getAuthErrorMessage(e) y loguean el error completo a console.error para debugging. (3) auth-api.ts: el catch del createUserFn ahora loguea {code, message, details} para diagnostico. Resultado: el usuario vera el mensaje real del error (ej. 'Error: functions/permission-denied' o el mensaje de Firebase) en vez de 'Error: unknown' generico."
+**Context**: BUGFIX - Error messages now show real error info, not generic 'unknown'
+
+---
