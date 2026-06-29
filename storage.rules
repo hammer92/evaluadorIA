@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// =============================================================================
+// Firebase Storage Security Rules
+// =============================================================================
+// DENEGACIÓN POR DEFECTO. Solo paths explícitos tienen acceso.
+// =============================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      // DENEGACIÓN POR DEFECTO
+      allow read, write: if false;
+    }
+
+    // Avatares de usuario — el user solo escribe/lee los suyos
+    match /avatars/{uid}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size < 2 * 1024 * 1024  // 2MB
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Exports de reportes — solo admin
+    match /reports/{fileName} {
+      allow read: if request.auth != null && request.auth.token.role == 'admin';
+      allow write: if false;  // solo Cloud Functions (Admin SDK)
+    }
+  }
+}

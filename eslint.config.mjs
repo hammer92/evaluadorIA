@@ -4,7 +4,7 @@ import importPlugin from 'eslint-plugin-import';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/coverage/**'] },
+  { ignores: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/lib/**', '**/coverage/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   ...tseslint.configs.stylistic,
@@ -32,6 +32,15 @@ export default tseslint.config(
             message: 'No importes la impl Firebase directamente. Usá el índice del repository.' },
         ],
       }],
+    },
+  },
+  {
+    // El wrapper oficial de Firebase es el único punto de imports directo al SDK.
+    // Por eso se exime de la regla `no-restricted-imports` SOLO en este path.
+    // Tests del wrapper también incluidos (jest los necesita accesibles).
+    files: ['apps/web/lib/firebase/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': 'off',
     },
   },
   {

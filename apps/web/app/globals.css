@@ -1,5 +1,10 @@
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
+
+/* Note: original template had `@import "shadcn/tailwind.css"` (leftover from
+   shadcn CLI scaffold). The package `shadcn` is not installed (it's a CLI
+   generator, not a runtime dep). All needed CSS variables are defined below
+   in `@layer base`. */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

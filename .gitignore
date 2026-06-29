@@ -9,6 +9,7 @@ out/
 # Build
 dist/
 build/
+/lib/
 
 # Testing
 coverage/
@@ -35,6 +36,8 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 *-debug.log
+emulator-data/
+firebase-storage-debug.log
 
 # Logs
 logs/

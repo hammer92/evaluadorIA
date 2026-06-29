@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "admin-platform-dev",
+    "dev": "admin-platform-dev",
+    "staging": "admin-platform-staging",
+    "prod": "admin-platform-prod"
+  }
+}

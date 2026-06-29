@@ -6,7 +6,8 @@
 
 - Node.js 20 LTS (usar `nvm install 20` si tenés nvm)
 - pnpm 9+ (`npm install -g pnpm`)
-- Firebase CLI (`npm install -g firebase-tools`) — requerido desde SDD-03
+- Firebase CLI (`npm install -g firebase-tools`) — **requerido desde SDD-03**
+- Java JRE 11+ (lo usan los emuladores de Firestore/Storage)
 
 ## Setup local
 
@@ -17,7 +18,30 @@
 5. `pnpm typecheck` para verificar que todo compila
 6. `pnpm test` para correr la suite
 
-> **Nota sobre `pnpm dev`**: hasta SDD-02 solo se valida build + tests. Desde SDD-03 se requieren los emuladores de Firebase levantados (`pnpm emulators`) antes de `pnpm --filter web dev`.
+## Firebase Emulators (SDD-03)
+
+Desde SDD-03 toda la app se desarrolla contra emuladores locales (rápidos, gratis, sin tocar prod).
+
+```bash
+# Levanta los 4 emuladores (auth:9099, firestore:8080, functions:5001, storage:9199, UI:4000)
+# Carga state desde ./emulator-data si existe y exporta al cerrar.
+pnpm emulators
+
+# Reset completo (borra ./emulator-data y arranca limpio)
+pnpm emulators:reset
+
+# Seed: 1 organización + 3 users (admin, recruiter, expert) en org_default
+# Requiere emuladores levantados en otra terminal.
+pnpm seed:emulators
+
+# UI del emulador: http://localhost:4000
+```
+
+Si los emuladores fallan al boot:
+
+- **Puerto ocupado**: matá el proceso (`lsof -ti:8080 | xargs kill`) o cambiá puertos en `firebase.json`.
+- **Java faltante**: instalá JRE 11+ (`sudo apt install default-jre` en Ubuntu).
+- **`firebase` no encontrado**: instalá CLI globalmente (`npm install -g firebase-tools`).
 
 ## Workflow AI-DLC
 

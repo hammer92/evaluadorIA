@@ -206,3 +206,48 @@
 **Context**: CONSTRUCTION - Sprint Closure Commit
 
 ---
+
+## SDD-03 — Firebase Setup Request
+
+**Timestamp**: 2026-06-28T23:00:00Z
+**User Input**: "usando AI-DLC impelmenta el SDD-3"
+**AI Response**: "Iniciando ciclo AI-DLC para SDD-03 (Firebase Setup: Emulators + Rules + SDK Wrappers). Etapas activas: Requirements Analysis (revisar SDD-03 + Q1/Q2/Q3 ya respondidas A/A/A) -> Code Generation (firebase.json/.firebaserc/rules/wrappers client+admin/seed) -> Build and Test -> Commit. Etapas saltadas (igual que sprint previo): User Stories, Application Design, Units Generation, Functional Design, NFR Requirements, NFR Design, Infrastructure Design."
+**Context**: INCEPTION - SDD-03 New Sprint Start
+
+---
+
+## SDD-03 — Workspace Detection
+
+**Timestamp**: 2026-06-28T23:00:30Z
+**User Input**: (continuacion)
+**AI Response**: "Workspace state al inicio SDD-03: monorepo pnpm con apps/web (Next.js 14 + TS strict), packages/shared (Zod schemas pendientes - solo placeholder), apps/functions (vacio, solo .gitkeep). Firebase CLI NO instalado globalmente (documentar en README). env.ts ya valida NEXT*PUBLIC_FIREBASE*_ y FIREBASE*ADMIN*_. ESLint ya rechaza firebase/firestore|auth|storage directos en apps/web. Siguiente: Code Generation."
+**Context**: INCEPTION - Workspace Detection complete for SDD-03
+
+---
+
+## SDD-03 — Code Generation Start
+
+**Timestamp**: 2026-06-28T23:01:00Z
+**User Input**: (continuacion)
+**AI Response**: "Plan de code generation SDD-03: (1) Root configs: firebase.json, .firebaserc, firestore.rules (con Q2 strict createdAt==request.time), firestore.indexes.json (4 indices segun data-model), storage.rules; (2) packages/shared schemas: users.ts, organizations.ts, audit-logs.ts; (3) apps/functions shell + firebase-admin.ts (con Q3 emulator detection) + auth/set-custom-claims.ts; (4) apps/web/lib/firebase/client.ts + **tests**/client.test.ts; (5) scripts/seed-emulators.ts; (6) Root scripts emulators/seed/emulators:reset + devDep firebase-admin; (7) apps/web dep firebase; (8) README updates."
+**Context**: CONSTRUCTION - Code Generation plan for SDD-03
+
+---
+
+## SDD-03 — Code Generation Complete
+
+**Timestamp**: 2026-06-28T23:25:00Z
+**User Input**: (continuacion)
+**AI Response**: "17 archivos creados/modificados. firebase.json (emulators auth/firestore/functions/storage + UI puerto 4000 + functions predeploy hook). .firebaserc (dev/staging/prod). firestore.rules (denegacion default + reglas users/orgs/auditLogs + helpers + Q2 strict createdAt==request.time en create). firestore.indexes.json (4 indices: users por orgId/role/status, users por status/createdAt, auditLogs por orgId/createdAt, auditLogs por actorId/createdAt). storage.rules (denegacion default + avatars/{uid} con size<2MB + reports solo admin). packages/shared schemas (users con Role enum, organizations con plan enum, audit-logs con AuditAction enum + targetType enum). apps/functions shell (package.json con firebase-admin, tsconfig con paths a shared, src/index.ts placeholder, src/firebase-admin.ts con Q3 emulator detection, src/auth/set-custom-claims.ts usando Role de shared). apps/web/lib/firebase/client.ts (singletons firebaseApp/auth/db/storage + conexion automatica a emuladores en dev con guard HMR + @/env). apps/web/lib/firebase/**tests**/client.test.ts (2 tests con vi.hoisted mocks + @vitest-environment jsdom). scripts/seed-emulators.ts (1 org_default + 3 users admin/recruiter/expert idempotente usando FieldValue.serverTimestamp()). Root package.json scripts: emulators/emulators:reset/seed:emulators/emulators:test + devDep firebase-admin. apps/web package.json: dep firebase 10.14.0 + dep radix-ui 1.4.0 (regresion detectada). README: seccion Firebase Emulators + Java JRE prereq + troubleshooting. .gitignore: +emulator-data/ +lib/."
+**Context**: CONSTRUCTION - Code Generation for SDD-03 complete
+
+---
+
+## SDD-03 — Build & Test Verification
+
+**Timestamp**: 2026-06-28T23:30:00Z
+**User Input**: (continuacion)
+**AI Response**: "Verificacion post-fixes: (1) typecheck OK 3 paquetes (shared, functions, web); (2) lint OK (max-warnings 0); (3) test OK 14/14 (3 utils + 9 helpers + 2 firebase client - este ultimo con @vitest-environment jsdom para simular window); (4) build OK (Next.js 14.2.35 compila 6 rutas con 87.4 kB First Load JS, functions tsc OK). Bugs colaterales encontrados durante verificacion: (a) globals.css importaba '@import shadcn/tailwind.css' que es CLI no runtime - comentado; (b) radix-ui dep removida en sprint anterior pero shadcn components/ui/\*.tsx la usan - re-agregada; (c) apps/functions rootDir bloqueaba imports externos - removido; (d) ESLint no ignoraba lib/ de functions build - agregado a ignores. Criterios de aceptacion SDD-03 cubiertos: 9/12 auto (wrapper singleton, reglas JSON valido, indices, scripts npm, exemption arquitectonica), 3/12 requieren emuladores levantados (reglas runtime, admin en emulador, seed idempotente)."
+**Context**: CONSTRUCTION - Build and Test for SDD-03 complete
+
+---
