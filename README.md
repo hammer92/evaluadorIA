@@ -19,6 +19,15 @@
 
 > **Nota sobre `pnpm dev`**: hasta SDD-02 solo se valida build + tests. Desde SDD-03 se requieren los emuladores de Firebase levantados (`pnpm emulators`) antes de `pnpm --filter web dev`.
 
+## Workflow AI-DLC
+
+Este proyecto sigue AI-DLC. Cada SDD se cierra con un commit que sigue Conventional Commits (validado por `commitlint`). Hooks activos:
+
+- `pre-commit`: `pnpm lint-staged` + `pnpm typecheck`
+- `commit-msg`: `pnpm commitlint --edit`
+
+Para detalles ver [.agents/AGENTS.md](.agents/AGENTS.md).
+
 ## Comandos principales
 
 | Comando              | Qué hace                                             |
