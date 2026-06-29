@@ -13,15 +13,15 @@ import { getAdminAuth, getAdminDb } from '../firebase-admin.js';
 // Firestore (count + create). Si count > 0 al commit, abort. Esto previene
 // race conditions en signups simultáneos.
 //
-// Auth: la CF verifica que el idToken del caller coincida con el uid del
-// user que se acaba de crear (evita impersonation).
+// Auth: httpsCallable adjunta automáticamente el idToken del current user
+// al header Authorization. La CF lo obtiene via req.auth.token (ya verificado
+// por el SDK de Functions). NO pedimos idToken en el body — esa es la forma
+// vieja con fetch manual.
 // =============================================================================
 
-const FIVE_DAYS_MS = 60 * 60 * 24 * 5 * 1000;
 const usersCol = () => getAdminDb().collection('users');
 
 interface CreateUserInput {
-  idToken: string;
   displayName: string;
 }
 
@@ -34,29 +34,27 @@ interface CreateUserOutput {
 export const createUser = onCall<CreateUserInput, Promise<CreateUserOutput>>(
   { cors: ['http://localhost:3000'] },
   async (req) => {
-    const { idToken, displayName } = req.data ?? ({} as CreateUserInput);
-    if (typeof idToken !== 'string' || typeof displayName !== 'string') {
-      throw new HttpsError('invalid-argument', 'idToken and displayName required');
+    // 1. Validar auth
+    if (!req.auth?.token) {
+      throw new HttpsError('unauthenticated', 'Necesitás estar autenticado');
+    }
+    const uid = req.auth.token.uid;
+    const email = req.auth.token.email;
+
+    // 2. Validar input
+    const { displayName } = req.data ?? ({} as CreateUserInput);
+    if (typeof displayName !== 'string') {
+      throw new HttpsError('invalid-argument', 'displayName required');
     }
     if (displayName.length < 1 || displayName.length > 120) {
       throw new HttpsError('invalid-argument', 'displayName length out of range');
     }
 
-    // Verificar el idToken del caller
+    // 3. Transacción: cuenta users no-deleted y crea el doc del caller.
     const auth = getAdminAuth();
-    let decoded;
-    try {
-      decoded = await auth.verifyIdToken(idToken, true);
-    } catch {
-      throw new HttpsError('unauthenticated', 'idToken inválido o expirado');
-    }
-    const uid = decoded.uid;
-
     const db = getAdminDb();
     const userRef = db.collection('users').doc(uid);
 
-    // Transacción: cuenta users no-deleted y crea el doc del caller.
-    // Si count > 0 al commit, abort.
     return await db.runTransaction<CreateUserOutput>(async (tx) => {
       // Count de users no-deleted. `select` es liviano (solo docId).
       const existing = await tx.get(usersCol().where('deleted_at', '==', null).select());
@@ -73,7 +71,7 @@ export const createUser = onCall<CreateUserInput, Promise<CreateUserOutput>>(
       const role: CreateUserOutput['role'] = 'admin';
       const now = FieldValue.serverTimestamp();
       tx.set(userRef, {
-        email: decoded.email ?? '',
+        email: email ?? '',
         display_name: displayName,
         photo_url: null,
         role,
@@ -93,7 +91,7 @@ export const createUser = onCall<CreateUserInput, Promise<CreateUserOutput>>(
       tx.set(db.collection('audit_logs').doc(), {
         organizationId: null,
         actorId: uid,
-        actorEmail: decoded.email ?? '',
+        actorEmail: email ?? '',
         action: 'user.created',
         targetType: 'user',
         targetId: uid,
@@ -107,6 +105,3 @@ export const createUser = onCall<CreateUserInput, Promise<CreateUserOutput>>(
     });
   },
 );
-
-// Re-export for tests
-export const __test = { FIVE_DAYS_MS };

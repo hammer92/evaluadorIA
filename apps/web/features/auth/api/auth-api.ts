@@ -82,6 +82,7 @@ export async function signUpWithEmail(input: {
   // El SDK agrega automáticamente:
   //   - Header Authorization: Bearer <idToken del current user>
   //   - Envelope { data: {...} }
+  // La CF obtiene el caller via req.auth.token (NO pedimos idToken en body).
   // Si la CF falla con permission-denied (no es first user), hacemos rollback
   // del user recién creado para no dejar cuentas colgadas.
   const createUserFn = httpsCallable<

@@ -182,7 +182,8 @@ async function main(): Promise<void> {
     firstUser = await createAuthUser(email, password);
     const result = await callOnCall<{ uid: string; role: string; isFirstUser: boolean }>(
       'createUser',
-      { idToken: firstUser.idToken, displayName: 'First Admin' },
+      { displayName: 'First Admin' },
+      firstUser.idToken,
     );
     assertEq(result.role, 'admin', 'first user role');
     assertEq(result.isFirstUser, true, 'isFirstUser flag');
@@ -259,7 +260,7 @@ async function main(): Promise<void> {
     const res = await fetch(`${FUNCTIONS_BASE}/createUser`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ data: { idToken: secondUser.idToken, displayName: 'Second' } }),
+      body: JSON.stringify({ data: { displayName: 'Second' } }),
     });
     assert(res.status === 403, `expected 403, got ${res.status}`);
     const body = (await res.json()) as { error?: { message: string } };

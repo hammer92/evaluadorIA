@@ -386,3 +386,12 @@
 **Context**: DX - pnpm dev funciona out-of-the-box sin crear .env.local
 
 ---
+
+## SDD-05 — Hotfix #5: CF createUser usa req.auth.token (no body.idToken)
+
+**Timestamp**: 2026-06-29T11:45:00Z
+**User Input**: "al Llamar a la CF createUser esta generarndo un error 400"
+**AI Response**: "Bug: la CF createUser esperaba 'idToken' en el body (req.data), pero el cliente via httpsCallable lo adjuntaba en el header Authorization (no en el body). Resultado: CF rechazaba con HttpsError('invalid-argument', 'idToken and displayName required') -> HTTP 400. Fix: la CF ahora usa 'req.auth.token' (patron correcto de onCall via httpsCallable - el SDK verifica el idToken del header y lo expone ya validado via req.auth). Verificacion: (1) typecheck PASS, lint PASS, 70/70 unit tests, 11/11 E2E PASS, (2) curl manual contra createUser con body invalido devuelve UNAUTHENTICATED (correcto) en vez de 400."
+**Context**: BUGFIX - CF ahora usa patron correcto de onCall (req.auth.token) en vez de pedir idToken en body
+
+---
