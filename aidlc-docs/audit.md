@@ -413,3 +413,12 @@
 **Context**: REFACTOR - Signup flow simplificado: cliente llama solo 1 CF, no necesita estar logueado
 
 ---
+
+## SDD-05 — Hotfix #8: CORS credentials=true para Set-Cookie cross-origin
+
+**Timestamp**: 2026-06-29T13:30:00Z
+**User Input**: "la api tiene un problema de coriscors"
+**AI Response**: "Bug CORS: el browser recibia el Set-Cookie en la respuesta del createSession CF pero NO lo persistia porque faltaba el header 'Access-Control-Allow-Credentials: true'. Firebase Functions v2 onRequest con cors: [...] setea Access-Control-Allow-Origin, -Methods, -Headers pero NO -Credentials. Sin este header, los browsers rechazan las cookies cross-origin (incluso si el server las manda). El flow parecia funcionar en el server (200 OK + Set-Cookie) pero el browser descartaba la cookie silenciosamente. Fix: handler OPTIONS manual + Access-Control-Allow-Credentials: true en cada response. Whitelist via Origin header (cualquier http://localhost:\*). Aplicado a createSession y clearSession (ambos onRequest con Set-Cookie). Verificacion: curl con Origin: http://localhost:3000 -> 200 OK con todos los headers CORS + Set-Cookie. El browser ahora deberia persistir la cookie."
+**Context**: BUGFIX - Set-Cookie requiere Access-Control-Allow-Credentials: true en CORS, que firebase-functions v2 no setea por default
+
+---

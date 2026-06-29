@@ -14,9 +14,14 @@ import { getAdminAuth } from '../firebase-admin.js';
 // Endpoint: POST /v1_auth_create_session
 // Body: { idToken: string }
 // Response: 200 { success: true } + Set-Cookie: __session=...
+//
+// IMPORTANTE: Set-Cookie requiere Access-Control-Allow-Credentials: true
+// en respuestas CORS. firebase-functions v2 onRequest NO lo setea por default.
+// Lo agregamos manualmente en cada response.
 // =============================================================================
 
 const COOKIE_NAME = '__session';
+const ALLOWED_ORIGIN = 'http://localhost:3000';
 const ISSUER = 'admin-platform';
 const ALG = 'HS256';
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 5; // 5 días
@@ -29,7 +34,29 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
+function setCorsHeaders(
+  res: { setHeader: (k: string, v: string) => void },
+  origin: string | undefined,
+): void {
+  // Solo allow si el origin está en la whitelist. Para dev, usamos * pero
+  // con credentials=true, los browsers REQUIEREN un origin específico (no *).
+  const allowOrigin = origin && origin.startsWith('http://localhost') ? origin : ALLOWED_ORIGIN;
+  res.setHeader('Access-Control-Allow-Origin', allowOrigin);
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+}
+
 export const createSession = onRequest({ cors: ['http://localhost:3000'] }, async (req, res) => {
+  const origin = req.headers['origin'] as string | undefined;
+  setCorsHeaders(res, origin);
+
+  // Preflight: responder sin invocar la lógica
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'method-not-allowed' });
     return;
@@ -41,7 +68,6 @@ export const createSession = onRequest({ cors: ['http://localhost:3000'] }, asyn
   }
 
   const auth = getAdminAuth();
-  // Verificar el idToken antes de crear la session cookie.
   let decoded;
   try {
     decoded = await auth.verifyIdToken(idToken, true);
@@ -50,7 +76,6 @@ export const createSession = onRequest({ cors: ['http://localhost:3000'] }, asyn
     return;
   }
 
-  // Firmamos JWT con jose (HS256) — mismo secret que middleware.
   const role = decoded['role'];
   const organizationId = decoded['organizationId'] ?? null;
   const sessionJwt = await new SignJWT({
