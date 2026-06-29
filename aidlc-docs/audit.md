@@ -431,3 +431,39 @@
 **Context**: BUGFIX - cors: false desactiva CORS handler interno de firebase-functions v2 que no soporta credentials
 
 ---
+
+## Stitch Login/Signup Redesign — Request (continuation of SDD-05 work)
+
+**Timestamp**: 2026-06-29T14:30:00Z
+**User Input**: "quero que usando AI-dcl apliques el diseño web de las pantallas de login y registo revisando en el mcp de stitch el protecto stitch"
+**AI Response**: "Tarea de rediseño visual: aplicar la identidad de Stitch 'Unified Design System' (TVS) a las pantallas /login y /signup ya existentes de SDD-05. NO es un SDD nuevo — es modificacion sobre archivos existentes: apps/web/app/(auth)/{layout,login/page,signup/page}.tsx + apps/web/features/auth/components/{login-form,signup-form}.tsx + tailwind.config.ts + globals.css. Stitch project: 15149830769149114285. Pantallas fuente: 'Candidato: Login - Ingreso de Email' (199db92f660c470aae3384cda4c70ddd), 'Candidato: Login - Verificacion OTP' (efaaaeb7bcbe4c2696fbf5ea34511d40), 'Admin: Login de Acceso' (f49e27c0e4c542ca80a2a415e72293ee), 'Bienvenida y Seleccion de Idioma' (69a60b77a4d6419492c559106d8061fb). Design tokens: navy #232f3e primary, naranja #ff9900 CTA, Hanken Grotesk headlines, Inter body, JetBrains Mono codigo/timers, 4px border radius, surface-neutral #FAFBFB."
+**Context**: CONTINUATION - Apply Stitch design to existing /login and /signup screens (no new SDD)
+
+---
+
+## Stitch Redesign — Requirements Decisions
+
+**Timestamp**: 2026-06-29T14:45:00Z
+**User Input**: Q1 (brand) = "KnowledgeSync (identico a Stitch)" ; Q2 (form) = "Aplicar visual, mantener email+password (Recommended)"
+**AI Response**: "Decisiones aplicadas: (1) Marca = KnowledgeSync con icono terminal — copiado identico del Stitch en headers, footer, titles. (2) Form = mantener logica email+password (no OTP UX) — solo aplicar el visual. Resultado esperado: pantalla con branding KnowledgeSync + header/footer/circulos decorativos del Stitch, pero con form de 2 campos (login) o 3 campos (signup)."
+**Context**: Requirements - Decisions confirmed
+
+---
+
+## Stitch Redesign — Code Generation Complete
+
+**Timestamp**: 2026-06-29T15:00:00Z
+**User Input**: (continuacion)
+**AI Response**: "Modificados 9 archivos: (1) apps/web/tailwind.config.ts: agregados tokens Stitch (colors: navy #232f3e, brand secondary #fe9800, surface-neutral #FAFBFB, border-standard #D5DBDB, status-info/success/error/warning, on-surface-variant; spacing: stack-sm/md/lg/container-padding/unit; borderRadius tv 0.5rem; fontFamily hanken/inter/jetbrains; boxShadow tv-card 0px 4px 20px rgba(0,0,0,0.04)). (2) apps/web/app/layout.tsx: next/font/google Hanken_Grotesk + JetBrains_Mono + Inter (CSS vars --font-hanken, --font-jetbrains, --font-inter); metadata title='KnowledgeSync', description='Technical Validation System'. (3) apps/web/app/globals.css: nuevas utilities text-headline-md/display-lg/body-lg/body-md/label-sm/timer usando las font vars. (4) apps/web/app/(auth)/layout.tsx: REESCRITO — bg-surface-neutral, header con icono SquareTerminal + 'KnowledgeSync' headline-md text-primary tracking-tight, footer con ShieldCheck + 'Entorno seguro · Technical Validation System' + '© 2024 KnowledgeSync. Secure Assessment Environment.' + Privacy Policy/Terms of Service, decorative circles fixed top-right opacity-10 border-primary. (5) apps/web/app/(auth)/login/page.tsx: simplificado — solo wrappea LoginForm en w-full max-w-[440px], error message con text-label-sm text-status-error. (6) apps/web/app/(auth)/signup/page.tsx: mismo patron. (7) login-form.tsx: REESCRITO — reemplazado shadcn Card por div bg-white border-border-standard shadow-tv-card rounded-lg p-stack-lg. Branding context arriba: h1 'Entorno de Evaluación' font-hanken text-primary + subtitle 'Technical Validation System' text-on-surface-variant. Inputs con Mail/Lock icons (lucide), placeholder 'usuario@empresa.com', focus ring brand-secondary. Boton submit bg-brand-secondary text-on-secondary-fixed-variant con ArrowRight icon + Loader2 spinner durante isSubmitting. Eye/EyeOff toggle para password. Footer del card: divider + ShieldCheck icon + texto entorno seguro. Bottom links: Soporte Tecnico + Instrucciones del Sistema. Link a /signup en brand-secondary font-semibold. (8) signup-form.tsx: REESCRITO mismo patron con User/Mail/Lock icons, headline 'Crear cuenta' + subtitle 'Technical Validation System', bottom info especifica del first-user-admin, link a /login."
+**Context**: CONSTRUCTION - Code generation complete (9 files modified)
+
+---
+
+## Stitch Redesign — Build and Test Verification
+
+**Timestamp**: 2026-06-29T15:10:00Z
+**User Input**: (continuacion)
+**AI Response**: "Verificacion: (1) pnpm typecheck PASS — 3 paquetes (shared, functions, web). (2) pnpm lint PASS — max-warnings 0. (3) pnpm test PASS — 71/71 tests + 1 skipped (firebase placeholder). (4) pnpm build PASS — Next.js 14.2.35 compila /login (1.99 kB) + /signup (2.19 kB) + /admin + /; first-load JS 236 kB en auth pages (vs 87.5 kB en root por las fonts). Google Fonts retrieval tuvo retry warnings (red local intermitente) pero next/font completo el build. Cierre: commit conventional con feat(auth)."
+**Context**: CONSTRUCTION - Build and Test complete (all 4 PASS)
+
+---

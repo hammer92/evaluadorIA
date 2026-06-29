@@ -6,14 +6,10 @@ export default function LoginPage({
   searchParams: { next?: string; error?: string };
 }) {
   return (
-    <div className="w-full max-w-md space-y-4">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold">Admin Platform</h1>
-        <p className="text-sm text-muted-foreground">Plataforma administrativa</p>
-      </div>
+    <div className="w-full max-w-[440px]">
       <LoginForm nextUrl={searchParams.next} />
       {searchParams.error && (
-        <p className="text-center text-sm text-destructive">
+        <p className="text-label-sm text-status-error mt-stack-md text-center">
           {searchParams.error === 'no-claims'
             ? 'Tu cuenta no tiene permisos. Contactá al admin.'
             : searchParams.error === 'server-misconfigured'
