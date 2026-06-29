@@ -1,21 +1,25 @@
 /* eslint-disable no-console */
 /**
- * verify-auth.ts — Integration test del flujo completo SDD-05 contra emuladores.
+ * verify-auth.ts — Integration test del flujo completo contra emuladores.
+ * Actualizado para SDD-06 (nombres v1XxxYyy).
  *
  * Asume que los emuladores están corriendo (auth:9099, firestore:8080,
- * functions:5001) y que las functions están construidas.
+ * functions:5001) y que las functions están construidas (pnpm --filter
+ * functions build).
  *
  * Verifica:
- *   1. First user signup → role='admin' (bootstrap) + cookie set
- *   2. SignIn admin → claims.role='admin'
- *   3. Middleware: cookie válida pasa / cookie ausente redirige
- *   4. Second user signup sin invitación → rejected
- *   5. Admin invite user → Auth + Firestore + claims
- *   6. Invited user signup con invite → role='expert' + cookie
- *   7. SignOut → cookie borrada
- *   8. setUserRole (admin) actualiza claims
+ *   1. First user signup vía v1AuthSignUp → role='admin' (bootstrap) + cookie
+ *   2. v1AuthCreateSession returns Set-Cookie con __session JWT firmado con jose
+ *   3. verifySessionCookie + jose roundtrip
+ *   4. Second user signup sin invitación → rejected (permission-denied)
+ *   5. Admin invite vía v1UsersCreate → Auth + Firestore + claims
+ *      (password no se setea — SDD-06 spec, se setea manualmente vía Admin SDK
+ *       hasta SDD-08 integre email magic link)
+ *   6. Invited user signin con password seteado por Admin SDK
+ *   7. v1AuthClearSession borra cookie (Max-Age=0)
+ *   8. setUserRole(invited, recruiter) actualiza claims
  *   9. Firestore rules con custom claims (subset SDD-03)
- *  10. Audit log entries (auth.login, user.created)
+ *  10. Audit log entries (user.created)
  *
  * Uso:
  *   pnpm verify:auth
@@ -25,7 +29,7 @@ import { initializeApp, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
-import { setUserRole } from '../apps/functions/src/auth/set-custom-claims.js';
+import { setUserRole } from '../apps/functions/src/v1/users/set-role.js';
 import {
   signSessionWithSecret,
   verifySessionCookieWithSecret,
@@ -172,15 +176,15 @@ async function main(): Promise<void> {
   let sessionCookie: string | undefined;
 
   // === Test 1: First user signup → role='admin' ===
-  // La CF createUser es PUBLICA: el cliente no necesita estar autenticado.
+  // La CF v1AuthSignUp es PUBLICA: el cliente no necesita estar autenticado.
   // La CF crea el user en Auth via Admin SDK + setea claims + crea doc.
   console.warn('\n[1] First user signup (bootstrap admin)');
-  await step('createUser CF assigns role=admin for first user', async () => {
+  await step('v1AuthSignUp CF assigns role=admin for first user', async () => {
     const email = `first-admin@verify.test`;
     const password = '12345678';
     // NO pre-creamos el user: la CF lo hace via Admin SDK
     const result = await callOnCall<{ uid: string; role: string; isFirstUser: boolean }>(
-      'createUser',
+      'v1AuthSignUp',
       { email, password, displayName: 'First Admin' },
     );
     assertEq(result.role, 'admin', 'first user role');
@@ -192,14 +196,14 @@ async function main(): Promise<void> {
 
   // === Test 2: Claims set + createSession returns cookie ===
   console.warn('\n[2] Session cookie');
-  await step('createSession returns Set-Cookie with __session JWT', async () => {
+  await step('v1AuthCreateSession returns Set-Cookie with __session JWT', async () => {
     assert(firstUser, 'firstUser defined');
     // Re-signin el admin para refrescar idToken con role=admin claim
-    // (createUser CF setea custom claims vía Admin SDK, pero el idToken
+    // (v1AuthSignUp CF setea custom claims vía Admin SDK, pero el idToken
     // original fue emitido antes. Necesitamos un token con los claims nuevos).
     const adminReSignin = await signInForToken('first-admin@verify.test', '12345678');
     const adminIdTokenWithClaims = adminReSignin.idToken;
-    const { status, setCookie } = await callOnRequest('createSession', {
+    const { status, setCookie } = await callOnRequest('v1AuthCreateSession', {
       idToken: adminIdTokenWithClaims,
     });
     assertEq(status, 200, 'createSession status');
@@ -239,10 +243,10 @@ async function main(): Promise<void> {
 
   // === Test 4: Second user signup sin invitación → rejected ===
   console.warn('\n[4] Second user signup rejected (Q3=C)');
-  await step('createUser CF rejects second user (count > 0)', async () => {
+  await step('v1AuthSignUp CF rejects second user (count > 0)', async () => {
     const email = `second-wo-invite@verify.test`;
     const password = '12345678';
-    const res = await fetch(`${FUNCTIONS_BASE}/createUser`, {
+    const res = await fetch(`${FUNCTIONS_BASE}/v1AuthSignUp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: { email, password, displayName: 'Second' } }),
@@ -257,19 +261,22 @@ async function main(): Promise<void> {
   });
 
   // === Test 5: Admin invite user ===
-  console.warn('\n[5] Admin inviteUser CF');
+  console.warn('\n[5] Admin v1UsersCreate CF');
   let invitedUid: string | undefined;
-  await step('inviteUser (admin) creates Auth user + Firestore doc + claims', async () => {
+  await step('v1UsersCreate (admin) creates Auth user + Firestore doc + claims', async () => {
     assert(firstUser, 'firstUser defined');
     // IMPORTANTE: re-signIn el admin para refrescar idToken con role=admin claim
     // (los claims se setearon via setCustomUserClaims después del signin inicial).
     const adminReSignin = await signInForToken('first-admin@verify.test', '12345678');
     const adminTokenWithClaims = adminReSignin.idToken;
+    // v1UsersCreate ya no acepta password (SDD-06 spec 4.8 — el invited user
+    // debe resetear su password vía email magic link, TODO SDD-08). Para que
+    // el test E2E siga funcionando, seteamos la password manualmente con
+    // Admin SDK después del invite.
     const result = await callOnCall<{ uid: string; email: string; role: string }>(
-      'inviteUser',
+      'v1UsersCreate',
       {
         email: 'invited@verify.test',
-        password: '12345678',
         displayName: 'Invited',
         role: 'expert',
       },
@@ -283,19 +290,21 @@ async function main(): Promise<void> {
     assert(firestoreDoc.exists, 'firestore user doc exists');
     assertEq(firestoreDoc.data()?.status, 'invited', 'user status=invited');
     assertEq(firestoreDoc.data()?.created_by, firstUser?.uid, 'created_by = admin uid');
+    // Workaround: setear password via Admin SDK (TODO: eliminar en SDD-08)
+    await auth.updateUser(invitedUid, { password: '12345678' });
   });
 
   // === Test 6: Invited user signs in (login con creds) ===
   console.warn('\n[6] Invited user signin');
-  await step('invited user can signIn with shared credentials', async () => {
+  await step('invited user can signIn with password set by Admin SDK', async () => {
     assert(invitedUid, 'invitedUid defined');
     await signInForToken('invited@verify.test', '12345678');
   });
 
   // === Test 7: clearSession borra cookie ===
-  console.warn('\n[7] clearSession');
-  await step('clearSession sets Max-Age=0', async () => {
-    const { setCookie } = await callOnRequest('clearSession', {});
+  console.warn('\n[7] v1AuthClearSession');
+  await step('v1AuthClearSession sets Max-Age=0', async () => {
+    const { setCookie } = await callOnRequest('v1AuthClearSession', {});
     assert(setCookie, 'setCookie present');
     assert(setCookie?.includes('Max-Age=0'), 'Max-Age=0 in clear');
   });
