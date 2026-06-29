@@ -1,6 +1,8 @@
 import { jwtVerify } from 'jose';
 import { NextResponse, type NextRequest } from 'next/server';
 
+import '@/lib/env-dev-defaults';
+
 // =============================================================================
 // Middleware Next.js — verifica la cookie `__session` (HS256) para /admin/**.
 // =============================================================================

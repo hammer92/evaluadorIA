@@ -467,3 +467,12 @@
 **Context**: CONSTRUCTION - Build and Test complete (all 4 PASS)
 
 ---
+
+## Stitch Redesign — Hotfix: Tailwind purge of feature/ classes
+
+**Timestamp**: 2026-06-29T15:30:00Z
+**User Input**: "[imagen] el login no esta respetando el diseno"
+**AI Response**: "Bug detectado por inspeccion del CSS compilado: tailwind.config.ts content array NO incluia ./features/**/\*, por lo que TODAS las clases custom usadas en features/auth/components/login-form.tsx y signup-form.tsx fueron PURGED del layout.css generado. Clases faltantes: .font-hanken, .text-headline-md, .shadow-tv-card, .p-stack-lg, .pt-stack-md, .mt-stack-lg, .py-3, .pl-10, .inset-y-0, .uppercase, .space-y-stack-md/sm, .max-w-[440px]. Sintomas visibles: (1) headlines 'Crear cuenta'/'Entorno de Evaluacion' en sans fallback en lugar de Hanken Grotesk; (2) labels en mixed-case 'Nombre Completo' en lugar de UPPERCASE; (3) iconos Mail/Lock/User colapsados en top-left del input por falta de inset-y-0. Fix: agregar './features/**/\*.{ts,tsx}' a content array. Verificacion post-fix: build PASS — confirmadas todas las clases presentes en /apps/web/.next/static/css/ccea3f608c6b1f6e.css. typecheck/lint/test 71/71 todos PASS. Commit a23013e."
+**Context**: BUGFIX - Tailwind content array missing features/, causing class purge
+
+---
