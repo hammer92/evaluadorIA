@@ -13,6 +13,11 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+      }],
       'import/order': ['error', {
         groups: ['builtin', 'external', 'internal', 'parent', 'sibling'],
         'newlines-between': 'always',
@@ -39,6 +44,20 @@ export default tseslint.config(
     // Por eso se exime de la regla `no-restricted-imports` SOLO en este path.
     // Tests del wrapper también incluidos (jest los necesita accesibles).
     files: ['apps/web/lib/firebase/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
+  {
+    // Los repositories son la capa de aislamiento del vendor. Las imples Firebase
+    // (`repositories/*/firebase.ts`) y sus mappers (`mapper.ts`, que solo usa
+    // types de firebase/firestore para snake_case) necesitan acceso al SDK.
+    // Tests de integración también acceden al SDK directamente.
+    files: [
+      'apps/web/repositories/**/firebase.ts',
+      'apps/web/repositories/**/mapper.ts',
+      'apps/web/repositories/**/__tests__/**',
+    ],
     rules: {
       'no-restricted-imports': 'off',
     },

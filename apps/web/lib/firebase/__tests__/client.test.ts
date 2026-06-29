@@ -81,7 +81,13 @@ describe('firebase client', () => {
   it('en dev, conecta automáticamente a los emuladores de auth/firestore/storage', async () => {
     stubClientEnv('dev');
 
-    await import('../client');
+    const mod = await import('../client');
+    // La inicialización es LAZY: los emuladores se conectan al primer access
+    // de un método/propiedad de auth/db/storage. Accedemos a una propiedad
+    // cualquiera para forzar la inicialización.
+    void mod.auth.app;
+    void mod.db.type;
+    void (mod.storage as unknown as { app: unknown }).app;
 
     expect(mocks.connectAuthEmulator).toHaveBeenCalledTimes(1);
     expect(mocks.connectFirestoreEmulator).toHaveBeenCalledTimes(1);

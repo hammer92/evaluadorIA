@@ -15,7 +15,14 @@ import { clientEnv } from '@/env';
 // En entorno `dev` se conecta automáticamente a los emuladores
 // (auth:9099, firestore:8080, storage:9199) — el guard evita reconectar
 // durante HMR.
+//
+// Inicialización LAZY: `firebaseApp`/`auth`/`db`/`storage` se crean en el
+// primer access, no al cargar el módulo. Esto permite que tests inyecten
+// sus propias instancias vía `__setFirebaseApp` o que el módulo se cargue
+// sin env vars disponibles (e.g. typecheck, build en CI).
 // =============================================================================
+
+let _app: FirebaseApp | undefined;
 
 function createFirebaseApp(): FirebaseApp {
   if (getApps().length > 0) return getApp();
@@ -32,23 +39,82 @@ function createFirebaseApp(): FirebaseApp {
   });
 }
 
-export const firebaseApp = createFirebaseApp();
-export const auth: Auth = getAuth(firebaseApp);
-export const db: Firestore = getFirestore(firebaseApp);
-export const storage: FirebaseStorage = getStorage(firebaseApp);
+function ensureApp(): FirebaseApp {
+  if (!_app) {
+    _app = createFirebaseApp();
+  }
+  return _app;
+}
 
-// Conectar a emuladores solo en dev y solo en el cliente (no SSR).
-// El guard `_emulatorConfig` evita reconectar en HMR.
-if (clientEnv.NEXT_PUBLIC_APP_ENV === 'dev' && typeof window !== 'undefined') {
-  if (!(auth as unknown as { _emulatorConfig?: unknown })._emulatorConfig) {
-    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+let _auth: Auth | undefined;
+let _db: Firestore | undefined;
+let _storage: FirebaseStorage | undefined;
+
+function ensureAuth(): Auth {
+  if (!_auth) _auth = getAuth(ensureApp());
+  return _auth;
+}
+function ensureDb(): Firestore {
+  if (!_db) _db = getFirestore(ensureApp());
+  return _db;
+}
+function ensureStorage(): FirebaseStorage {
+  if (!_storage) _storage = getStorage(ensureApp());
+  return _storage;
+}
+
+// Conectar a emuladores una sola vez (idempotente via guards internos del SDK).
+let _emulatorsConnected = false;
+function connectEmulatorsOnce(): void {
+  if (_emulatorsConnected) return;
+  if (typeof window === 'undefined') return; // SSR no aplica
+  if (clientEnv.NEXT_PUBLIC_APP_ENV !== 'dev') return;
+  const a = ensureAuth();
+  const d = ensureDb();
+  const s = ensureStorage();
+  if (!(a as unknown as { _emulatorConfig?: unknown })._emulatorConfig) {
+    connectAuthEmulator(a, 'http://127.0.0.1:9099', { disableWarnings: true });
   }
-  if (!(db as unknown as { _emulatorConfig?: unknown })._emulatorConfig) {
-    connectFirestoreEmulator(db, '127.0.0.1', 8080);
+  if (!(d as unknown as { _emulatorConfig?: unknown })._emulatorConfig) {
+    connectFirestoreEmulator(d, '127.0.0.1', 8080);
   }
-  if (!(storage as unknown as { _emulatorConfig?: unknown })._emulatorConfig) {
-    connectStorageEmulator(storage, '127.0.0.1', 9199);
+  if (!(s as unknown as { _emulatorConfig?: unknown })._emulatorConfig) {
+    connectStorageEmulator(s, '127.0.0.1', 9199);
   }
+  _emulatorsConnected = true;
+}
+
+function lazyProxy<T extends object>(ensure: () => T): T {
+  return new Proxy({} as T, {
+    get(_t, prop) {
+      const obj = ensure();
+      // Disparar conexión a emuladores en el primer access de un servicio
+      connectEmulatorsOnce();
+      return (obj as unknown as Record<string | symbol, unknown>)[prop];
+    },
+  });
+}
+
+export const firebaseApp = lazyProxy<FirebaseApp>(ensureApp);
+export const auth = lazyProxy<Auth>(ensureAuth);
+export const db = lazyProxy<Firestore>(ensureDb);
+export const storage = lazyProxy<FirebaseStorage>(ensureStorage);
+
+// Test helpers
+export function __resetFirebaseClient(): void {
+  _app = undefined;
+  _auth = undefined;
+  _db = undefined;
+  _storage = undefined;
+  _emulatorsConnected = false;
+}
+
+export function __setFirebaseApp(app: FirebaseApp): void {
+  _app = app;
+  _auth = getAuth(app);
+  _db = getFirestore(app);
+  _storage = getStorage(app);
+  _emulatorsConnected = false;
 }
 
 export type { FirebaseApp, Auth, Firestore, FirebaseStorage };

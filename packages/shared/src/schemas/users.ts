@@ -36,13 +36,17 @@ export const createUserInputSchema = z.object({
   organizationId: z.string().optional(),
   sendInviteEmail: z.boolean().default(true),
 });
-export type CreateUserInput = z.infer<typeof createUserInputSchema>;
+// z.input preserva optional+default; z.infer los aplicaría y haría obligatorio.
+export type CreateUserInput = z.input<typeof createUserInputSchema>;
 
-export const updateUserInputSchema = z.object({
-  uid: z.string(),
-  displayName: z.string().min(1).max(120).nullable().optional(),
-  photoURL: z.string().url().nullable().optional(),
-  role: roleSchema.optional(),
-  status: userStatusSchema.optional(),
-});
+export const updateUserInputSchema = z
+  .object({
+    displayName: z.string().min(1).max(120).nullable().optional(),
+    photoURL: z.string().url().nullable().optional(),
+    role: roleSchema.optional(),
+    status: userStatusSchema.optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'Debe proporcionar al menos un campo',
+  });
 export type UpdateUserInput = z.infer<typeof updateUserInputSchema>;

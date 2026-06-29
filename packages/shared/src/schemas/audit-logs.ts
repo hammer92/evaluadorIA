@@ -38,3 +38,10 @@ export const auditLogSchema = z.object({
   createdAt: z.date(),
 });
 export type AuditLog = z.infer<typeof auditLogSchema>;
+
+// logId y createdAt se asignan server-side (Cloud Functions / Admin SDK).
+export const createAuditLogInputSchema = auditLogSchema.omit({
+  logId: true,
+  createdAt: true,
+});
+export type CreateAuditLogInput = z.infer<typeof createAuditLogInputSchema>;

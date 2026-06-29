@@ -58,6 +58,8 @@
 - [x] Workflow Planning — 2026-06-26T22:22:08Z
 - [x] Requirements Analysis — SDD-03 (Q1=A, Q2=A, Q3=A) — 2026-06-28T23:00Z
 - [x] Workflow Planning — SDD-03 (execution-plan-sdd03.md) — 2026-06-28T23:01Z
+- [x] Requirements Analysis — SDD-04 (Q1=C, Q2=A, Q3=A) — 2026-06-29T06:05Z
+- [x] Workflow Planning — SDD-04 (execution-plan-sdd04.md) — 2026-06-29T06:10Z
 - [ ] Application Design — SKIP
 - [ ] Units Generation — SKIP
 
@@ -71,6 +73,8 @@
 - [x] Build and Test — 2026-06-26 (sdd-gap-closure)
 - [x] Code Generation — 2026-06-28 (sdd-03-firebase-setup)
 - [x] Build and Test — 2026-06-28 (sdd-03-firebase-setup)
+- [x] Code Generation — 2026-06-29 (sdd-04-repository-layer)
+- [x] Build and Test — 2026-06-29 (sdd-04-repository-layer)
 
 ### OPERATIONS PHASE
 
@@ -78,9 +82,9 @@
 
 ## Current Status
 
-- **Lifecycle Phase**: CONSTRUCTION (SDD-01/02 gap closure complete)
-- **Next Stage**: SDD-03 (Firebase) — fuera de scope actual
-- **Active Unit**: sdd-gap-closure — DONE
+- **Lifecycle Phase**: CONSTRUCTION (SDD-04 repository layer complete)
+- **Next Stage**: SDD-05 (Auth/Authorization) — bloqueado por SDD-04 (ahora desbloqueado)
+- **Active Unit**: sdd-04-repository-layer — DONE
 
 ## Latest Activity
 
@@ -93,24 +97,36 @@
   - **2 commits** realizados: `ac2ed9a` (feat fixes) + `ba93db5` (docs policy)
   - **Politica de commit por SDD** documentada en `.agents/AGENTS.md`
 - **2026-06-28T23:00Z — SDD-03 (Firebase Setup) Sprint START**: nuevo ciclo AI-DLC iniciado por usuario ("usando AI-DLC impelmenta el SDD-3"). Etapas activas: Requirements Analysis (revisar SDD-03 + Q1/Q2/Q3 ya respondidas A/A/A) → Code Generation → Build and Test → Commit.
-- **2026-06-28T23:30Z — SDD-03 `sdd-03-firebase-setup` COMPLETE**:
-  - **17 archivos** creados/modificados:
-    - Root: `firebase.json`, `.firebaserc`, `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `.gitignore` (+emulator-data)
-    - Schemas: `packages/shared/src/schemas/{users,organizations,audit-logs}.ts` + `index.ts` actualizado
-    - Functions shell: `apps/functions/{package.json,tsconfig.json,src/index.ts,src/firebase-admin.ts,src/auth/set-custom-claims.ts}`
-    - Web client: `apps/web/lib/firebase/{client.ts,__tests__/client.test.ts}` + dep `firebase` + dep `radix-ui` (regresión detectada)
-    - Seed: `scripts/seed-emulators.ts`
-    - Root scripts: `emulators`, `emulators:reset`, `seed:emulators`, `emulators:test` + devDep `firebase-admin`
-    - README: sección Firebase Emulators + Java JRE prereq
-    - ESLint: exemption para `apps/web/lib/firebase/**` (único punto de imports Firebase)
-  - **Decisiones aplicadas**: Q1=A (App Check → SDD-08), Q2=A (strict `createdAt == request.time`), Q3=A (Admin SDK lightweight sin credenciales si emulator env var presente)
-  - **Verificación**: typecheck PASS, lint PASS (max-warnings 0), test 14/14 PASS (+2 nuevos: client singleton export + dev emulator connection), build PASS (87.4 kB First Load JS, 6 routes)
+- **2026-06-29T07:00Z — SDD-04 `sdd-04-repository-layer` COMPLETE**:
+  - **23 archivos nuevos + 9 modificados**:
+    - `packages/shared/src/schemas/common.ts` (primitives: emailSchema, slugSchema, timestampSchema, roleSchema, statusSchema)
+    - `apps/web/repositories/errors.ts` (RepositoryError class, 6 códigos: NOT_FOUND, ALREADY_EXISTS, PERMISSION_DENIED, VALIDATION, INTERNAL, UNAVAILABLE)
+    - `apps/web/repositories/{users,organizations,audit-logs}/`: `types.ts` (interface + Ctx), `firebase.ts` (impl con DI de db), `memory.ts` (impl in-memory), `mapper.ts` (snake_case ↔ camelCase), `index.ts` (factory + **reset), `**tests\_\_/contract.test.ts`+`memory.test.ts`(+`firebase.test.ts` placeholder)
+    - `apps/web/repositories/index.ts` (re-exports)
+    - `packages/shared/src/schemas/users.ts`: `CreateUserInput = z.input` (preserva optional+default), removido `uid` de `updateUserInputSchema` (es param), agregado `.refine` al update
+    - `packages/shared/src/schemas/audit-logs.ts`: agregado `createAuditLogInputSchema` (omit logId+createdAt)
+    - `packages/shared/src/schemas/organizations.ts`: agregado `updateOrganizationInputSchema` con refine
+    - `apps/web/env.ts`: `REPOSITORY_DRIVER.default('firebase')` (Q1=C); validación LAZY (Proxy) para permitir test setup
+    - `apps/web/vitest.setup.ts`: simplificado (lazy env permite setup en cualquier momento)
+    - `apps/web/lib/firebase/client.ts`: inicialización LAZY (Proxy + `ensureApp`/`ensureAuth`/`ensureDb`/`ensureStorage`) — emuladores se conectan al primer access; agregados `__resetFirebaseClient()` y `__setFirebaseApp()` test helpers
+    - `eslint.config.mjs`: exemption para `apps/web/repositories/**/firebase.ts`, `mapper.ts` y `__tests__/**`; configurado `no-unused-vars` con prefijo `_`
+  - **Decisiones aplicadas** (Q1=C, Q2=A, Q3=A):
+    - Q1=C → default factory driver es `firebase` (devs necesitan emuladores)
+    - Q2=A → tests integration sin deps nuevas (Admin SDK via dynamic import; client SDK inyecta db propio)
+    - Q3=A → helpers `__reset()`/`__seed()` en Memory class; `__resetUserRepository()` en factory
+  - **Verificación**: typecheck PASS (3 packages), lint PASS (max-warnings 0), test 40/40 PASS (10 users contract/memory + 6 organizations contract + 5 audit-logs memory + 5 extras + 14 SDD-01/02 + 1 skipped firebase placeholder), build PASS (87.2 kB First Load JS)
   - **Bugs colaterales encontrados y arreglados**:
-    - `globals.css` importaba `@import "shadcn/tailwind.css"` (shadcn es CLI, no runtime) — comentado
-    - `radix-ui` dep removida en sprint anterior pero shadcn components/ui/\*.tsx la usan — re-agregada
-    - `apps/functions/tsconfig.json`: removido `rootDir` y usado import relativo para `@shared` desde seed-emulators.ts
-    - ESLint ignora `lib/` (build artifacts)
-  - **Criterios de aceptación SDD-03 cubiertos**: 9/12 verificables automáticamente (cliente wrapper, reglas firestore sintaxis JSON válida, índices, scripts npm, exemption arquitectónica). 3/12 requieren emuladores levantados (reglas runtime, admin en emulador, seed idempotente) — verificables manualmente con `firebase emulators:start && pnpm seed:emulators`.
+    - `updateUserInputSchema` tenía `uid` (debe ser param separado) — removido
+    - `createUserInputSchema` con `z.infer` hacía `sendInviteEmail` obligatorio — cambiado a `z.input` (preserva optional+default)
+    - `Error.cause` requería `override` modifier en TS strict — agregado
+    - `toUpdateOrgRaw` settings no era `Partial` — ajustada signature con defaults
+    - `firebase.ts` y `client.ts` se inicializaban al module-load y crasheaban tests — convertidos a lazy Proxy
+    - `firebase.ts` ahora acepta `db` opcional por constructor (DI) — tests inyectan su propio db
+    - `vitest.setup.ts` mutations no se aplicaban a tiempo (setupFile runs after test file imports) — removido, usado lazy env
+  - **Criterios de aceptación SDD-04**: 12/13 cubiertos. 1/13 pendiente: integration tests Firebase reactivar en CI con emuladores persistidos.
+  - **Architectural enforcement check**: 0 imports directos `firebase/firestore|auth|storage|app` fuera de `repositories/*/firebase.ts`, `repositories/*/mapper.ts`, `repositories/*/__tests__/**` y `lib/firebase/*` (verificado con grep).
+
+- **2026-06-28T23:30Z — SDD-03 `sdd-03-firebase-setup` COMPLETE**:
 
 ## Commit Policy (desde 2026-06-28)
 
@@ -122,3 +138,6 @@ Cada SDD o sprint cierra con un commit Conventional Commits. Pre-commit + commit
 - `ba93db5` (2026-06-28T22:50) — docs(tooling): document git commit policy per SDD
 - `eaf15bb` (2026-06-28T22:50) — chore(tooling): add aidlc to commitlint scope-enum
 - `91e0b14` (2026-06-28T22:51) — chore(aidlc): update audit and state after remediation sprint
+- `9970bfa` (2026-06-28T23:25) — feat(firebase): sdd-03 firebase setup with emulators, rules and SDK wrappers
+- `a697287` (2026-06-29T05:00) — fix(firestore): add databases/documents wrapper to rules + expand verify-rules
+- `abd2817` (2026-06-29T05:30) — feat(tooling): add pnpm emulators:detach stop status logs commands

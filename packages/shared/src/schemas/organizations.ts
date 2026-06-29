@@ -25,3 +25,19 @@ export const createOrganizationInputSchema = organizationSchema.pick({
   plan: true,
 });
 export type CreateOrganizationInput = z.infer<typeof createOrganizationInputSchema>;
+
+export const updateOrganizationInputSchema = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    plan: organizationPlanSchema.optional(),
+    settings: z
+      .object({
+        timezone: z.string().optional(),
+        locale: z.string().optional(),
+      })
+      .optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'Debe proporcionar al menos un campo',
+  });
+export type UpdateOrganizationInput = z.infer<typeof updateOrganizationInputSchema>;
