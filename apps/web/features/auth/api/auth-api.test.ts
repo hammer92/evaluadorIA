@@ -1,0 +1,120 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Mock de @/env (necesario porque auth-api.ts llama getFunctionsBase() que
+// lee NEXT_PUBLIC_APP_ENV). Las env vars en vitest config no se aplican
+// cuando vitest corre desde root sin --config.
+vi.mock('@/env', () => ({
+  clientEnv: {
+    NEXT_PUBLIC_APP_ENV: 'dev',
+    NEXT_PUBLIC_FIREBASE_API_KEY: 'fake',
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: 'localhost',
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID: 'demo-test',
+    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: 'demo-test.appspot.com',
+    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '0',
+    NEXT_PUBLIC_FIREBASE_APP_ID: '1:0:web:test',
+  },
+  env: {
+    SESSION_COOKIE_SECRET: 'test-secret-for-vitest-must-be-at-least-32-chars-long',
+  },
+}));
+
+// Mock de firebase/auth (signIn, createUser, signOut, updateProfile).
+// `vi.mock` se aplica a TODOS los imports del módulo, incluido el del archivo
+// bajo test. Esto evita tocar la red durante unit tests.
+vi.mock('@/lib/firebase/auth', () => {
+  const fakeUser = {
+    uid: 'u_fake',
+    email: 'fake@example.com',
+    displayName: 'Fake User',
+    getIdToken: vi.fn().mockResolvedValue('fake-id-token'),
+    delete: vi.fn().mockResolvedValue(undefined),
+  };
+  return {
+    auth: { currentUser: null },
+    signInWithEmailAndPassword: vi.fn().mockResolvedValue({ user: fakeUser }),
+    createUserWithEmailAndPassword: vi.fn().mockResolvedValue({ user: fakeUser }),
+    signOut: vi.fn().mockResolvedValue(undefined),
+    updateProfile: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
+// Mock global de fetch (signUp llama a la Cloud Function, createSession/logout al API route).
+const fetchMock = vi.fn();
+beforeEach(() => {
+  fetchMock.mockReset();
+  globalThis.fetch = fetchMock as unknown as typeof fetch;
+});
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+import { AuthApiError, signInWithEmail, signOutCurrent, signUpWithEmail } from './auth-api';
+
+describe('signInWithEmail', () => {
+  it('returns the user from Firebase Auth', async () => {
+    const user = await signInWithEmail('fake@example.com', '12345678');
+    expect(user.uid).toBe('u_fake');
+    expect(user.email).toBe('fake@example.com');
+  });
+});
+
+describe('signUpWithEmail', () => {
+  it('creates user, calls CF, and returns isFirstUser=true', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ result: { isFirstUser: true } }),
+    });
+    const result = await signUpWithEmail({
+      email: 'first@example.com',
+      password: '12345678',
+      displayName: 'First',
+    });
+    expect(result.isFirstUser).toBe(true);
+    expect(result.user.uid).toBe('u_fake');
+  });
+
+  it('creates user, calls CF, returns isFirstUser=false for subsequent', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ result: { isFirstUser: false } }),
+    });
+    const result = await signUpWithEmail({
+      email: 'second@example.com',
+      password: '12345678',
+      displayName: 'Second',
+    });
+    expect(result.isFirstUser).toBe(false);
+  });
+
+  it('rolls back user when CF rejects (not first user)', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      json: () =>
+        Promise.resolve({
+          error: { message: 'Registro solo por invitación' },
+        }),
+    });
+    await expect(
+      signUpWithEmail({
+        email: 'second@example.com',
+        password: '12345678',
+        displayName: 'Second',
+      }),
+    ).rejects.toThrow(AuthApiError);
+  });
+});
+
+describe('signOutCurrent', () => {
+  it('signs out from Firebase and calls logout endpoint', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true });
+    await signOutCurrent();
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/v1_auth_clear_session'), {
+      method: 'POST',
+    });
+  });
+
+  it('does not throw if logout endpoint fails (offline-safe)', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network'));
+    await expect(signOutCurrent()).resolves.toBeUndefined();
+  });
+});

@@ -75,6 +75,8 @@
 - [x] Build and Test — 2026-06-28 (sdd-03-firebase-setup)
 - [x] Code Generation — 2026-06-29 (sdd-04-repository-layer)
 - [x] Build and Test — 2026-06-29 (sdd-04-repository-layer)
+- [x] Code Generation — 2026-06-29 (sdd-05-auth-authorization)
+- [x] Build and Test — 2026-06-29 (sdd-05-auth-authorization) — 65/65 unit + 11/11 E2E emuladores
 
 ### OPERATIONS PHASE
 
@@ -97,7 +99,13 @@
   - **2 commits** realizados: `ac2ed9a` (feat fixes) + `ba93db5` (docs policy)
   - **Politica de commit por SDD** documentada en `.agents/AGENTS.md`
 - **2026-06-28T23:00Z — SDD-03 (Firebase Setup) Sprint START**: nuevo ciclo AI-DLC iniciado por usuario ("usando AI-DLC impelmenta el SDD-3"). Etapas activas: Requirements Analysis (revisar SDD-03 + Q1/Q2/Q3 ya respondidas A/A/A) → Code Generation → Build and Test → Commit.
-- **2026-06-29T07:00Z — SDD-04 `sdd-04-repository-layer` COMPLETE**:
+- **2026-06-29T09:00Z — SDD-05 `sdd-05-auth-authorization` COMPLETE**:
+  - 25 archivos nuevos + 7 modificados. Q1=A (email/password), Q2=A (jose HS256), Q3=C (first-user-admin hibrido).
+  - Cloud Functions: createUser (first-user-admin en transaccion), inviteUser (admin only), createSession/clearSession (onRequest + Set-Cookie).
+  - Web: useAuth hook + auth-api + login/signup forms + middleware jose HS256.
+  - Verificacion E2E contra emuladores: 11/11 PASS (scripts/verify-auth.ts) — first-user-admin, session cookie con jose, signup rejection, admin invite, signin, clearSession, setUserRole, firestore rules, audit logs.
+  - Issues resueltos: projectId en admin SDK, secret compartido CF↔middleware, claim refresh post-invite.
+  - 65/65 unit tests + 1 skipped (firebase placeholder).
   - **23 archivos nuevos + 9 modificados**:
     - `packages/shared/src/schemas/common.ts` (primitives: emailSchema, slugSchema, timestampSchema, roleSchema, statusSchema)
     - `apps/web/repositories/errors.ts` (RepositoryError class, 6 códigos: NOT_FOUND, ALREADY_EXISTS, PERMISSION_DENIED, VALIDATION, INTERNAL, UNAVAILABLE)

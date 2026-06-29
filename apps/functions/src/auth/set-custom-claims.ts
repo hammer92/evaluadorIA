@@ -1,5 +1,6 @@
-import type { Role } from '../../../../packages/shared/src/schemas/users';
 import { getAdminAuth } from '../firebase-admin.js';
+
+type Role = 'admin' | 'recruiter' | 'expert';
 
 /**
  * Sets Custom User Claims for a Firebase Auth user.

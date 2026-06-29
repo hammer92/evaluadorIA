@@ -18,6 +18,12 @@ const serverEnvSchema = clientEnvSchema.extend({
   FIREBASE_ADMIN_PROJECT_ID: z.string().optional(),
   FIREBASE_ADMIN_CLIENT_EMAIL: z.string().optional(),
   FIREBASE_ADMIN_PRIVATE_KEY: z.string().optional(),
+  // HS256 secret para firmar/verificar la cookie de sesión __session.
+  // Generar con: openssl rand -base64 48. Mismo valor en middleware y
+  // Cloud Function createSession. NUNCA exponer al cliente (sin NEXT_PUBLIC_).
+  SESSION_COOKIE_SECRET: z
+    .string()
+    .min(32, 'SESSION_COOKIE_SECRET debe tener al menos 32 caracteres (HS256)'),
 });
 
 // =============================================================================
@@ -56,6 +62,12 @@ function readClient(): z.infer<typeof clientEnvSchema> {
 
 function readServer(): z.infer<typeof serverEnvSchema> {
   if (_server) return _server;
+  // En dev, si SESSION_COOKIE_SECRET no está seteado, generamos uno por
+  // sesión. Esto permite `pnpm dev` sin tocar .env. En prod/staging,
+  // Zod falla con error explícito.
+  if (!process.env['SESSION_COOKIE_SECRET'] && process.env['NEXT_PUBLIC_APP_ENV'] === 'dev') {
+    process.env['SESSION_COOKIE_SECRET'] = 'dev-secret-please-change-in-production-32+chars';
+  }
   _server = serverEnvSchema.parse({ ...readClient(), ...process.env });
   return _server;
 }

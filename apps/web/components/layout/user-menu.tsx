@@ -1,5 +1,9 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { toast } from 'sonner';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -9,8 +13,34 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { signOutCurrent } from '@/features/auth/api/auth-api';
+
+// =============================================================================
+// UserMenu — avatar + dropdown con signOut.
+// =============================================================================
+// `signOutCurrent` limpia Firebase Auth client + cookie httpOnly (vía CF).
+// Después del signOut, redirect a /login.
+// =============================================================================
 
 export function UserMenu() {
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await signOutCurrent();
+      toast.success('Sesión cerrada');
+      router.push('/login');
+      router.refresh();
+    } catch {
+      toast.error('No se pudo cerrar la sesión');
+    } finally {
+      setSigningOut(false);
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -25,7 +55,15 @@ export function UserMenu() {
         <DropdownMenuItem>Perfil</DropdownMenuItem>
         <DropdownMenuItem>Settings</DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>Salir</DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={(e) => {
+            e.preventDefault();
+            void handleSignOut();
+          }}
+          disabled={signingOut}
+        >
+          {signingOut ? 'Saliendo...' : 'Cerrar sesión'}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

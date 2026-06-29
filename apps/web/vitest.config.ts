@@ -20,6 +20,7 @@ export default defineConfig({
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: 'demo-test.appspot.com',
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '0',
       NEXT_PUBLIC_FIREBASE_APP_ID: '1:0:web:test',
+      SESSION_COOKIE_SECRET: 'test-secret-for-vitest-must-be-at-least-32-chars-long',
     },
   },
   resolve: {

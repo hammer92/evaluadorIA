@@ -15,7 +15,11 @@ PROJECT="${FIREBASE_PROJECT:-dev}"
 cmd_start_detached() {
   mkdir -p "$(dirname "$LOG_FILE")"
   rm -rf emulator-data
-  setsid bash -c "firebase emulators:start --project $PROJECT --import ./emulator-data --export-on-exit ./emulator-data > '$LOG_FILE' 2>&1" &
+  # SESSION_COOKIE_SECRET: requerido por la Cloud Function createSession
+  # (firma HS256 del JWT de sesión). Mismo secret que el middleware Next.js.
+  # En dev usamos un valor fijo; en staging/prod se setea via Secret Manager.
+  export SESSION_COOKIE_SECRET="${SESSION_COOKIE_SECRET:-dev-secret-please-change-in-production-32+chars}"
+  setsid bash -c "SESSION_COOKIE_SECRET='$SESSION_COOKIE_SECRET' firebase emulators:start --project $PROJECT --import ./emulator-data --export-on-exit ./emulator-data > '$LOG_FILE' 2>&1" &
   echo "Iniciado emuladores en background. Log: $LOG_FILE"
   echo "  UI: http://127.0.0.1:4000"
   echo "  Detener con: pnpm emulators:stop"

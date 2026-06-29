@@ -10,6 +10,11 @@ out/
 dist/
 build/
 /lib/
+apps/functions/lib/
+packages/shared/src/**/*.d.ts
+packages/shared/src/**/*.js
+packages/shared/src/**/*.js.map
+apps/web/.next/
 
 # Testing
 coverage/

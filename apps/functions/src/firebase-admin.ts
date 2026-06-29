@@ -12,7 +12,7 @@ import { getStorage, type Storage } from 'firebase-admin/storage';
 //   En staging/prod, exigimos credenciales completas vía env vars.
 // =============================================================================
 
-const EMULATOR_PROJECT_ID_FALLBACK = 'demo-admin-platform-dev';
+const EMULATOR_PROJECT_ID_FALLBACK = 'admin-platform-dev';
 
 let _app: App | undefined;
 
@@ -31,9 +31,13 @@ export function getAdminApp(): App {
   );
 
   if (isEmulator) {
-    _app = initializeApp({
-      projectId: process.env['FIREBASE_ADMIN_PROJECT_ID'] ?? EMULATOR_PROJECT_ID_FALLBACK,
-    });
+    // El functions emulator setea GCLOUD_PROJECT automáticamente. Si no,
+    // usamos FIREBASE_ADMIN_PROJECT_ID o el fallback.
+    const projectId =
+      process.env['GCLOUD_PROJECT'] ??
+      process.env['FIREBASE_ADMIN_PROJECT_ID'] ??
+      EMULATOR_PROJECT_ID_FALLBACK;
+    _app = initializeApp({ projectId });
   } else {
     const projectId = process.env['FIREBASE_ADMIN_PROJECT_ID'];
     const clientEmail = process.env['FIREBASE_ADMIN_CLIENT_EMAIL'];

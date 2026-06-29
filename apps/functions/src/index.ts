@@ -1,15 +1,21 @@
+import { clearSession } from './auth/clear-session.js';
+import { createSession } from './auth/create-session.js';
+import { createUser } from './auth/create-user.js';
+import { inviteUser } from './auth/invite-user.js';
+import { setUserRole } from './auth/set-custom-claims.js';
+
 /**
  * Firebase Cloud Functions (v2) — entrypoint.
  *
- * Real Cloud Functions (onCall, onRequest, triggers) are implemented in
- * SDD-06 per `aidlc-docs/inception/plans/execution-plan-sdd03.md`.
+ * Exporta:
+ *   - v1_auth_create_session  (onRequest) — set httpOnly cookie
+ *   - v1_auth_clear_session   (onRequest) — clear cookie
+ *   - v1_users_create         (onCall)    — first-user-admin bootstrap
+ *   - v1_users_invite         (onCall)    — admin invite
+ *   - setUserRole             (utility)   — set custom claims (auth helper)
  *
- * This placeholder exists so that:
- *   - `pnpm --filter @platform/functions build` produces a valid `lib/index.js`
- *   - `firebase deploy --only functions` has something to deploy (no-op)
- *   - The repo structure for SDD-06 is already in place.
+ * SDD-05: implementa el flujo de autenticación + autorización client-side
+ * (cookie session, custom claims, primer-user-admin).
  */
 
-export const noop = (): void => {
-  // placeholder until SDD-06
-};
+export { setUserRole, createSession, clearSession, createUser, inviteUser };

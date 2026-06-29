@@ -1,5 +1,6 @@
 'use client';
 
+import type { Role } from '@shared/schemas/common';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -8,10 +9,21 @@ import { NAV_ITEMS } from '@/config/constants';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui-store';
 
-export function Sidebar() {
+// =============================================================================
+// Sidebar — nav items filtrados por rol del user logueado.
+// =============================================================================
+// Cada NavItem puede tener `requiredRoles?: Role[]` para restringir acceso.
+// Sin `requiredRoles`, el item es visible para todos los roles autenticados.
+// =============================================================================
+
+export function Sidebar({ role }: { role: Role }) {
   const pathname = usePathname();
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const toggle = useUiStore((s) => s.toggleSidebar);
+
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => !item.requiredRoles || item.requiredRoles.includes(role),
+  );
 
   return (
     <aside
@@ -31,7 +43,7 @@ export function Sidebar() {
         </button>
       </div>
       <nav className="flex-1 p-2 space-y-1">
-        {NAV_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const active = pathname === item.href || pathname?.startsWith(item.href + '/');
           return (
             <Link
