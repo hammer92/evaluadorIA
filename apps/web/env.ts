@@ -37,8 +37,33 @@ const serverEnvSchema = clientEnvSchema.extend({
 let _client: z.infer<typeof clientEnvSchema> | undefined;
 let _server: z.infer<typeof serverEnvSchema> | undefined;
 
+// Dev defaults — placeholders seguros para correr contra emuladores locales
+// sin necesidad de crear .env.local. En staging/prod, los env vars DEBEN
+// estar seteados explícitamente (la validación lazy con safeParse fallaría).
+const DEV_FIREBASE_DEFAULTS: Record<string, string> = {
+  NEXT_PUBLIC_FIREBASE_API_KEY: 'fake-api-key-for-emulator',
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: 'admin-platform-dev.firebaseapp.com',
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: 'admin-platform-dev',
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: 'admin-platform-dev.appspot.com',
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '000000000000',
+  NEXT_PUBLIC_FIREBASE_APP_ID: '1:000000000000:web:0000000000000000000000',
+};
+
+function applyDevDefaults(): void {
+  // Aplica defaults si no estamos en staging/prod explícito. En esos envs,
+  // los valores DEBEN estar seteados via .env / Secret Manager.
+  const env = process.env['NEXT_PUBLIC_APP_ENV'];
+  if (env === 'staging' || env === 'prod') return;
+  for (const [key, value] of Object.entries(DEV_FIREBASE_DEFAULTS)) {
+    if (!process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+}
+
 function readClient(): z.infer<typeof clientEnvSchema> {
   if (_client) return _client;
+  applyDevDefaults();
   const parsed = clientEnvSchema.safeParse({
     NEXT_PUBLIC_APP_ENV: process.env['NEXT_PUBLIC_APP_ENV'],
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env['NEXT_PUBLIC_FIREBASE_API_KEY'],

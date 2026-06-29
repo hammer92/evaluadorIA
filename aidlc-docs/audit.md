@@ -377,3 +377,12 @@
 **Context**: BUGFIX - Error messages now show real error info, not generic 'unknown'
 
 ---
+
+## SDD-05 — Hotfix #4: dev defaults para env vars de Firebase
+
+**Timestamp**: 2026-06-29T11:15:00Z
+**User Input**: "Invalid client env: { NEXT_PUBLIC_FIREBASE_API_KEY: [Required], ... }"
+**AI Response**: "El dev server no tenia las env vars de Firebase seteadas. El usuario necesitaba crear un .env.local o tener los valores en el ambiente. Fix: (1) apps/web/env.ts: nuevo DEV_FIREBASE_DEFAULTS con placeholders seguros para emuladores (fake-api-key-for-emulator, admin-platform-dev, etc.). applyDevDefaults() los aplica si NEXT_PUBLIC_APP_ENV no es 'staging' o 'prod'. (2) .env.example: aclarar que en dev NO hace falta crear .env.local gracias a los defaults. En staging/prod los valores son OBLIGATORIOS via .env / Secret Manager. (3) env.test.ts: 4 tests que verifican (a) defaults se aplican en dev, (b) user values tienen prioridad, (c) NEXT_PUBLIC_APP_ENV default = dev, (d) en prod sin env vars falla la validacion. Resultado: typecheck PASS, lint PASS, 70/70 tests PASS (4 nuevos), build PASS. Ahora 'pnpm dev' funciona sin tener que crear .env.local."
+**Context**: DX - pnpm dev funciona out-of-the-box sin crear .env.local
+
+---
