@@ -476,3 +476,12 @@
 **Context**: BUGFIX - Tailwind content array missing features/, causing class purge
 
 ---
+
+## Stitch Redesign — Hotfix: dev session secret not visible to middleware
+
+**Timestamp**: 2026-06-29T15:45:00Z
+**User Input**: "me sale este mensaje El servidor no esta configurado correctamente. Contacta al admin."
+**AI Response**: "Bug: middleware edge runtime lee process.env.SESSION_COOKIE_SECRET directo, pero env.ts aplicaba el dev default lazy dentro de readServer() — el middleware nunca invoca readServer() y por tanto veia undefined. Resultado: cualquier acceso a /admin redirigia a /login?error=server-misconfigured en lugar de /login?next=/admin. Fix: extraer dev defaults a apps/web/lib/env-dev-defaults.ts (modulo Edge-compatible, sin zod/Proxy/server-only, side-effect al module load). middleware.ts lo importa para ejecutar el side-effect eagerly. env.ts reusa applyDevEnvDefaults(). En staging/prod no se aplica el default — Zod sigue fallando con error explicito si falta. Verificacion live: GET /admin ahora retorna 307 -> /login?next=%2Fadmin (correcto). typecheck/lint/test 71/71/build todos PASS. Commit a743b0b."
+**Context**: BUGFIX - Middleware sees undefined SESSION_COOKIE_SECRET in dev because env.ts default was lazy
+
+---

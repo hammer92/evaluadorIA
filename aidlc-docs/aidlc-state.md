@@ -79,6 +79,8 @@
 - [x] Build and Test — 2026-06-29 (sdd-05-auth-authorization) — 65/65 unit + 11/11 E2E emuladores
 - [x] Code Generation — 2026-06-29 (stitch-redesign-auth)
 - [x] Build and Test — 2026-06-29 (stitch-redesign-auth) — typecheck/lint/test 71/71/build PASS
+- [x] Bugfix — 2026-06-29 (tailwind content features/)
+- [x] Bugfix — 2026-06-29 (eager SESSION_COOKIE_SECRET for middleware)
 
 ### OPERATIONS PHASE
 
