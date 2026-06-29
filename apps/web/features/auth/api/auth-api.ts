@@ -3,12 +3,10 @@
 import { clientEnv } from '@/env';
 import {
   auth,
-  createUserWithEmailAndPassword,
   functions,
   httpsCallable,
   signInWithEmailAndPassword,
   signOut,
-  updateProfile,
   type User,
 } from '@/lib/firebase/auth';
 
@@ -17,32 +15,39 @@ import {
 // =============================================================================
 // Q1=A (email/password only). Q3=C (híbrido: primer user admin, resto por invitación).
 //
-// Para tests, todas las llamadas al SDK Firebase se hacen a través de
-// `@/lib/firebase/auth` re-exports, que se pueden mockear con vi.mock().
+// El flow de signup es SIMPLE:
+//   1. signUpWithEmail({ email, password, displayName })
+//      → Llama CF v1_users_create (pública, no requiere auth previa) con el
+//        form data. La CF crea el user en Auth via Admin SDK + setea claims
+//        (admin si first-user, rejected si no).
+//   2. Si la CF retorna OK → signInWithEmailAndPassword (login normal)
+//   3. createSession(user) → llama CF onRequest que setea cookie httpOnly
+//   4. router.push('/admin')
+//
+// NO usamos createUserWithEmailAndPassword directo del SDK porque
+// (a) requiere que el cliente ya esté autenticado para llamar la CF que
+//     decide first-user-admin (raro), (b) hace rollback complejo si la CF
+//     rechaza. Es más limpio delegar todo a la CF.
 // =============================================================================
 
 const COOKIE_NAME = '__session';
 
 function getFunctionsBase(): string {
-  // En dev/staging, el emulator corre en localhost:5001.
-  // En prod, NEXT_PUBLIC_API_BASE_URL apunta a las functions desplegadas.
   if (clientEnv.NEXT_PUBLIC_API_BASE_URL) {
-    // Si el base URL ya incluye /<project>/<region>, lo usamos tal cual.
     return clientEnv.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, '');
   }
   if (clientEnv.NEXT_PUBLIC_APP_ENV === 'dev') {
     return 'http://127.0.0.1:5001/admin-platform-dev/us-central1';
   }
-  // Fallback vacío — el fetch fallará con un mensaje claro.
   return '';
 }
 
 function getSessionEndpoint(): string {
-  return `${getFunctionsBase()}/v1_auth_create_session`;
+  return `${getFunctionsBase()}/createSession`;
 }
 
 function getLogoutEndpoint(): string {
-  return `${getFunctionsBase()}/v1_auth_clear_session`;
+  return `${getFunctionsBase()}/clearSession`;
 }
 
 export class AuthApiError extends Error {
@@ -56,8 +61,7 @@ export class AuthApiError extends Error {
 }
 
 /**
- * SignIn con email + password. Devuelve el `User` de Firebase Auth.
- * No setea cookie — eso lo hace la página vía `fetch(SESSION_ENDPOINT)`.
+ * SignIn con email + password (user YA EXISTE en Auth).
  */
 export async function signInWithEmail(email: string, password: string): Promise<User> {
   const cred = await signInWithEmailAndPassword(auth, email, password);
@@ -65,40 +69,35 @@ export async function signInWithEmail(email: string, password: string): Promise<
 }
 
 /**
- * SignUp público. Q3=C: si es el primer user del sistema, se asigna role='admin'
- * server-side. Resto: rejected (debe usar invitación).
+ * SignUp público: delega TODO a la Cloud Function createUser (que es
+ * server-authoritative para first-user-admin y para crear el Auth user
+ * con Admin SDK).
  *
- * Retorna `{ user, isFirstUser }` para que la UI sepa si es admin bootstrap.
+ * Flow:
+ *   1. CF createUser({ email, password, displayName }) - pública, no auth
+ *   2. Si OK → signInWithEmailAndPassword (login normal)
+ *   3. createSession (cookie httpOnly)
  */
 export async function signUpWithEmail(input: {
   email: string;
   password: string;
   displayName: string;
 }): Promise<{ user: User; isFirstUser: boolean }> {
-  const cred = await createUserWithEmailAndPassword(auth, input.email, input.password);
-  await updateProfile(cred.user, { displayName: input.displayName });
-
-  // Force refresh del idToken para asegurar que esté vigente y el SDK de
-  // Functions lo pueda leer al hacer la llamada.
-  await cred.user.getIdToken(true);
-
-  // Llama a la Cloud Function v1_users_create vía httpsCallable.
-  // El SDK agrega automáticamente:
-  //   - Header Authorization: Bearer <idToken del current user>
-  //   - Envelope { data: {...} }
-  // La CF obtiene el caller via req.auth.token (NO pedimos idToken en body).
-  // Si la CF falla con permission-denied (no es first user), hacemos rollback
-  // del user recién creado para no dejar cuentas colgadas.
+  // 1. Crear user via CF (server-authoritative)
   const createUserFn = httpsCallable<
-    { displayName: string },
+    { email: string; password: string; displayName: string },
     { uid: string; role: string; isFirstUser: boolean }
   >(functions, 'createUser');
+
+  let result: { uid: string; role: string; isFirstUser: boolean };
   try {
-    const result = await createUserFn({ displayName: input.displayName });
-    return { user: cred.user, isFirstUser: result.data.isFirstUser };
+    const cfResult = await createUserFn({
+      email: input.email,
+      password: input.password,
+      displayName: input.displayName,
+    });
+    result = cfResult.data;
   } catch (e) {
-    // Rollback: borrar el user recién creado.
-    await cred.user.delete().catch(() => undefined);
     const err = e as { code?: string; message?: string; details?: unknown };
     console.error('[signUpWithEmail] createUser CF failed:', {
       code: err.code,
@@ -110,6 +109,11 @@ export async function signUpWithEmail(input: {
       err.message ?? 'No se pudo completar el registro',
     );
   }
+
+  // 2. Login normal (para tener una sesión Firebase Auth + poder llamar createSession)
+  const user = await signInWithEmail(input.email, input.password);
+
+  return { user, isFirstUser: result.isFirstUser };
 }
 
 /**
@@ -118,7 +122,7 @@ export async function signUpWithEmail(input: {
  * firma un JWT con jose HS256, y setea la cookie via Set-Cookie.
  */
 export async function createSession(user: User): Promise<boolean> {
-  const idToken = await user.getIdToken();
+  const idToken = await user.getIdToken(true);
   const res = await fetch(getSessionEndpoint(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -142,8 +146,4 @@ export async function signOutCurrent(): Promise<void> {
   );
 }
 
-/**
- * Helper para tests: setea una cookie de sesión directamente (sin pasar por
- * Cloud Function). Solo se usa en `verify-auth.ts` con emuladores.
- */
 export { COOKIE_NAME };

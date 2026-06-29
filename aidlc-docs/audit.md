@@ -404,3 +404,12 @@
 **Context**: BUGFIX - Force idToken refresh ensures the SDK attaches a valid bearer to the CF call
 
 ---
+
+## SDD-05 — Refactor #7: createUser es PÚBLICA, cliente no necesita estar logueado
+
+**Timestamp**: 2026-06-29T12:30:00Z
+**User Input**: "para el regustro de usuario no se necesita el token porque no tienen sentido tener login para registrarse"
+**AI Response**: "Refactor importante del flow de signup. Antes el cliente hacia: (1) createUserWithEmailAndPassword (ya logueaba al user), (2) getIdToken(true), (3) httpsCallable(createUser) con el token. Esto era conceptual mente raro porque el user tenia que estar 'ya logueado' para registrarse. Ahora: el cliente solo llama createUser CF con {email, password, displayName} y la CF es server-authoritative: (1) crea user en Auth via Admin SDK, (2) cuenta users en transaccion (first-user-admin), (3) setea custom claims, (4) crea user doc en Firestore, (5) audit log, (6) rollback si no es first user. Despues de OK, el cliente hace signInWithEmailAndPassword normal para obtener sesion. Cambios: (1) apps/functions/src/auth/create-user.ts: ahora publica, valida email/password/displayName, usa Admin SDK createUser, transaccion con rollback. (2) auth-api.ts: signUpWithEmail solo llama CF + signIn (sin createUserWithEmailAndPassword). (3) auth.ts: re-exports sin createUserWithEmailAndPassword ni updateProfile (ya no se usan). (4) verify-auth.ts: tests actualizados. (5) auth-api.test.ts: 3 tests actualizados. Verificacion: typecheck/lint/test/verify:auth/build todos OK. Curl manual: POST /createUser sin Authorization header -> 200 con role=admin, user creado en Auth, doc en Firestore, claims seteados. Flow E2E completo: 11/11 PASS."
+**Context**: REFACTOR - Signup flow simplificado: cliente llama solo 1 CF, no necesita estar logueado
+
+---

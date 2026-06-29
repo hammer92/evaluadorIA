@@ -65,11 +65,11 @@ async function step(name: string, fn: () => Promise<void>): Promise<void> {
   process.stdout.write(`  ${name} ... `);
   try {
     await fn();
-    console.log('\x1b[32mOK\x1b[0m');
+    console.warn('\x1b[32mOK\x1b[0m');
     _pass++;
   } catch (e) {
-    console.log('\x1b[31mFAIL\x1b[0m');
-    console.log(`    ${(e as Error).message}`);
+    console.warn('\x1b[31mFAIL\x1b[0m');
+    console.warn(`    ${(e as Error).message}`);
     _fail++;
   }
 }
@@ -117,13 +117,11 @@ async function callOnRequest<T>(
   return { status: res.status, data, setCookie };
 }
 
-async function createAuthUser(
+async function signInForToken(
   email: string,
   password: string,
 ): Promise<{ uid: string; idToken: string }> {
-  // Crea user via Admin SDK + signIn via REST para obtener idToken.
-  // El emulador acepta signInWithPassword en el REST endpoint.
-  await auth.createUser({ email, password });
+  // SignIn via REST (no createUser — la CF createUser se encarga en el flow real).
   const res = await fetch(
     `http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key`,
     {
@@ -144,10 +142,10 @@ async function createAuthUser(
 // =============================================================================
 
 async function main(): Promise<void> {
-  console.log('\n\x1b[1m=== verify-auth: SDD-05 integration test suite ===\x1b[0m\n');
+  console.warn('\n\x1b[1m=== verify-auth: SDD-05 integration test suite ===\x1b[0m\n');
 
   // Limpiar state
-  console.log('[setup] Limpiando usuarios de tests previos…');
+  console.warn('[setup] Limpiando usuarios de tests previos…');
   try {
     const list = await auth.listUsers();
     for (const u of list.users) {
@@ -156,7 +154,7 @@ async function main(): Promise<void> {
       }
     }
   } catch (e) {
-    console.log(`  (warn) No se pudo limpiar: ${(e as Error).message}`);
+    console.warn(`  (warn) No se pudo limpiar: ${(e as Error).message}`);
   }
 
   // Limpiar users collection
@@ -171,47 +169,36 @@ async function main(): Promise<void> {
   }
 
   let firstUser: { uid: string; idToken: string } | undefined;
-  let secondUser: { uid: string; idToken: string } | undefined;
   let sessionCookie: string | undefined;
 
   // === Test 1: First user signup → role='admin' ===
-  console.log('\n[1] First user signup (bootstrap admin)');
+  // La CF createUser es PUBLICA: el cliente no necesita estar autenticado.
+  // La CF crea el user en Auth via Admin SDK + setea claims + crea doc.
+  console.warn('\n[1] First user signup (bootstrap admin)');
   await step('createUser CF assigns role=admin for first user', async () => {
     const email = `first-admin@verify.test`;
     const password = '12345678';
-    firstUser = await createAuthUser(email, password);
+    // NO pre-creamos el user: la CF lo hace via Admin SDK
     const result = await callOnCall<{ uid: string; role: string; isFirstUser: boolean }>(
       'createUser',
-      { displayName: 'First Admin' },
-      firstUser.idToken,
+      { email, password, displayName: 'First Admin' },
     );
     assertEq(result.role, 'admin', 'first user role');
     assertEq(result.isFirstUser, true, 'isFirstUser flag');
+    // Ahora hacemos signIn para obtener el idToken (igual que el cliente)
+    firstUser = await signInForToken(email, password);
     assertEq(result.uid, firstUser.uid, 'uid match');
   });
 
   // === Test 2: Claims set + createSession returns cookie ===
-  console.log('\n[2] Session cookie');
+  console.warn('\n[2] Session cookie');
   await step('createSession returns Set-Cookie with __session JWT', async () => {
     assert(firstUser, 'firstUser defined');
     // Re-signin el admin para refrescar idToken con role=admin claim
     // (createUser CF setea custom claims vía Admin SDK, pero el idToken
     // original fue emitido antes. Necesitamos un token con los claims nuevos).
-    const adminReSignin = await fetch(
-      `http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: 'first-admin@verify.test',
-          password: '12345678',
-          returnSecureToken: true,
-        }),
-      },
-    );
-    assert(adminReSignin.ok, 'admin re-signin ok');
-    const adminJson = (await adminReSignin.json()) as { idToken: string };
-    const adminIdTokenWithClaims = adminJson.idToken;
+    const adminReSignin = await signInForToken('first-admin@verify.test', '12345678');
+    const adminIdTokenWithClaims = adminReSignin.idToken;
     const { status, setCookie } = await callOnRequest('createSession', {
       idToken: adminIdTokenWithClaims,
     });
@@ -224,7 +211,7 @@ async function main(): Promise<void> {
   });
 
   // === Test 3: verifySessionCookie + jose roundtrip ===
-  console.log('\n[3] JWT verification with jose');
+  console.warn('\n[3] JWT verification with jose');
   await step('verifySessionCookie returns valid payload', async () => {
     assert(sessionCookie, 'sessionCookie defined');
     const payload = await verifySessionCookieWithSecret(
@@ -251,16 +238,14 @@ async function main(): Promise<void> {
   });
 
   // === Test 4: Second user signup sin invitación → rejected ===
-  console.log('\n[4] Second user signup rejected (Q3=C)');
-  await step('createUser CF rejects second user without invite', async () => {
+  console.warn('\n[4] Second user signup rejected (Q3=C)');
+  await step('createUser CF rejects second user (count > 0)', async () => {
     const email = `second-wo-invite@verify.test`;
-    secondUser = await createAuthUser(email, '12345678');
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    headers['Authorization'] = `Bearer ${secondUser.idToken}`;
+    const password = '12345678';
     const res = await fetch(`${FUNCTIONS_BASE}/createUser`, {
       method: 'POST',
-      headers,
-      body: JSON.stringify({ data: { displayName: 'Second' } }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: { email, password, displayName: 'Second' } }),
     });
     assert(res.status === 403, `expected 403, got ${res.status}`);
     const body = (await res.json()) as { error?: { message: string } };
@@ -272,24 +257,14 @@ async function main(): Promise<void> {
   });
 
   // === Test 5: Admin invite user ===
-  console.log('\n[5] Admin inviteUser CF');
+  console.warn('\n[5] Admin inviteUser CF');
   let invitedUid: string | undefined;
   await step('inviteUser (admin) creates Auth user + Firestore doc + claims', async () => {
     assert(firstUser, 'firstUser defined');
     // IMPORTANTE: re-signIn el admin para refrescar idToken con role=admin claim
     // (los claims se setearon via setCustomUserClaims después del signin inicial).
-    const adminEmail = 'first-admin@verify.test';
-    const adminSigninRes = await fetch(
-      `http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: adminEmail, password: '12345678', returnSecureToken: true }),
-      },
-    );
-    assert(adminSigninRes.ok, 'admin re-signin ok');
-    const adminJson = (await adminSigninRes.json()) as { idToken: string };
-    const adminTokenWithClaims = adminJson.idToken;
+    const adminReSignin = await signInForToken('first-admin@verify.test', '12345678');
+    const adminTokenWithClaims = adminReSignin.idToken;
     const result = await callOnCall<{ uid: string; email: string; role: string }>(
       'inviteUser',
       {
@@ -311,26 +286,14 @@ async function main(): Promise<void> {
   });
 
   // === Test 6: Invited user signs in (login con creds) ===
-  console.log('\n[6] Invited user signin');
+  console.warn('\n[6] Invited user signin');
   await step('invited user can signIn with shared credentials', async () => {
     assert(invitedUid, 'invitedUid defined');
-    const res = await fetch(
-      `http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: 'invited@verify.test',
-          password: '12345678',
-          returnSecureToken: true,
-        }),
-      },
-    );
-    assert(res.ok, 'signin ok');
+    await signInForToken('invited@verify.test', '12345678');
   });
 
   // === Test 7: clearSession borra cookie ===
-  console.log('\n[7] clearSession');
+  console.warn('\n[7] clearSession');
   await step('clearSession sets Max-Age=0', async () => {
     const { setCookie } = await callOnRequest('clearSession', {});
     assert(setCookie, 'setCookie present');
@@ -338,7 +301,7 @@ async function main(): Promise<void> {
   });
 
   // === Test 8: setUserRole actualiza claims ===
-  console.log('\n[8] setUserRole updates claims');
+  console.warn('\n[8] setUserRole updates claims');
   await step('setUserRole(invited, recruiter) updates custom claims', async () => {
     assert(invitedUid, 'invitedUid defined');
     await setUserRole(invitedUid, 'recruiter');
@@ -347,7 +310,7 @@ async function main(): Promise<void> {
   });
 
   // === Test 9: Firestore rules con custom claims ===
-  console.log('\n[9] Firestore rules with custom claims');
+  console.warn('\n[9] Firestore rules with custom claims');
   await step('admin can read /users/{uid}', async () => {
     assert(firstUser?.idToken, 'firstUser.idToken defined');
     // Firestore REST API: GET /v1/projects/{project}/databases/(default)/documents/users/{uid}
@@ -359,7 +322,7 @@ async function main(): Promise<void> {
   });
 
   // === Test 10: Audit log entries ===
-  console.log('\n[10] Audit logs');
+  console.warn('\n[10] Audit logs');
   await step('user.created entries exist (first + invited)', async () => {
     const auditSnap = await db.collection('audit_logs').get();
     // Esperado: 2 (first user created + invited user created)
@@ -371,7 +334,7 @@ async function main(): Promise<void> {
   });
 
   // === Summary ===
-  console.log(`\n\x1b[1m=== Result: ${_pass} passed, ${_fail} failed ===\x1b[0m\n`);
+  console.warn(`\n\x1b[1m=== Result: ${_pass} passed, ${_fail} failed ===\x1b[0m\n`);
   if (_fail > 0) {
     process.exit(1);
   }

@@ -8,11 +8,9 @@
 // =============================================================================
 
 import {
-  createUserWithEmailAndPassword,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut as fbSignOut,
-  updateProfile,
   type Auth,
   type User,
 } from 'firebase/auth';
@@ -21,12 +19,5 @@ import { httpsCallable, type Functions } from 'firebase/functions';
 import { auth, functions } from './client';
 
 export { auth, functions };
-export {
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  fbSignOut as signOut,
-  updateProfile,
-  httpsCallable,
-};
+export { onAuthStateChanged, signInWithEmailAndPassword, fbSignOut as signOut, httpsCallable };
 export type { Auth, User, Functions };
