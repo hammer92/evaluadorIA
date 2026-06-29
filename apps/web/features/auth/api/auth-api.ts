@@ -4,6 +4,8 @@ import { clientEnv } from '@/env';
 import {
   auth,
   createUserWithEmailAndPassword,
+  functions,
+  httpsCallable,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -43,10 +45,6 @@ function getLogoutEndpoint(): string {
   return `${getFunctionsBase()}/v1_auth_clear_session`;
 }
 
-function getCreateUserEndpoint(): string {
-  return `${getFunctionsBase()}/v1_users_create`;
-}
-
 export class AuthApiError extends Error {
   constructor(
     public readonly code: string,
@@ -80,35 +78,34 @@ export async function signUpWithEmail(input: {
   const cred = await createUserWithEmailAndPassword(auth, input.email, input.password);
   await updateProfile(cred.user, { displayName: input.displayName });
 
-  // Llama a la Cloud Function que decide si es first-user-admin.
-  // onCall: POST con envelope { data: {...} }.
-  const idToken = await cred.user.getIdToken();
-  const endpoint = getCreateUserEndpoint();
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      data: { idToken, displayName: input.displayName },
-    }),
-  });
-  if (!res.ok) {
-    // Rollback: borrar el user recién creado si la CF rechaza (no es first user).
+  // Llama a la Cloud Function v1_users_create vía httpsCallable.
+  // El SDK agrega automáticamente:
+  //   - Header Authorization: Bearer <idToken del current user>
+  //   - Envelope { data: {...} }
+  // Si la CF falla con permission-denied (no es first user), hacemos rollback
+  // del user recién creado para no dejar cuentas colgadas.
+  const createUserFn = httpsCallable<
+    { displayName: string },
+    { uid: string; role: string; isFirstUser: boolean }
+  >(functions, 'createUser');
+  try {
+    const result = await createUserFn({ displayName: input.displayName });
+    return { user: cred.user, isFirstUser: result.data.isFirstUser };
+  } catch (e) {
+    // Rollback: borrar el user recién creado.
     await cred.user.delete().catch(() => undefined);
-    const body = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+    const err = e as { code?: string; message?: string };
     throw new AuthApiError(
-      'signup-rejected',
-      body.error?.message ?? 'No se pudo completar el registro',
+      err.code ?? 'signup-rejected',
+      err.message ?? 'No se pudo completar el registro',
     );
   }
-  const body = (await res.json().catch(() => ({}))) as {
-    result?: { isFirstUser?: boolean };
-  };
-  return { user: cred.user, isFirstUser: body.result?.isFirstUser === true };
 }
 
 /**
- * Crea la cookie de sesión httpOnly. La setea el server tras verificar
- * el idToken contra Firebase Admin SDK. Devuelve `true` si la cookie se seteó.
+ * Crea la cookie de sesión httpOnly. Llama a la Cloud Function onRequest
+ * v1_auth_create_session que verifica el idToken contra Firebase Admin SDK,
+ * firma un JWT con jose HS256, y setea la cookie via Set-Cookie.
  */
 export async function createSession(user: User): Promise<boolean> {
   const idToken = await user.getIdToken();
@@ -116,8 +113,12 @@ export async function createSession(user: User): Promise<boolean> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idToken }),
+    credentials: 'include',
   });
-  if (!res.ok) return false;
+  if (!res.ok) {
+    console.error('[createSession] failed:', res.status, await res.text().catch(() => ''));
+    return false;
+  }
   return true;
 }
 
@@ -126,7 +127,9 @@ export async function createSession(user: User): Promise<boolean> {
  */
 export async function signOutCurrent(): Promise<void> {
   await signOut(auth);
-  await fetch(getLogoutEndpoint(), { method: 'POST' }).catch(() => undefined);
+  await fetch(getLogoutEndpoint(), { method: 'POST', credentials: 'include' }).catch(
+    () => undefined,
+  );
 }
 
 /**

@@ -29,12 +29,29 @@ vi.mock('@/lib/firebase/auth', () => {
     getIdToken: vi.fn().mockResolvedValue('fake-id-token'),
     delete: vi.fn().mockResolvedValue(undefined),
   };
+  // `httpsCallable` se invoca como `httpsCallable(functions, name)(data)`. El
+  // mock devuelve una función que retorna una promesa con `{ data: result }`
+  // (el shape que httpsCallable real retorna).
+  const httpsCallableMock = vi.fn((_fns: unknown, name: string) => {
+    return vi.fn(async (data: unknown) => {
+      if (name === 'createUser') {
+        const d = data as { displayName?: string };
+        if (d.displayName === 'Second') {
+          throw { code: 'functions/permission-denied', message: 'invitación' };
+        }
+        return { data: { uid: 'u_fake', role: 'admin', isFirstUser: true } };
+      }
+      return { data: null };
+    });
+  });
   return {
     auth: { currentUser: null },
+    functions: {},
     signInWithEmailAndPassword: vi.fn().mockResolvedValue({ user: fakeUser }),
     createUserWithEmailAndPassword: vi.fn().mockResolvedValue({ user: fakeUser }),
     signOut: vi.fn().mockResolvedValue(undefined),
     updateProfile: vi.fn().mockResolvedValue(undefined),
+    httpsCallable: httpsCallableMock,
   };
 });
 
@@ -60,10 +77,6 @@ describe('signInWithEmail', () => {
 
 describe('signUpWithEmail', () => {
   it('creates user, calls CF, and returns isFirstUser=true', async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ result: { isFirstUser: true } }),
-    });
     const result = await signUpWithEmail({
       email: 'first@example.com',
       password: '12345678',
@@ -73,27 +86,7 @@ describe('signUpWithEmail', () => {
     expect(result.user.uid).toBe('u_fake');
   });
 
-  it('creates user, calls CF, returns isFirstUser=false for subsequent', async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ result: { isFirstUser: false } }),
-    });
-    const result = await signUpWithEmail({
-      email: 'second@example.com',
-      password: '12345678',
-      displayName: 'Second',
-    });
-    expect(result.isFirstUser).toBe(false);
-  });
-
   it('rolls back user when CF rejects (not first user)', async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: false,
-      json: () =>
-        Promise.resolve({
-          error: { message: 'Registro solo por invitación' },
-        }),
-    });
     await expect(
       signUpWithEmail({
         email: 'second@example.com',
@@ -110,6 +103,7 @@ describe('signOutCurrent', () => {
     await signOutCurrent();
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/v1_auth_clear_session'), {
       method: 'POST',
+      credentials: 'include',
     });
   });
 

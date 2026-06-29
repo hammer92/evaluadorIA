@@ -350,3 +350,12 @@
 **Context**: CONSTRUCTION - Build and Test SDD-05 (E2E 11/11 PASS con emuladores)
 
 ---
+
+## SDD-05 — Hotfix: cliente usa httpsCallable + functions emulator
+
+**Timestamp**: 2026-06-29T10:30:00Z
+**User Input**: "al intentar usar la pantalla de registro se rellenan los campos pero no se activa el boton de login"
+**AI Response**: "Bug en auth-api.ts: signUpWithEmail llamaba la CF v1_users_create via fetch() sin header Authorization: Bearer <idToken>. Las CF onCall REQUIEREN ese header para autenticar al caller (Firebase Functions SDK lo agrega automaticamente via httpsCallable). Sin el header, la CF devuelve 401 'unauthenticated' y el form se queda colgado (loader aparece pero el await falla, la promesa nunca resuelve). Fix: (1) lib/firebase/client.ts: agregar export 'functions' + ensureFunctions() + connectFunctionsEmulator en dev. (2) lib/firebase/auth.ts: re-exportar functions y httpsCallable. (3) auth-api.ts: usar httpsCallable(functions, 'createUser') en vez de fetch manual - el SDK agrega el idToken al header automaticamente. (4) auth-api.test.ts: actualizar mocks para que httpsCallable retorne {data: result} (el shape real). Resultado: typecheck PASS, lint PASS, 64/64 unit tests PASS, build PASS, verify:auth 11/11 PASS (script server-side no afectado - sigue usando fetch directo a las URLs de las CFs)."
+**Context**: BUGFIX - Cliente auth flow no funcionaba por falta de Authorization header en llamada a CF onCall
+
+---

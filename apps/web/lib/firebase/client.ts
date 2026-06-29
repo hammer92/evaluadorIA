@@ -2,6 +2,7 @@ import { getApps, getApp, initializeApp, type FirebaseApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore, type Firestore } from 'firebase/firestore';
 import { connectStorageEmulator, getStorage, type FirebaseStorage } from 'firebase/storage';
+import { connectFunctionsEmulator, getFunctions, type Functions } from 'firebase/functions';
 
 import { clientEnv } from '@/env';
 
@@ -49,6 +50,7 @@ function ensureApp(): FirebaseApp {
 let _auth: Auth | undefined;
 let _db: Firestore | undefined;
 let _storage: FirebaseStorage | undefined;
+let _functions: Functions | undefined;
 
 function ensureAuth(): Auth {
   if (!_auth) _auth = getAuth(ensureApp());
@@ -62,6 +64,10 @@ function ensureStorage(): FirebaseStorage {
   if (!_storage) _storage = getStorage(ensureApp());
   return _storage;
 }
+function ensureFunctions(): Functions {
+  if (!_functions) _functions = getFunctions(ensureApp(), 'us-central1');
+  return _functions;
+}
 
 // Conectar a emuladores una sola vez (idempotente via guards internos del SDK).
 let _emulatorsConnected = false;
@@ -72,6 +78,7 @@ function connectEmulatorsOnce(): void {
   const a = ensureAuth();
   const d = ensureDb();
   const s = ensureStorage();
+  const fns = ensureFunctions();
   if (!(a as unknown as { _emulatorConfig?: unknown })._emulatorConfig) {
     connectAuthEmulator(a, 'http://127.0.0.1:9099', { disableWarnings: true });
   }
@@ -80,6 +87,9 @@ function connectEmulatorsOnce(): void {
   }
   if (!(s as unknown as { _emulatorConfig?: unknown })._emulatorConfig) {
     connectStorageEmulator(s, '127.0.0.1', 9199);
+  }
+  if (!(fns as unknown as { _emulatorConfig?: unknown })._emulatorConfig) {
+    connectFunctionsEmulator(fns, '127.0.0.1', 5001);
   }
   _emulatorsConnected = true;
 }
@@ -99,6 +109,7 @@ export const firebaseApp = lazyProxy<FirebaseApp>(ensureApp);
 export const auth = lazyProxy<Auth>(ensureAuth);
 export const db = lazyProxy<Firestore>(ensureDb);
 export const storage = lazyProxy<FirebaseStorage>(ensureStorage);
+export const functions = lazyProxy<Functions>(ensureFunctions);
 
 // Test helpers
 export function __resetFirebaseClient(): void {
@@ -106,6 +117,7 @@ export function __resetFirebaseClient(): void {
   _auth = undefined;
   _db = undefined;
   _storage = undefined;
+  _functions = undefined;
   _emulatorsConnected = false;
 }
 
@@ -114,7 +126,8 @@ export function __setFirebaseApp(app: FirebaseApp): void {
   _auth = getAuth(app);
   _db = getFirestore(app);
   _storage = getStorage(app);
+  _functions = getFunctions(app, 'us-central1');
   _emulatorsConnected = false;
 }
 
-export type { FirebaseApp, Auth, Firestore, FirebaseStorage };
+export type { FirebaseApp, Auth, Firestore, FirebaseStorage, Functions };

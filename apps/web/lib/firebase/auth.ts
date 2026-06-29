@@ -1,9 +1,10 @@
 // =============================================================================
-// Firebase Auth — re-exports nombrados (único punto de acceso desde el cliente).
+// Firebase Auth + Functions — re-exports nombrados (único punto de acceso desde el cliente).
 // =============================================================================
 // Cero lógica. Ver SDD-05 spec sección 4.2.
-// Las funciones del SDK se importan de `firebase/auth` y se re-exportan
-// para que `features/auth/api/auth-api.ts` tenga un único path de import.
+// Las funciones del SDK se importan de `firebase/auth` y `firebase/functions`
+// y se re-exportan para que `features/auth/api/auth-api.ts` tenga un único
+// path de import.
 // =============================================================================
 
 import {
@@ -15,15 +16,17 @@ import {
   type Auth,
   type User,
 } from 'firebase/auth';
+import { httpsCallable, type Functions } from 'firebase/functions';
 
-import { auth } from './client';
+import { auth, functions } from './client';
 
-export { auth };
+export { auth, functions };
 export {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   fbSignOut as signOut,
   updateProfile,
+  httpsCallable,
 };
-export type { Auth, User };
+export type { Auth, User, Functions };
