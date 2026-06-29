@@ -78,6 +78,10 @@ export async function signUpWithEmail(input: {
   const cred = await createUserWithEmailAndPassword(auth, input.email, input.password);
   await updateProfile(cred.user, { displayName: input.displayName });
 
+  // Force refresh del idToken para asegurar que esté vigente y el SDK de
+  // Functions lo pueda leer al hacer la llamada.
+  await cred.user.getIdToken(true);
+
   // Llama a la Cloud Function v1_users_create vía httpsCallable.
   // El SDK agrega automáticamente:
   //   - Header Authorization: Bearer <idToken del current user>

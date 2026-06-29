@@ -36,6 +36,8 @@ export const createUser = onCall<CreateUserInput, Promise<CreateUserOutput>>(
   async (req) => {
     // 1. Validar auth
     if (!req.auth?.token) {
+      // eslint-disable-next-line no-console
+      console.log('[createUser] no auth — req.context?', typeof req);
       throw new HttpsError('unauthenticated', 'Necesitás estar autenticado');
     }
     const uid = req.auth.token.uid;

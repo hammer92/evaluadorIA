@@ -395,3 +395,12 @@
 **Context**: BUGFIX - CF ahora usa patron correcto de onCall (req.auth.token) en vez de pedir idToken en body
 
 ---
+
+## SDD-05 — Hotfix #6: force idToken refresh antes de createUser CF
+
+**Timestamp**: 2026-06-29T12:00:00Z
+**User Input**: "Request URL ... 401 Unauthorized"
+**AI Response**: "El 401 es porque el idToken del current user no estaba siendo adjuntado al header Authorization en la llamada del cliente via httpsCallable. Causa probable: despues de createUserWithEmailAndPassword, el idToken cacheado del cliente no estaba siendo refrescado a tiempo para la llamada a la CF. El Functions emulator recibe la request sin header Authorization -> req.auth undefined -> HttpsError(unauthenticated) -> 401. Fix: (1) auth-api.ts: agregar 'await cred.user.getIdToken(true)' despues de createUserWithEmailAndPassword y updateProfile, para forzar refresh del idToken. El parametro true le pide al SDK de Auth que obtenga un token fresco del servidor (en vez de usar el cacheado). Esto asegura que el SDK de Functions pueda leer el token vigente cuando hace la llamada httpsCallable. (2) create-user.ts: simplificado el log de debug. Verificacion: typecheck/lint/test/verify:auth todos OK."
+**Context**: BUGFIX - Force idToken refresh ensures the SDK attaches a valid bearer to the CF call
+
+---
