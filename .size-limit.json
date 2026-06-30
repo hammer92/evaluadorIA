@@ -1,0 +1,18 @@
+[
+  {
+    "name": "main-app",
+    "path": "apps/web/.next/static/chunks/main-app-*.js",
+    "limit": "200 KB",
+    "ignore": ["react", "react-dom"]
+  },
+  {
+    "name": "webpack-runtime",
+    "path": "apps/web/.next/static/chunks/webpack-*.js",
+    "limit": "10 KB"
+  },
+  {
+    "name": "shared-chunks-total",
+    "path": "apps/web/.next/static/chunks/*.js",
+    "limit": "500 KB"
+  }
+]

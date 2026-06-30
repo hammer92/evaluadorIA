@@ -1,0 +1,69 @@
+name: Deploy Prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy-prod" to confirm'
+        required: true
+        default: ''
+      reason:
+        description: 'Reason / changelog for this deploy'
+        required: false
+        default: ''
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  confirm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify confirmation token
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "deploy-prod" ]; then
+            echo "::error::Confirmation token must be exactly 'deploy-prod'."
+            exit 1
+          fi
+
+  deploy:
+    needs: confirm
+    runs-on: ubuntu-latest
+    environment: production # requires manual approval in GitHub settings
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - name: Deploy Cloud Functions
+        working-directory: apps/functions
+        run: pnpm exec firebase deploy --only functions --project prod
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_PROD }}
+
+      - name: Deploy Firestore + Storage rules
+        run: pnpm exec firebase deploy --only firestore:rules,storage --project prod
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_PROD }}
+
+      - name: Notify (optional)
+        if: always()
+        run: |
+          if [ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
+            STATUS=$([ "${{ job.status }}" = "success" ] && echo "✅" || echo "❌")
+            REASON="${{ github.event.inputs.reason }}"
+            curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+              -H 'Content-Type: application/json' \
+              -d "{\"text\":\"$STATUS *Prod deploy* — ${{ github.sha }} — ${REASON}\"}"
+          fi

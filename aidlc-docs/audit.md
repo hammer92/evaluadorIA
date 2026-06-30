@@ -525,3 +525,34 @@
 **Context**: SDD-07 Code Generation + Build and Test cerrados. typecheck PASS (3 packages), lint PASS, test 89/89, build PASS, E2E live dashboard OK
 
 ---
+
+## SDD-08 CI/CD & Deploy — Requirements Analysis
+
+**Timestamp**: 2026-06-30T20:50:00Z
+**User Input**: "continua"
+**AI Response**: "AI-DLC workflow iniciado para SDD-08 (CI/CD & Deploy). Spec tiene 11 acceptance criteria + 3 open questions. Workspace es brownfield post-SDD-07: ya hay firebase.json (firestore/storage), package.json con scripts (lint/test/build/typecheck), repositorio Git con Husky pre-commit. Faltan: .github/workflows/, .github/dependabot.yml, .github/PULL_REQUEST_TEMPLATE.md, .size-limit.json, hosting config en firebase.json, script bundle:check. SDD-08 es config puro (YAML + JSON) — no hay código de aplicación nuevo. Sigo el patrón establecido: 3 preguntas críticas adaptativas al contexto (hosting target, branch protection, bundle check)."
+**Context**: SDD-08 start, AI-DLC workflow kickoff
+
+---
+
+## SDD-08 CI/CD & Deploy — Requirements Analysis Answers
+
+**Timestamp**: 2026-06-30T20:51:00Z
+**User Input**: "Q1:A, Q2:A, Q3:A"
+**AI Response**: "Decisiones confirmadas:
+
+- Q1=A: solo workflows CI/CD ahora, deferir hosting config (Firebase Hosting + SSR) hasta que exista la CF `ssr` real. Mantiene scope acotado.
+- Q2=A: workflows + docs/CI-CD.md documentando branch protection + GitHub environments + secrets requeridos (setup manual via UI).
+- Q3=A: size-limit + bundle:check script + step en CI (umbral 200KB gzip)."
+  **Context**: Requirements Analysis cerrado 3/3 A
+
+---
+
+## SDD-08 CI/CD & Deploy — Code Generation + Build/Test
+
+**Timestamp**: 2026-06-30T21:00:00Z
+**User Input**: "a"
+**AI Response**: "8 sub-fases ejecutadas en orden. 8.1 ci.yml: lint+typecheck+test+build+bundle:check con concurrency group + pnpm cache + Node 20 + env vars ci-test + coverage job (Codecov). 8.2 deploy-staging.yml: push to main → build + firebase deploy functions + firestore:rules + storage con concurrency group 'deploy-staging'. 8.3 deploy-prod.yml: workflow_dispatch con input 'confirm' (debe ser exactamente 'deploy-prod') + 'reason' opcional + environment 'production' (requiere reviewers via GitHub UI). 8.4 dependabot.yml: pnpm weekly lunes 9 AM ART + github-actions monthly, agrupados minor+patch, commit prefix 'chore(deps)'/'ci', labels. 8.5 PR template con checklist (tests, no firebase imports fuera de repositories/lib, typecheck/lint/test/verify:auth/bundle:check, emuladores, conventional commits). 8.6 .size-limit.json (200KB main-app, 10KB webpack-runtime, 500KB shared total) + apps/web scripts.bundle:check = size-limit + @size-limit/preset-app + @size-limit/webpack (para soportar ignore). Bundle local: main-app 193B, webpack-runtime 1.53KB, shared 345.77KB — todos OK. 8.7 docs/CI-CD.md con TOC + tabla de secrets + setup de environments via gh api + branch protection via gh api + smoke tests post-deploy + troubleshooting + out-of-scope notes (hosting+SSR deferido, canary v2). 8.8 Verify: 4 YAML files parsean con js-yaml, typecheck 3/3 PASS, lint 0 warnings, test 89/89, bundle:check PASS localmente. Commit sdd-08 + docs."
+**Context**: SDD-08 Code Generation + Build/Test cerrados
+
+---

@@ -1,0 +1,50 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - name: Deploy Cloud Functions
+        working-directory: apps/functions
+        run: pnpm exec firebase deploy --only functions --project staging
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
+
+      - name: Deploy Firestore + Storage rules
+        run: pnpm exec firebase deploy --only firestore:rules,storage --project staging
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
+
+      - name: Notify (optional)
+        if: always()
+        run: |
+          if [ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
+            STATUS=$([ "${{ job.status }}" = "success" ] && echo "✅" || echo "❌")
+            curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+              -H 'Content-Type: application/json' \
+              -d "{\"text\":\"$STATUS *Staging deploy* — ${{ github.sha }}\"}"
+          fi

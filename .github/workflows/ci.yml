@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-typecheck-test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_APP_ENV: dev
+      NEXT_PUBLIC_FIREBASE_API_KEY: ci-test
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci.firebaseapp.com
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci.appspot.com
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '0'
+      NEXT_PUBLIC_FIREBASE_APP_ID: '1:0:web:0'
+      REPOSITORY_DRIVER: memory
+      SESSION_COOKIE_SECRET: ci-secret-must-be-at-least-32-characters-long-for-hs256
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Bundle size check
+        run: pnpm --filter web bundle:check
+
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: lint-typecheck-test-build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      NEXT_PUBLIC_APP_ENV: dev
+      NEXT_PUBLIC_FIREBASE_API_KEY: ci-test
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci.firebaseapp.com
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci.appspot.com
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '0'
+      NEXT_PUBLIC_FIREBASE_APP_ID: '1:0:web:0'
+      REPOSITORY_DRIVER: memory
+      SESSION_COOKIE_SECRET: ci-secret-must-be-at-least-32-characters-long-for-hs256
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Coverage
+        run: pnpm test:coverage
+      - name: Upload to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
