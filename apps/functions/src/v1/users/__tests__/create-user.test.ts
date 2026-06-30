@@ -1,7 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { v1UsersCreate } from '../create-user.js';
+import { v1UsersDelete } from '../delete-user.js';
 import { v1UsersList } from '../list-users.js';
+import { v1UsersUpdate } from '../update-user.js';
 
 vi.mock('../../../firebase-admin.js', () => ({
   getAdminAuth: vi.fn(),
@@ -18,5 +20,13 @@ describe('v1 endpoints (smoke)', () => {
 
   it('v1UsersList está registrado como Cloud Function v2', () => {
     expect(v1UsersList).toBeDefined();
+  });
+
+  it('v1UsersUpdate está registrado como Cloud Function v2', () => {
+    expect(v1UsersUpdate).toBeDefined();
+  });
+
+  it('v1UsersDelete está registrado como Cloud Function v2', () => {
+    expect(v1UsersDelete).toBeDefined();
   });
 });

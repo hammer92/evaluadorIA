@@ -19,8 +19,8 @@ export { v1AuthClearSession } from './v1/auth/clear-session.js';
 // v1/users
 export { v1UsersCreate } from './v1/users/create-user.js';
 export { v1UsersList } from './v1/users/list-users.js';
-// export { v1UsersUpdate } from './v1/users/update-user.js'; // TODO SDD-07
-// export { v1UsersDelete } from './v1/users/delete-user.js'; // TODO SDD-07
+export { v1UsersUpdate } from './v1/users/update-user.js';
+export { v1UsersDelete } from './v1/users/delete-user.js';
 
 // v1/reports
 export { v1ReportsGenerate } from './v1/reports/generate-report.js';

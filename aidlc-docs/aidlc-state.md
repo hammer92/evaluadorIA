@@ -83,6 +83,8 @@
 - [x] Bugfix — 2026-06-29 (eager SESSION_COOKIE_SECRET for middleware)
 - [x] Code Generation — 2026-06-29 (sdd-06-cloud-functions)
 - [x] Build and Test — 2026-06-29 (sdd-06-cloud-functions) — typecheck/lint/test 87/87/build PASS
+- [x] Code Generation — 2026-06-30 (sdd-07-admin-ui)
+- [x] Build and Test — 2026-06-30 (sdd-07-admin-ui) — typecheck/lint/test 89/89/build PASS
 
 ### OPERATIONS PHASE
 

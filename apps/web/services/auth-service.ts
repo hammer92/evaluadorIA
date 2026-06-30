@@ -5,6 +5,8 @@ import { cookies } from 'next/headers';
 import { verifySessionCookie } from '@/features/auth/server/session';
 import type { ServerAuth } from '@/features/auth/types';
 
+export type { ServerAuth };
+
 // =============================================================================
 // Server-side auth helpers — usados en RSC y route handlers.
 // =============================================================================

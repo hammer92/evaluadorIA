@@ -44,7 +44,8 @@ process.env['FIREBASE_STORAGE_EMULATOR_HOST'] = '127.0.0.1:9199';
 // Mismo default que scripts/emulators.sh (para que las CFs firmen con el
 // mismo secret que usamos acá para verificar).
 process.env['SESSION_COOKIE_SECRET'] =
-  process.env['SESSION_COOKIE_SECRET'] ?? 'dev-secret-please-change-in-production-32+chars';
+  process.env['SESSION_COOKIE_SECRET'] ??
+  'dev-secret-shared-by-cf-and-middleware-must-be-at-least-32-chars-long';
 
 if (getApps().length === 0) {
   initializeApp({ projectId: 'admin-platform-dev' });

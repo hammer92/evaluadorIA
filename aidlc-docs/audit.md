@@ -494,3 +494,34 @@
 **Context**: Code Generation + Build and Test — SDD-06 aplicado completo
 
 ---
+
+## SDD-07 Admin UI — Requirements Analysis
+
+**Timestamp**: 2026-06-30T20:20:00Z
+**User Input**: "usando el ai-sdl implemennta el sdd siguiente"
+**AI Response**: "AI-DLC workflow iniciado para SDD-07 (Admin UI: Dashboard, Users, Settings). El workspace es brownfield post-SDD-06: shadcn base instalado (button, card, input, tabs, sheet, sonner), repositories de users+organizations+audit-logs listos, Cloud Functions v1Auth/v1Users/v1Reports deployadas, admin layout (Sidebar+Header+verifyAuth) ya en su lugar. Faltan: badge, dialog, select, skeleton, table, textarea (shadcn adds); features/dashboard, features/users, features/settings; app/admin/users, app/admin/settings, loading.tsx, error.tsx; 404/500 pages; dark mode toggle. Sigo el patrón establecido: Requirements Analysis adaptativo (3 preguntas críticas) → Workflow Planning → Code Generation → Build and Test → Commit."
+**Context**: SDD-07 start, AI-DLC workflow kickoff
+
+---
+
+## SDD-07 Admin UI — Requirements Analysis Answers
+
+**Timestamp**: 2026-06-30T20:21:00Z
+**User Input**: "Q1:A, Q2:A, Q3:a"
+**AI Response**: "Decisiones confirmadas:
+
+- Q1=A: implementar v1UsersUpdate + v1UsersDelete (Cloud Functions + unit tests + cliente que las llame)
+- Q2=A: next-themes + ThemeProvider + toggle en header + persist localStorage
+- Q3=A: /admin/users full client-side con TanStack Query (useUsersList, useCreateUser, useUpdateUser, useDeleteUser, invalidación en mutaciones)"
+  **Context**: Requirements Analysis cerrado con 3/3 respuestas A (decisiones técnicas adaptativas)
+
+---
+
+## SDD-07 Admin UI — Code Generation + Build/Test
+
+**Timestamp**: 2026-06-30T20:42:00Z
+**User Input**: "a"
+**AI Response**: "8 sub-fases ejecutadas en orden. 7.1 shadcn add (dialog/badge/skeleton/table/select/textarea). 7.2 Cloud Functions: v1UsersUpdate (admin o self, setea custom claims si role cambia, audit log user.role_changed/user.updated) + v1UsersDelete (admin only, soft delete con deletedAt + status=suspended, audit log user.deleted). 7.3 Dark mode: ThemeProvider + ThemeToggle ya estaban de SDD-02 (next-themes instalado). 7.4 features/dashboard (stats-card, recent-activity, activity-item, getUsersStats+getRecentAuditLogs en api, ServerAuth re-export). 7.5 features/users (users-table TanStack, user-form-modal con create+edit, delete-user-dialog, user-filters con Select, role-badge, status-badge, 4 hooks, users-api con httpsCallable a v1UsersList/Create/Update/Delete, schemas). 7.6 features/settings (profile-form, team-list RSC, billing-card). 7.7 Páginas: dashboard RSC, users client-side con TanStack Query, settings con Tabs, 404, 500. 7.8 Tests 89/89, lint 0 warnings, build PASS, E2E verify:auth 11/11, dashboard live renderiza 4 stats cards + Actividad reciente + Bienvenido, /admin/users renderiza tabla+search+filtros, /admin/settings renderiza 3 tabs, 404 OK. Bugfixes: (1) StatsCard recibia LucideIcon function desde RSC → cambiado a ReactNode JSX; (2) getUsersStats y getRecentAuditLogs degradan gracefully a zeros/empty si Firestore index falta en emulator; (3) team-list degrada a empty; (4) verify-auth.ts secret string sincronizado con emulators.sh. Stats card labels encontrados en HTML: 'Total usuarios', 'Activos', 'Invitados', 'Suspendidos', 'Actividad reciente', 'Bienvenido'."
+**Context**: SDD-07 Code Generation + Build and Test cerrados. typecheck PASS (3 packages), lint PASS, test 89/89, build PASS, E2E live dashboard OK
+
+---
