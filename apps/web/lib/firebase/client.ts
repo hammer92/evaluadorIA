@@ -69,7 +69,11 @@ function ensureFunctions(): Functions {
   return _functions;
 }
 
-// Conectar a emuladores una sola vez (idempotente via guards internos del SDK).
+// Conectar a emuladores una sola vez, EAGERLY al primer access de CUALQUIER
+// servicio (no lazy-after-call). El auth SDK marca `_canInitEmulator = false`
+// en la primera network call (e.g. onAuthStateChanged), y connectAuthEmulator
+// falla con `auth/emulator-config-failed` si se llama después. Por eso la
+// conexión tiene que ocurrir ANTES del primer access al servicio.
 let _emulatorsConnected = false;
 function connectEmulatorsOnce(): void {
   if (_emulatorsConnected) return;
@@ -79,17 +83,26 @@ function connectEmulatorsOnce(): void {
   const d = ensureDb();
   const s = ensureStorage();
   const fns = ensureFunctions();
-  if (!(a as unknown as { _emulatorConfig?: unknown })._emulatorConfig) {
+  try {
     connectAuthEmulator(a, 'http://127.0.0.1:9099', { disableWarnings: true });
+  } catch {
+    // Idempotente: si el SDK ya tenía _emulatorUrl seteado (HMR re-import),
+    // reconnect puede tirar. Ignorar.
   }
-  if (!(d as unknown as { _emulatorConfig?: unknown })._emulatorConfig) {
+  try {
     connectFirestoreEmulator(d, '127.0.0.1', 8080);
+  } catch {
+    // Idempotente.
   }
-  if (!(s as unknown as { _emulatorConfig?: unknown })._emulatorConfig) {
+  try {
     connectStorageEmulator(s, '127.0.0.1', 9199);
+  } catch {
+    // Idempotente.
   }
-  if (!(fns as unknown as { _emulatorConfig?: unknown })._emulatorConfig) {
+  try {
     connectFunctionsEmulator(fns, '127.0.0.1', 5001);
+  } catch {
+    // Idempotente.
   }
   _emulatorsConnected = true;
 }
@@ -97,9 +110,12 @@ function connectEmulatorsOnce(): void {
 function lazyProxy<T extends object>(ensure: () => T): T {
   return new Proxy({} as T, {
     get(_t, prop) {
-      const obj = ensure();
-      // Disparar conexión a emuladores en el primer access de un servicio
+      // Conectar ANTES de retornar cualquier propiedad. Esto garantiza que
+      // connectAuthEmulator corre antes de la primera network call del SDK
+      // (e.g. onAuthStateChanged dispara una llamada implícita al auth
+      // server apenas se suscribe).
       connectEmulatorsOnce();
+      const obj = ensure();
       return (obj as unknown as Record<string | symbol, unknown>)[prop];
     },
   });
@@ -128,6 +144,14 @@ export function __setFirebaseApp(app: FirebaseApp): void {
   _storage = getStorage(app);
   _functions = getFunctions(app, 'us-central1');
   _emulatorsConnected = false;
+}
+
+// Bootstrap: en dev, conectar a los emuladores en cuanto se carga este módulo
+// en el cliente. Sin esto, la primera auth call (típicamente onAuthStateChanged
+// desde useEffect) corre antes de que connectEmulatorsOnce haya tenido chance
+// de ejecutarse vía el lazy proxy, y el SDK marca _canInitEmulator = false.
+if (typeof window !== 'undefined' && clientEnv.NEXT_PUBLIC_APP_ENV === 'dev') {
+  connectEmulatorsOnce();
 }
 
 export type { FirebaseApp, Auth, Firestore, FirebaseStorage, Functions };
