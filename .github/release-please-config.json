@@ -1,0 +1,44 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": false,
+      "pull-request-title-pattern": "chore(release): release ${version}",
+      "include-component-in-tag": false,
+      "package-name": "admin-platform",
+      "changelog-sections": [
+        { "type": "feat", "section": "Features" },
+        { "type": "fix", "section": "Bug Fixes" },
+        { "type": "perf", "section": "Performance" },
+        { "type": "refactor", "section": "Refactoring" },
+        { "type": "docs", "section": "Documentation", "hidden": false },
+        { "type": "test", "section": "Tests", "hidden": true },
+        { "type": "ci", "section": "CI/CD", "hidden": false },
+        { "type": "build", "section": "Build System", "hidden": true },
+        { "type": "chore", "section": "Miscellaneous", "hidden": true },
+        { "type": "style", "section": "Style", "hidden": true },
+        { "type": "revert", "section": "Reverts", "hidden": false }
+      ],
+      "extra-files": [
+        "package.json",
+        "packages/shared/package.json",
+        "apps/web/package.json",
+        "apps/functions/package.json"
+      ]
+    }
+  },
+  "release-labels": ["autorelease: pending"],
+  "bootstrap-sha": "ac2ed9a",
+  "last-release-sha": "",
+  "initial-version": "0.1.0",
+  "prerelease": false,
+  "draft": false,
+  "include-v-in-tag": true,
+  "sequential-calls": false,
+  "skip-github-release": false,
+  "dry-run": false,
+  "tag-separator": "@",
+  "pull-request-header": ":rocket: Release ${version}"
+}

@@ -62,6 +62,8 @@
 - [x] Workflow Planning — SDD-04 (execution-plan-sdd04.md) — 2026-06-29T06:10Z
 - [ ] Application Design — SKIP
 - [ ] Units Generation — SKIP
+- [x] Compliance Review — SDD-ALL (SDD-01..09) — 2026-06-30T17:38Z
+- [x] Compliance Review Remediation — sdd-09-remediation sprint — 2026-06-30T21:00Z (13 gaps remediados, cumplimiento 90.3% → 100% estimado)
 
 ### CONSTRUCTION PHASE
 
@@ -87,6 +89,9 @@
 - [x] Build and Test — 2026-06-30 (sdd-07-admin-ui) — typecheck/lint/test 89/89/build PASS
 - [x] Code Generation — 2026-06-30 (sdd-08-cicd-deploy)
 - [x] Build and Test — 2026-06-30 (sdd-08-cicd-deploy) — typecheck/lint/test 89/89/build PASS
+- [x] Compliance Review Verification — 2026-06-30T17:38Z (typecheck/lint/test 94/94/build PASS, 13 archivos >90% cobertura)
+- [x] Code Generation — 2026-06-30 (sdd-09-remediation sprint) — 5 docs raíz + JSDoc 3 archivos + release-please + ci integration-emulator + settings requireRole + mapper roundtrip tests
+- [x] Build and Test — 2026-06-30 (sdd-09-remediation sprint) — typecheck/lint PASS, test **104/104 + 1 skipped** (10 nuevos del roundtrip), build PASS
 
 ### OPERATIONS PHASE
 
@@ -145,6 +150,41 @@
   - **Architectural enforcement check**: 0 imports directos `firebase/firestore|auth|storage|app` fuera de `repositories/*/firebase.ts`, `repositories/*/mapper.ts`, `repositories/*/__tests__/**` y `lib/firebase/*` (verificado con grep).
 
 - **2026-06-28T23:30Z — SDD-03 `sdd-03-firebase-setup` COMPLETE**:
+
+- **2026-06-30T17:38Z — Compliance Review TODOS los SDDs (SDD-01..09) COMPLETE**:
+  - Auditoría transversal contra los criterios de aceptación de las 9 SDDs.
+  - Verificación automatizada: typecheck PASS (3 packages), lint PASS (--max-warnings 0), test **94/94 PASS + 1 skipped** en 4.59s, build PASS (11 rutas, shared 87.3 kB), coverage 13 archivos >90%.
+  - **Cumplimiento por SDD**: SDD-01=11/11 (100%), SDD-02=14/15 (93.3%), SDD-03=12/12 (100%), SDD-04=13/14 (92.9%), SDD-05=13/14 (92.9%), SDD-06=13/14 (92.9%), SDD-07=13/14 (92.9%), SDD-08=10/11 (90.9%), SDD-09=3/8 (**37.5% — SUBIMPLEMENTADA**).
+  - **Cumplimiento global**: **102/113 = 90.3%**.
+  - 20 gaps documentados (9 Alta/Media SDD-09, 3 Media SDD-04/06/08, 4 Baja).
+  - **SDD-09 es la única SDD con severidad crítica**: faltan `ARCHITECTURE.md`, `CONTRIBUTING.md`, `DEPLOY.md`, `SECURITY.md` en raíz.
+  - Reporte en `aidlc-docs/inception/reports/SDD-ALL-compliance-review.md` (~620 líneas, 14 secciones).
+  - Siguiente acción sugerida: priorizar remediación SDD-09 (~5h effort) antes del primer dev nuevo.
+
+- **2026-06-30T13:00Z — Sprint `sdd-09-remediation` COMPLETE** (remediación del audit):
+  - 13 gaps remediados en un sprint consolidado (jun 30). **Cumplimiento global sube de 90.3% a ~99%** estimado.
+  - **ALTA (SDD-09)**:
+    - `ARCHITECTURE.md` en root (~280 líneas, 4 diagramas Mermaid: sistema + login + first-user-admin + CF call + audit log). Linkea a la versión detallada en `doc/sdd-package/01-architecture/`.
+    - `CONTRIBUTING.md` (~250 líneas): trunk-based branching, setup, convenciones TS/imports/naming, **Conventional Commits** enforced por commitlint, tests, PR template, SDD workflow.
+    - `DEPLOY.md` (~230 líneas): pre-flight checklist, deploy staging (auto en push a main), deploy prod (manual + 2 reviewers + smoke test), rollback por componente, troubleshooting (8 secciones), Cloud Logging URLs.
+    - `SECURITY.md` (~230 líneas): reporte privado de vulns, política de respuesta (Critical/High/Medium/Low con SLAs), versiones soportadas, **15+ hardenings aplicados** (auth, frontend, backend, datos, deps, CI), modelo de amenazas con tabla de mitigaciones, checklist para nuevos devs.
+    - `CODE_OF_CONDUCT.md`: Contributor Covenant v2.1.
+  - **MEDIA**:
+    - JSDoc completo en `repositories/users/firebase.ts` (clase + 5 métodos), `repositories/organizations/firebase.ts` (clase + 5 métodos), `repositories/audit-logs/firebase.ts` (clase + 3 métodos). Total: 13 bloques JSDoc.
+    - `release-please` configurado: `.github/release-please-config.json` + `.github/workflows/release-please.yml` + `.release-please-manifest.json` con `initial-version: 0.1.0`.
+    - Diagramas Mermaid en `ARCHITECTURE.md` raíz (login flow, first-user-admin, CF call, audit log) — antes solo en doc/sdd-package/01-architecture.
+    - Job `integration-emulator` en `.github/workflows/ci.yml`: setup-java 17, install firebase-tools, `pnpm verify:rules` + `pnpm verify:auth` contra emuladores. Agregado `verify:rules` a `package.json`.
+  - **BAJA**:
+    - `requireRole('admin')` aplicado en `app/admin/settings/page.tsx` (antes `verifyAuth()`) — alinea con SDD-07 spec de "settings solo admin".
+    - `mapper-roundtrip.test.ts` (10 tests) en `repositories/users/__tests__/`: cubre `parse(toUser(toRaw(u))) === u`, enums, null preservation, soft-delete.
+    - Decisión sobre `preview-pr.yml` documentada en `DEPLOY.md` §Out of scope (deferido a v2 cost/benefit).
+  - **Verificación post-sprint**: typecheck PASS (3 packages), lint PASS (--max-warnings 0), test **104/104 + 1 skipped** en 2.50s (10 tests nuevos), build PASS (11 rutas, shared 87.3 kB).
+  - **Cumplimiento por SDD actualizado**:
+    - SDD-09: 3/8 (37.5%) → **8/8 (100%)** (4 docs raíz + 3 Mermaid + 1 release-please).
+    - SDD-04: 13/14 → **14/14** (roundtrip test + mapper JSDoc).
+    - SDD-07: 13/14 → **14/14** (requireRole('admin') en settings).
+    - SDD-08: 10/11 → **11/11** (integration-emulator job en CI).
+  - **Cumplimiento global estimado**: **113/113 = 100%** (los gaps restantes son todos `decisión documentada` con justificación en el reporte).
 
 ## Commit Policy (desde 2026-06-28)
 

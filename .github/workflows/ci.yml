@@ -53,6 +53,49 @@ jobs:
       - name: Bundle size check
         run: pnpm --filter web bundle:check
 
+  integration-emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      NEXT_PUBLIC_APP_ENV: dev
+      NEXT_PUBLIC_FIREBASE_API_KEY: ci-test
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci.firebaseapp.com
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci.appspot.com
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '0'
+      NEXT_PUBLIC_FIREBASE_APP_ID: '1:0:web:0'
+      SESSION_COOKIE_SECRET: ci-secret-must-be-at-least-32-characters-long-for-hs256
+      ALLOWED_ORIGINS: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@13
+
+      - name: Verify firestore + storage rules
+        run: pnpm verify:rules
+
+      - name: Integration E2E (auth + functions + firestore via emulators)
+        run: pnpm verify:auth
+
   coverage:
     runs-on: ubuntu-latest
     timeout-minutes: 15
