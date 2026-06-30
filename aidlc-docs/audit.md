@@ -583,3 +583,12 @@
 **Context**: Bugfix aplicado
 
 ---
+
+## Settings — Stitch "Configuración Global del Sistema" applied
+
+**Timestamp**: 2026-06-30T23:45:00Z
+**User Input**: "busca la pantalla de setting en el mcp de diseño y aplica la interfax exacta"
+**AI Response**: "Encontrado Stitch screen `Configuración Global del Sistema` (project 15149830769149114285, screenId 21e074f9cfd3493a832b498aea4cf22f, 2560×2448). Aplicado exacto: title h1 'Configuración Global del Sistema' + subtitle, top-right actions 'Descartar Cambios' (outline) + 'Guardar Configuración' (brand-secondary), search bar 'Buscar parámetros…', 2x2 grid con 4 cards: 1) Niveles de Maestría y Rangos (table Junior/Mid-Level/Senior/Tech Lead con number steppers en rango + descripción), 2) Pesos por Defecto (3 sliders Desafíos de Código 50% / Opción Múltiple 30% / Preguntas Abiertas 20% con validación de suma=100%), 3) Configuración de Agentes IA (Agente Verificador GPT-4o + Agente de Informe GPT-4 Turbo selects + Temperatura Creatividad 0.2 + Temperatura Rigor 0.7 sliders + toggle Generación Proactiva), 4) Seguridad y Proctoring (segmented Sensibilidad Pérdida de Foco Baja/Media/Alta + counter Re-intentos + segmented Retención 30/60/90/365 con 60 selected + toggle Detección IA Externa). Bottom navy strip: Consumo Tokens 14.2M/20M + Costo $124.50 USD + Uptime 99.98% en verde. Componentes internos: CardShell, NumberStepper, TempSlider, ToggleRow, SegmentedControl, Counter, Metric + iconos SVG custom (Star/Scale/Brain/Shield/Alert). Client component con useState para dirty tracking + save/reset."
+**Context**: Stitch MCP design aplicado a settings
+
+---

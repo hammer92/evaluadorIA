@@ -1,5 +1,7 @@
 'use client';
 
+'use client';
+
 import type { Role } from '@shared/schemas/common';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
@@ -8,6 +10,14 @@ import { usePathname } from 'next/navigation';
 import { NAV_ITEMS } from '@/config/constants';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui-store';
+
+function isItemActive(itemHref: string, pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (itemHref === '/admin') {
+    return pathname === '/admin';
+  }
+  return pathname === itemHref || pathname.startsWith(`${itemHref}/`);
+}
 
 export function Sidebar({ role }: { role: Role }) {
   const pathname = usePathname();
@@ -46,11 +56,12 @@ export function Sidebar({ role }: { role: Role }) {
       </div>
       <nav className="flex-1 space-y-1 p-3">
         {visibleItems.map((item) => {
-          const active = pathname === item.href || pathname?.startsWith(item.href + '/');
+          const active = isItemActive(item.href, pathname);
           return (
             <Link
               key={item.href}
               href={item.href}
+              aria-current={active ? 'page' : undefined}
               className={cn(
                 'group relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                 active
