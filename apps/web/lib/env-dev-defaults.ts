@@ -20,7 +20,7 @@ const DEV_FIREBASE_DEFAULTS: Record<string, string> = {
   NEXT_PUBLIC_FIREBASE_APP_ID: '1:000000000000:web:0000000000000000000000',
 };
 
-const DEV_SESSION_SECRET = 'dev-secret-please-change-in-production-must-be-at-least-32-chars-long';
+const DEV_SESSION_SECRET = 'dev-secret-shared-by-cf-and-middleware-must-be-at-least-32-chars-long';
 
 function isProductionLike(): boolean {
   const env = process.env['NEXT_PUBLIC_APP_ENV'];

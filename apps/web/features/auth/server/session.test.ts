@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { SignJWT } from 'jose';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 

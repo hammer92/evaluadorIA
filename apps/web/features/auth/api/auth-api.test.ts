@@ -104,7 +104,7 @@ describe('signOutCurrent', () => {
   it('signs out from Firebase and calls logout endpoint', async () => {
     fetchMock.mockResolvedValueOnce({ ok: true });
     await signOutCurrent();
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/v1AuthClearSession'), {
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/session/clear'), {
       method: 'POST',
       credentials: 'include',
     });

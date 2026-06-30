@@ -1,6 +1,5 @@
 'use client';
 
-import { clientEnv } from '@/env';
 import {
   auth,
   functions,
@@ -32,22 +31,14 @@ import {
 
 const COOKIE_NAME = '__session';
 
-function getFunctionsBase(): string {
-  if (clientEnv.NEXT_PUBLIC_API_BASE_URL) {
-    return clientEnv.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, '');
-  }
-  if (clientEnv.NEXT_PUBLIC_APP_ENV === 'dev') {
-    return 'http://127.0.0.1:5001/admin-platform-dev/us-central1';
-  }
-  return '';
-}
-
 function getSessionEndpoint(): string {
-  return `${getFunctionsBase()}/v1AuthCreateSession`;
+  // Same-origin: la cookie queda en localhost:3000, no en 127.0.0.1:5001
+  // (ver apps/web/app/api/session/route.ts para la explicación completa).
+  return '/api/session';
 }
 
 function getLogoutEndpoint(): string {
-  return `${getFunctionsBase()}/v1AuthClearSession`;
+  return '/api/session/clear';
 }
 
 export class AuthApiError extends Error {
