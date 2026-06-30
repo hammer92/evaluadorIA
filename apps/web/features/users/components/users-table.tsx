@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
 export function UsersTable({
   users,
@@ -44,34 +45,59 @@ export function UsersTable({
     {
       accessorKey: 'email',
       header: ({ column }) => (
-        <Button variant="ghost" size="sm" onClick={() => column.toggleSorting()}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => column.toggleSorting()}
+          className="-ml-3 font-hanken text-label-sm uppercase tracking-wider text-outline-tv hover:text-navy"
+        >
           Email
           <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
       ),
-    },
-    {
-      accessorKey: 'displayName',
-      header: 'Nombre',
-      cell: ({ row }) => row.original.displayName ?? '—',
+      cell: ({ row }) => (
+        <div className="min-w-0">
+          <p className="truncate text-body-md font-medium text-on-surface">{row.original.email}</p>
+          {row.original.displayName && (
+            <p className="truncate text-xs text-on-surface-variant">{row.original.displayName}</p>
+          )}
+        </div>
+      ),
     },
     {
       accessorKey: 'role',
-      header: 'Rol',
+      header: () => (
+        <span className="font-hanken text-label-sm uppercase tracking-wider text-outline-tv">
+          Rol
+        </span>
+      ),
       cell: ({ row }) => <RoleBadge role={row.original.role} />,
     },
     {
       accessorKey: 'status',
-      header: 'Estado',
+      header: () => (
+        <span className="font-hanken text-label-sm uppercase tracking-wider text-outline-tv">
+          Estado
+        </span>
+      ),
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
       id: 'actions',
-      header: () => <div className="text-right">Acciones</div>,
+      header: () => (
+        <div className="text-right font-hanken text-label-sm uppercase tracking-wider text-outline-tv">
+          Acciones
+        </div>
+      ),
       cell: ({ row }) => (
         <div className="flex justify-end gap-2">
           {canEdit && (
-            <Button variant="ghost" size="sm" onClick={() => onEdit(row.original)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(row.original)}
+              className="text-on-surface-variant hover:text-navy"
+            >
               Editar
             </Button>
           )}
@@ -79,8 +105,8 @@ export function UsersTable({
             <Button
               variant="ghost"
               size="sm"
-              className="text-destructive hover:text-destructive"
               onClick={() => onDelete(row.original)}
+              className="text-on-surface-variant hover:text-status-error"
             >
               Eliminar
             </Button>
@@ -100,13 +126,13 @@ export function UsersTable({
   });
 
   return (
-    <div className="rounded-md border">
+    <div className="overflow-hidden rounded-tv border border-border-standard bg-white shadow-tv-card">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((hg) => (
-            <TableRow key={hg.id}>
+            <TableRow key={hg.id} className="border-b border-border-standard bg-surface-subtle">
               {hg.headers.map((h) => (
-                <TableHead key={h.id}>
+                <TableHead key={h.id} className="h-12">
                   {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
                 </TableHead>
               ))}
@@ -118,16 +144,21 @@ export function UsersTable({
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground"
+                className="h-24 text-center text-body-md text-on-surface-variant"
               >
                 No hay usuarios para los filtros seleccionados.
               </TableCell>
             </TableRow>
           ) : (
             table.getRowModel().rows.map((r) => (
-              <TableRow key={r.id}>
+              <TableRow
+                key={r.id}
+                className={cn(
+                  'border-b border-border-standard last:border-0 hover:bg-surface-subtle',
+                )}
+              >
                 {r.getVisibleCells().map((c) => (
-                  <TableCell key={c.id}>
+                  <TableCell key={c.id} className="py-stack-md">
                     {flexRender(c.column.columnDef.cell, c.getContext())}
                   </TableCell>
                 ))}

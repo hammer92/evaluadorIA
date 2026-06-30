@@ -12,12 +12,24 @@ export interface RecentActivityItem {
 
 export function RecentActivity({ items }: { items: RecentActivityItem[] }): React.JSX.Element {
   return (
-    <div className="rounded-lg border bg-card p-6">
-      <h2 className="text-lg font-semibold mb-2">Actividad reciente</h2>
+    <section className="rounded-tv border border-border-standard bg-white shadow-tv-card">
+      <header className="flex items-center justify-between border-b border-border-standard px-stack-lg py-stack-md">
+        <div>
+          <h2 className="font-hanken text-headline-md text-on-surface">Actividad reciente</h2>
+          <p className="text-body-md text-on-surface-variant">
+            Últimos eventos del sistema y auditoría.
+          </p>
+        </div>
+        <span className="rounded-md bg-navy/5 px-2 py-0.5 text-label-sm text-navy">
+          {items.length} {items.length === 1 ? 'evento' : 'eventos'}
+        </span>
+      </header>
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-4">Sin actividad reciente.</p>
+        <p className="px-stack-lg py-stack-md text-body-md text-on-surface-variant">
+          Sin actividad reciente.
+        </p>
       ) : (
-        <ul className="divide-y">
+        <ul className="divide-y divide-border-standard">
           {items.map((it) => (
             <ActivityItem
               key={it.logId}
@@ -29,6 +41,6 @@ export function RecentActivity({ items }: { items: RecentActivityItem[] }): Reac
           ))}
         </ul>
       )}
-    </div>
+    </section>
   );
 }

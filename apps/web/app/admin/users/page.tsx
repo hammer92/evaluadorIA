@@ -30,32 +30,37 @@ export default function UsersPage() {
   const pageStart = ((data?.page ?? 1) - 1) * (data?.pageSize ?? 20);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Usuarios</h1>
-          <p className="text-muted-foreground text-sm">Gestioná los miembros de tu organización.</p>
+    <div className="space-y-stack-lg">
+      <header className="flex flex-wrap items-end justify-between gap-stack-md">
+        <div className="space-y-stack-sm">
+          <p className="text-label-sm text-outline-tv">ADMINISTRACIÓN</p>
+          <h1 className="font-hanken text-display-lg text-on-surface">Usuarios</h1>
+          <p className="text-body-lg text-on-surface-variant">
+            Gestioná los miembros de tu organización.
+          </p>
         </div>
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Nuevo
+            Nuevo usuario
           </Button>
         )}
-      </div>
+      </header>
 
       <UsersFilters value={filters} onChange={setFilters} />
 
       {isLoading && (
-        <div className="space-y-2">
+        <div className="space-y-stack-sm rounded-tv border border-border-standard bg-white p-stack-md shadow-tv-card">
           {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-12" />
+            <Skeleton key={i} className="h-12 bg-surface-subtle" />
           ))}
         </div>
       )}
 
       {isError && (
-        <p className="text-sm text-destructive">Error cargando usuarios: {error?.message}</p>
+        <div className="rounded-tv border border-status-error/30 bg-status-error/5 p-stack-md text-body-md text-status-error">
+          Error cargando usuarios: {error?.message}
+        </div>
       )}
 
       {data && (
@@ -67,12 +72,12 @@ export default function UsersPage() {
             canEdit={canEdit}
             canDelete={canDelete}
           />
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <div className="flex items-center justify-between text-body-md text-on-surface-variant">
             <span>
               Mostrando {data.items.length === 0 ? 0 : pageStart + 1}–
               {pageStart + data.items.length} de {data.total}
             </span>
-            <div className="flex gap-2">
+            <div className="flex gap-stack-sm">
               <Button
                 variant="outline"
                 size="sm"

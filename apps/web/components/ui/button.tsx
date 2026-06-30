@@ -9,16 +9,19 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/80',
+        default:
+          'bg-navy text-white shadow-tv-card hover:bg-navy/90 focus-visible:ring-navy/40 aria-expanded:bg-navy/90',
+        primary:
+          'bg-brand-secondary text-on-secondary-container hover:bg-brand-secondary/90 focus-visible:ring-brand-secondary/40 aria-expanded:bg-brand-secondary/90',
         outline:
-          'border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
+          'border border-border-standard bg-white text-on-surface hover:bg-surface-subtle hover:border-outline-tv aria-expanded:bg-surface-subtle aria-expanded:text-navy',
         secondary:
-          'bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground',
+          'bg-surface-subtle text-on-surface hover:bg-surface-neutral aria-expanded:bg-surface-neutral aria-expanded:text-navy',
         ghost:
-          'hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50',
+          'bg-transparent text-on-surface-variant hover:bg-navy/5 hover:text-navy aria-expanded:bg-navy/5 aria-expanded:text-navy',
         destructive:
-          'bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40',
-        link: 'text-primary underline-offset-4 hover:underline',
+          'bg-status-error text-white hover:bg-status-error/90 focus-visible:ring-status-error/40 aria-expanded:bg-status-error/90',
+        link: 'text-navy underline-offset-4 hover:underline',
       },
       size: {
         default:

@@ -20,11 +20,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect('/login?next=/admin');
   }
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-surface-neutral">
       <Sidebar role={auth.role} />
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col min-w-0">
         <Header email={auth.email} role={auth.role} />
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 px-container-padding py-stack-lg overflow-x-auto">
+          <div className="mx-auto w-full max-w-7xl space-y-stack-lg">{children}</div>
+        </main>
       </div>
     </div>
   );

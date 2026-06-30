@@ -1,23 +1,36 @@
 import type { UserStatus } from '@shared/schemas/users';
 
-import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
-const STATUS_CONFIG: Record<UserStatus, { label: string; className: string }> = {
+const STATUS_CONFIG: Record<UserStatus, { label: string; className: string; dot: string }> = {
   active: {
     label: 'Activo',
-    className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
+    className: 'bg-status-success/10 text-status-success ring-1 ring-inset ring-status-success/30',
+    dot: 'bg-status-success',
   },
   invited: {
     label: 'Invitado',
-    className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+    className: 'bg-status-warning/10 text-status-warning ring-1 ring-inset ring-status-warning/30',
+    dot: 'bg-status-warning',
   },
   suspended: {
     label: 'Suspendido',
-    className: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+    className: 'bg-status-error/10 text-status-error ring-1 ring-inset ring-status-error/30',
+    dot: 'bg-status-error',
   },
 };
 
 export function StatusBadge({ status }: { status: UserStatus }): React.JSX.Element {
-  const { label, className } = STATUS_CONFIG[status];
-  return <Badge className={className}>{label}</Badge>;
+  const { label, className, dot } = STATUS_CONFIG[status];
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-label-sm',
+        className,
+      )}
+    >
+      <span aria-hidden className={cn('h-1.5 w-1.5 rounded-full', dot)} />
+      {label}
+    </span>
+  );
 }

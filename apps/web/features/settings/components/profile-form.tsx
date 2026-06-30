@@ -30,14 +30,12 @@ export function ProfileForm({ user }: { user: ServerAuth }): React.JSX.Element {
   }, [user.email, form]);
 
   const onSubmit = form.handleSubmit((values) => {
-    // TODO SDD-08: integrar con v1UsersUpdate (incluye displayName + photoURL).
-    // Por ahora guardamos en el form y mostramos toast.
     void values;
     toast.success('Perfil actualizado (mock)');
   });
 
   return (
-    <Card>
+    <Card className="max-w-2xl">
       <CardHeader>
         <CardTitle>Perfil</CardTitle>
         <CardDescription>
@@ -45,21 +43,21 @@ export function ProfileForm({ user }: { user: ServerAuth }): React.JSX.Element {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-4 max-w-md">
-          <div className="space-y-1.5">
+        <form onSubmit={onSubmit} className="space-y-stack-md">
+          <div className="space-y-stack-sm">
             <Label htmlFor="email">Email</Label>
             <Input id="email" value={user.email} disabled readOnly />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-stack-sm">
             <Label htmlFor="displayName">Nombre</Label>
             <Input id="displayName" {...form.register('displayName')} />
             {form.formState.errors.displayName && (
-              <p className="text-xs text-destructive">
+              <p className="text-xs text-status-error">
                 {form.formState.errors.displayName.message}
               </p>
             )}
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-stack-sm">
             <Label htmlFor="photoURL">Foto (URL)</Label>
             <Input
               id="photoURL"
@@ -68,13 +66,18 @@ export function ProfileForm({ user }: { user: ServerAuth }): React.JSX.Element {
               {...form.register('photoURL')}
             />
             {form.formState.errors.photoURL && (
-              <p className="text-xs text-destructive">{form.formState.errors.photoURL.message}</p>
+              <p className="text-xs text-status-error">{form.formState.errors.photoURL.message}</p>
             )}
           </div>
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Guardar
-          </Button>
+          <div className="flex items-center justify-end gap-2 pt-stack-sm">
+            <Button type="button" variant="ghost" onClick={() => form.reset()}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Guardar cambios
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

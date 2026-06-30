@@ -1,7 +1,7 @@
 'use client';
 
 import type { User } from '@shared/schemas/users';
-import { Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 
 import { useDeleteUser } from '../hooks/use-delete-user';
 
@@ -40,12 +40,19 @@ export function DeleteUserDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Eliminar usuario</DialogTitle>
-          <DialogDescription>
-            ¿Eliminar a <span className="font-medium text-foreground">{user?.email}</span>? La
-            acción es reversible: el user queda con status=&ldquo;suspendido&rdquo; y deletedAt
-            timestamp.
-          </DialogDescription>
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-status-error/10 text-status-error">
+              <AlertTriangle className="h-5 w-5" />
+            </span>
+            <div className="space-y-stack-sm">
+              <DialogTitle>Eliminar usuario</DialogTitle>
+              <DialogDescription>
+                ¿Eliminar a <span className="font-medium text-on-surface">{user?.email}</span>? Esta
+                acción es reversible: el usuario queda con status=&ldquo;suspendido&rdquo; y un
+                timestamp <code className="font-jetbrains text-xs">deletedAt</code>.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={del.isPending}>
@@ -53,7 +60,7 @@ export function DeleteUserDialog({
           </Button>
           <Button variant="destructive" onClick={onConfirm} disabled={del.isPending}>
             {del.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Eliminar
+            Eliminar usuario
           </Button>
         </DialogFooter>
       </DialogContent>

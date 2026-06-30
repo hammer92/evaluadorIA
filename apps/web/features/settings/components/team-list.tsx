@@ -7,7 +7,13 @@ import { verifyAuth } from '@/services/auth-service';
 
 export async function TeamList(): Promise<React.JSX.Element> {
   const auth = await verifyAuth();
-  if (!auth) return <p className="text-sm text-muted-foreground">Sin sesión.</p>;
+  if (!auth) {
+    return (
+      <div className="rounded-tv border border-border-standard bg-surface-subtle p-stack-md text-body-md text-on-surface-variant">
+        Sin sesión activa.
+      </div>
+    );
+  }
 
   try {
     const repo = getUserRepository();
@@ -17,28 +23,37 @@ export async function TeamList(): Promise<React.JSX.Element> {
     );
 
     if (result.items.length === 0) {
-      return <p className="text-sm text-muted-foreground">Sin miembros en el equipo.</p>;
+      return (
+        <div className="rounded-tv border border-dashed border-border-standard bg-surface-subtle p-stack-md text-body-md text-on-surface-variant">
+          Sin miembros en el equipo.
+        </div>
+      );
     }
 
     return (
-      <div className="rounded-md border divide-y">
-        {result.items.map((u) => (
-          <div key={u.uid} className="flex items-center justify-between p-3">
-            <div className="min-w-0">
-              <p className="font-medium truncate">{u.displayName ?? u.email}</p>
-              <p className="text-xs text-muted-foreground truncate">{u.email}</p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <RoleBadge role={u.role} />
-              <StatusBadge status={u.status} />
-            </div>
-          </div>
-        ))}
+      <div className="overflow-hidden rounded-tv border border-border-standard bg-white shadow-tv-card">
+        <ul className="divide-y divide-border-standard">
+          {result.items.map((u) => (
+            <li key={u.uid} className="flex items-center justify-between gap-stack-md p-stack-md">
+              <div className="min-w-0">
+                <p className="truncate font-medium text-on-surface">{u.displayName ?? u.email}</p>
+                <p className="truncate text-body-md text-on-surface-variant">{u.email}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <RoleBadge role={u.role} />
+                <StatusBadge status={u.status} />
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
     );
   } catch (e) {
-    // Firestore index puede faltar en dev/emulator; degradar a empty.
     console.error('[team-list] repo.list failed (degraded to empty):', (e as Error).message);
-    return <p className="text-sm text-muted-foreground">No se pudo cargar el equipo.</p>;
+    return (
+      <div className="rounded-tv border border-dashed border-status-warning/40 bg-status-warning/5 p-stack-md text-body-md text-status-warning">
+        No se pudo cargar el equipo. Reintentá más tarde.
+      </div>
+    );
   }
 }

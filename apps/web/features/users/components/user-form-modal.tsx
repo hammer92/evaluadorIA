@@ -82,6 +82,9 @@ export function UserFormModal({
   });
 
   const pending = create.isPending || update.isPending;
+  const emailError = (form.formState.errors as Record<string, { message?: string } | undefined>)[
+    'email'
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -94,9 +97,9 @@ export function UserFormModal({
               : 'Creá un usuario y enviale la invitación por email.'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-stack-md">
           {!isEdit && (
-            <div className="space-y-1.5">
+            <div className="space-y-stack-sm">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -104,35 +107,25 @@ export function UserFormModal({
                 autoComplete="off"
                 {...form.register('email' as keyof CreateValues)}
               />
-              {(form.formState.errors as Record<string, { message?: string } | undefined>)[
-                'email'
-              ] && (
-                <p className="text-xs text-destructive">
-                  {
-                    (form.formState.errors as Record<string, { message?: string } | undefined>)[
-                      'email'
-                    ]?.message
-                  }
-                </p>
-              )}
+              {emailError && <p className="text-xs text-status-error">{emailError.message}</p>}
             </div>
           )}
           {isEdit && (
-            <div className="space-y-1.5">
+            <div className="space-y-stack-sm">
               <Label>Email</Label>
               <Input value={user.email} disabled readOnly />
             </div>
           )}
-          <div className="space-y-1.5">
+          <div className="space-y-stack-sm">
             <Label htmlFor="displayName">Nombre</Label>
             <Input id="displayName" autoComplete="off" {...form.register('displayName' as const)} />
             {form.formState.errors.displayName && (
-              <p className="text-xs text-destructive">
+              <p className="text-xs text-status-error">
                 {form.formState.errors.displayName.message as string}
               </p>
             )}
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-stack-sm">
             <Label htmlFor="role">Rol</Label>
             <Select
               value={form.watch('role' as const)}
@@ -140,7 +133,7 @@ export function UserFormModal({
                 form.setValue('role' as const, v as 'admin' | 'recruiter' | 'expert')
               }
             >
-              <SelectTrigger>
+              <SelectTrigger id="role" className="border-border-standard">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -151,7 +144,7 @@ export function UserFormModal({
             </Select>
           </div>
           {isEdit && (
-            <div className="space-y-1.5">
+            <div className="space-y-stack-sm">
               <Label htmlFor="status">Estado</Label>
               <Select
                 value={form.watch('status' as const)}
@@ -159,7 +152,7 @@ export function UserFormModal({
                   form.setValue('status' as const, v as 'active' | 'invited' | 'suspended')
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger id="status" className="border-border-standard">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -171,16 +164,18 @@ export function UserFormModal({
             </div>
           )}
           {!isEdit && (
-            <div className="flex items-center gap-2 pt-1">
+            <label
+              htmlFor="sendInviteEmail"
+              className="flex cursor-pointer items-center gap-2 text-body-md text-on-surface-variant"
+            >
               <input
                 id="sendInviteEmail"
                 type="checkbox"
+                className="h-4 w-4 rounded border-border-standard text-navy focus:ring-navy/30"
                 {...form.register('sendInviteEmail' as const)}
               />
-              <Label htmlFor="sendInviteEmail" className="cursor-pointer">
-                Enviar email de invitación
-              </Label>
-            </div>
+              Enviar email de invitación
+            </label>
           )}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
@@ -188,7 +183,7 @@ export function UserFormModal({
             </Button>
             <Button type="submit" disabled={pending}>
               {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEdit ? 'Guardar' : 'Crear'}
+              {isEdit ? 'Guardar cambios' : 'Crear usuario'}
             </Button>
           </DialogFooter>
         </form>
