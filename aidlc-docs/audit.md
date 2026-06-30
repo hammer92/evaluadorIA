@@ -574,3 +574,12 @@
 **Context**: Bugfix aplicado en CFs con withAuth
 
 ---
+
+## Bugfix — users list empty (organization_id null)
+
+**Timestamp**: 2026-06-30T23:30:00Z
+**User Input**: "la lista de usuarios se esta mostrando vacia"
+**AI Response**: "Bug: v1UsersList query `where('organization_id', '==', '__none__')` no matchea documentos con `organization_id === null` (campo missing). En el emulator, los usuarios bootstrap tenían organization_id null. Fix: cuando `ctx.organizationId` es null, no filtrar por organization_id en la query y post-filtrar `u.organizationId === null` en JS. Verificado: lista ahora retorna 2 usuarios (recluter@yopmail.com recruiter invited, hammer92@hotmail.es admin active)."
+**Context**: Bugfix aplicado
+
+---

@@ -60,12 +60,19 @@ export const v1UsersList = onCall(
       const input = validateInput(listUsersInputSchema, data);
       const db = getAdminDb();
 
-      const orgId = input.organizationId ?? ctx.organizationId ?? '__none__';
+      const orgId = input.organizationId ?? ctx.organizationId ?? null;
 
-      let query = db
-        .collection('users')
-        .where('organization_id', '==', orgId)
-        .orderBy('created_at', 'desc') as FirebaseFirestore.Query<Record<string, unknown>>;
+      let query = db.collection('users').orderBy('created_at', 'desc') as FirebaseFirestore.Query<
+        Record<string, unknown>
+      >;
+
+      // Firestore no soporta `where('field', '==', null)` directamente ni
+      // `in` con null, así que cuando el caller no tiene organización
+      // resolvemos los docs sin organization_id (campo missing) en JS para
+      // incluir usuarios pre-org del bootstrap.
+      if (orgId) {
+        query = query.where('organization_id', '==', orgId) as typeof query;
+      }
 
       if (input.status) query = query.where('status', '==', input.status) as typeof query;
       if (input.role) query = query.where('role', '==', input.role) as typeof query;
@@ -74,6 +81,7 @@ export const v1UsersList = onCall(
 
       const filtered = snap.docs
         .map((d) => mapUserDoc(d.id, d.data()))
+        .filter((u) => (orgId ? true : u.organizationId === null))
         .filter((u) => u.status !== 'suspended')
         .filter((u) =>
           input.search
