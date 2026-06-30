@@ -565,3 +565,12 @@
 **Context**: Stitch TVS design system aplicado consistentemente a toda la web
 
 ---
+
+## Auth fix — cookie fallback en withAuth
+
+**Timestamp**: 2026-06-30T23:00:00Z
+**User Input**: "Error cargando usuarios: Authentication required"
+**AI Response**: "Bug identificado: `httpsCallable` en el client SDK requiere `auth.currentUser` populated para enviar Bearer token, pero después de page reload (o con Auth emulator en dev) el SDK pierde currentUser aunque la cookie `__session` sea válida. Fix: en `buildAuthContext` (shared/with-auth.ts), si `request.auth` es null, intentar verificar la cookie `__session` (HS256 con SESSION_COOKIE_SECRET defineSecret) como fallback. Path 2 construye el AuthedContext desde el payload del cookie (uid/email/role/organizationId) y respeta requiredRole. Si tampoco hay cookie válida, sigue lanzando `unauthenticated`. Agregado: shared/verify-session-cookie.ts; secrets: ['SESSION_COOKIE_SECRET'] declarado en v1UsersCreate/List/Update/Delete + v1ReportsGenerate; 10 nuevos tests (13 totales con with-auth) cubriendo Firebase Auth path + cookie fallback + requiredRole on cookie + invalid role rejection. Verificado: cookie-only CF call retorna 200 con payload válido, ambos-auth-and-cookie retorna 200, sin-auth-sin-cookie retorna 401, cookie inválida retorna 401. verify:auth sigue 11/11 PASS. typecheck/lint/test 94/94/build PASS."
+**Context**: Bugfix aplicado en CFs con withAuth
+
+---

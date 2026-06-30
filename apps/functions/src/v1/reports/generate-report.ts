@@ -28,6 +28,7 @@ export interface GenerateReportOutput {
 export const v1ReportsGenerate = onCall(
   {
     cors: (process.env['ALLOWED_ORIGINS'] ?? 'http://localhost:3000').split(','),
+    secrets: ['SESSION_COOKIE_SECRET'],
   },
   withAuth<GenerateReportInput, GenerateReportOutput>('admin', async (_ctx, data) => {
     try {

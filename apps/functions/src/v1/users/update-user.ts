@@ -43,6 +43,7 @@ export const v1UsersUpdate = onCall(
   {
     cors: (process.env['ALLOWED_ORIGINS'] ?? 'http://localhost:3000').split(','),
     enforceAppCheck: false,
+    secrets: ['SESSION_COOKIE_SECRET'],
   },
   withAuth<UpdateUserRequest, unknown>(undefined, async (ctx: AuthedContext, data) => {
     try {

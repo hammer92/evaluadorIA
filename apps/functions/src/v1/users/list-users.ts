@@ -53,6 +53,7 @@ function mapUserDoc(id: string, raw: Record<string, unknown>): UserSummary {
 export const v1UsersList = onCall(
   {
     cors: (process.env['ALLOWED_ORIGINS'] ?? 'http://localhost:3000').split(','),
+    secrets: ['SESSION_COOKIE_SECRET'],
   },
   withAuth<ListUsersInput, ListUsersOutput>(['admin', 'recruiter'], async (ctx, data) => {
     try {

@@ -23,6 +23,7 @@ export const v1UsersCreate = onCall(
   {
     cors: (process.env['ALLOWED_ORIGINS'] ?? 'http://localhost:3000').split(','),
     enforceAppCheck: false,
+    secrets: ['SESSION_COOKIE_SECRET'],
   },
   withAuth<CreateUserInput, CreateUserOutput>('admin', async (ctx: AuthedContext, data) => {
     try {
