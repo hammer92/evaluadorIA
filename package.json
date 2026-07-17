@@ -15,7 +15,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run --exclude '**/*.integration.test.ts'",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --exclude '**/*.integration.test.ts' --coverage",
     "test:integration": "pnpm --filter @platform/functions test:integration",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
