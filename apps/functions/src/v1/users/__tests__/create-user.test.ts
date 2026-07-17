@@ -29,10 +29,7 @@ vi.mock('firebase-functions/v2/https', async () => {
     hoisted._firebase_functions_v2_https = await vi.importActual('firebase-functions/v2/https');
   }
   const actual = hoisted._firebase_functions_v2_https as { onCall: unknown };
-  const capturedHandler = (
-    optsOrHandler: unknown,
-    maybeHandler?: unknown,
-  ): unknown => {
+  const capturedHandler = (optsOrHandler: unknown, maybeHandler?: unknown): unknown => {
     const handler =
       typeof optsOrHandler === 'function'
         ? (optsOrHandler as (req: unknown) => Promise<unknown>)
@@ -115,7 +112,12 @@ function makeChain() {
   };
 }
 
-function adminContext(): { uid: string; email: string; role: string; token: Record<string, unknown> } {
+function adminContext(): {
+  uid: string;
+  email: string;
+  role: string;
+  token: Record<string, unknown>;
+} {
   return { uid: 'admin-uid', email: 'admin@platform.com', role: 'admin', token: { role: 'admin' } };
 }
 
