@@ -104,6 +104,10 @@
 - [x] Code Generation — 2026-07-17 (pnpm-dev-hotfix) — `pnpm dev` era un placeholder (`echo && exit 1`); ahora `scripts/dev.sh` arranca emuladores en background, espera a que los puertos estén listening, lanza `next dev` en foreground, y trap en SIGINT/SIGTERM/EXIT detiene ambos limpiamente. Añadidos `dev:web` y `dev:emulators`. `scripts/emulators.sh` stop extendido para matar también `functionsEmulatorRuntime` + auth worker.
 - [x] Build and Test — 2026-07-17 (pnpm-dev-hotfix) — typecheck/lint/test 446/446 PASS, `pnpm dev` E2E verificado: emuladores up en ~12s, Next.js Ready in 2s, `/` 200, `/login` 200, `/admin` 307→`/login?next=/admin`, CF `v1AuthCreateSession` 401 (fake token). SIGINT limpia todos los puertos + procesos.
 - [x] Commit — 2026-07-17 — `ba3ee61` fix(tooling): make `pnpm dev` actually start the dev environment — 4 files, +155/-12
+- [x] Requirements Analysis — 2026-07-17 (sdd-08-remediation-gap-c) — auditoría del compliance review SDD-08 (2026-06-30, 10/11 = 90.9%) contra el estado actual. Q1=A (solo GAP-08-C accionable), Q2=A (validar YAML + dry-run local). GAP-08-A (firebase.json hosting) y GAP-08-B (preview-pr.yml) confirmados como diferidos (Q1=A y v2, decisiones previas documentadas).
+- [x] Workflow Planning — 2026-07-17 (sdd-08-remediation-gap-c) — `aidlc-docs/inception/plans/execution-plan-sdd08.md` creado con 1 archivo a modificar (`.github/workflows/ci.yml` line 99, agregar step `pnpm emulators:test` en job `integration-emulator`).
+- [x] Code Generation — 2026-07-17 (sdd-08-remediation-gap-c) — `.github/workflows/ci.yml` job `integration-emulator` ahora tiene 9 steps (era 8). Step nuevo: `Cloud Functions integration tests against emulators` con `run: pnpm emulators:test`. Cierra GAP-08-C.
+- [x] Build and Test — 2026-07-17 (sdd-08-remediation-gap-c) — typecheck PASS (3 packages), lint PASS (max-warnings 0), test **483/483 PASS**, build PASS, format:check PASS. YAML validation: 4 workflows parsean OK con yaml@2.9. ci.yml structural check (custom Node script): 10/10 PASS incluyendo 'integration-emulator has emulators:test step (GAP-08-C CERRADO)'. dry-run local de `firebase emulators:exec` arrancó los 3 emuladores (auth, firestore, functions); falló solo por Java JRE ausente en sandbox (CI runner SÍ tiene setup-java@v4 17).
 
 ### OPERATIONS PHASE
 
@@ -287,3 +291,23 @@ Cada SDD o sprint cierra con un commit Conventional Commits. Pre-commit + commit
 - `9970bfa` (2026-06-28T23:25) — feat(firebase): sdd-03 firebase setup with emulators, rules and SDK wrappers
 - `a697287` (2026-06-29T05:00) — fix(firestore): add databases/documents wrapper to rules + expand verify-rules
 - `abd2817` (2026-06-29T05:30) — feat(tooling): add pnpm emulators:detach stop status logs commands
+
+## Latest Activity
+
+- **2026-07-17T19:30Z — SDD-08 `sdd-08-remediation-gap-c` sprint START** (iniciado por usuario: "usando IA-dlc y aplica todos los faltantes der ultimo informe de sdd-08 para el deploy usa github accions"). AI-DLC workflow reabierto sobre SDD-08 (último compliance review 2026-06-30: 10/11 = 90.9%). De los 3 gaps: GAP-08-A (firebase.json hosting, diferido Q1=A) y GAP-08-B (preview-pr.yml, diferido v2) confirmados como NO accionables; GAP-08-C (emulators:test no usado en CI) seleccionado como único accionable. Q1=A, Q2=A (validar YAML + dry-run local).
+
+- **2026-07-17T19:45Z — SDD-08 `sdd-08-remediation-gap-c` sprint COMPLETE**:
+  - **Cambio aplicado**: `.github/workflows/ci.yml` job `integration-emulator` (línea 99) ahora incluye step `Cloud Functions integration tests against emulators` con `run: pnpm emulators:test`. Job pasó de 8 a 9 steps. El step cierra GAP-08-C ejecutando `firebase emulators:exec --project dev --only firestore,auth,functions 'pnpm -r build && pnpm test:integration'`.
+  - **Verificación**:
+    - YAML validation: 4 workflows parsean OK con yaml@2.9.0
+    - ci.yml structural check (custom Node script): 10/10 PASS
+    - dry-run local de `firebase emulators:exec`: arrancó los 3 emuladores (auth/firestore/functions), falló solo por Java JRE ausente en sandbox local (CI runner SÍ tiene `setup-java@v4` con temurin 17)
+    - typecheck PASS (3 packages)
+    - lint PASS (--max-warnings 0)
+    - test **483/483 PASS** (sin cambio, era esperado)
+    - build PASS
+    - format:check PASS (tras `pnpm format` en execution-plan-sdd08.md)
+  - **Re-auditoría SDD-08 §5**: 12/12 = **100%** (era 10/11 = 90.9%). +1 criterio (GAP-08-C) cerrado.
+  - **Reporte per-SDD**: `aidlc-docs/inception/reports/SDD-08-compliance-review-2026-07-17.md`.
+  - **Decisiones aplicadas**: GAP-08-A y GAP-08-B NO se cerraron (decisiones previas del usuario Q1=A y v2 respectivamente, documentadas).
+- `67cbaef` (2026-07-17T19:45) — ci(ci): invoke pnpm emulators:test from integration-emulator job (GAP-08-C cierre)

@@ -931,3 +931,30 @@ Ampliado para matar también `functionsEmulatorRuntime` y auth emulator worker (
 ### Commit
 
 - `ba3ee61` fix(tooling): make `pnpm dev` actually start the dev environment — 4 files, +155/-12
+
+---
+
+## SDD-08 Remediation Sprint — Workspace Detection + Requirements Analysis
+
+**Timestamp**: 2026-07-17T19:30:00Z
+**User Input**: "usando IA-dlc y aplica todos los faltantes der ultimo informe de sdd-08 para el deploy usa github accions"
+**AI Response**: "AI-DLC workflow iniciado para SDD-08 remediation sprint. Workspace detection: brownfield post-SDD-07 ya cerrado (commit `1e60de7`). Estado actual SDD-08: 10/11 = 90.9% per `aidlc-docs/inception/reports/SDD-ALL-compliance-review.md` (2026-06-30). 3 gaps identificados: GAP-08-A (firebase.json hosting — diferido Q1=A), GAP-08-B (preview-pr.yml — diferido v2), GAP-08-C (emulators:test no usado en CI — accionable). User explicit decision Q1=A (alcance solo GAP-08-C), Q2=A (validar YAML + dry-run local). Defer GAP-08-A (Q1=A documentada) y GAP-08-B (v2 decision) según decisiones previas."
+**Context**: INCEPTION - Workspace Detection + Requirements Analysis (sprint sdd-08-remediation-gap-c)
+
+---
+
+## SDD-08 Remediation Sprint — Workflow Planning
+
+**Timestamp**: 2026-07-17T19:32:00Z
+**User Input**: Q1=A (Solo GAP-08-C), Q2=A (Validar YAML + dry-run local)
+**AI Response**: "Execution plan escrito en `aidlc-docs/inception/plans/execution-plan-sdd08.md`. 1 archivo a modificar (`.github/workflows/ci.yml`): agregar step 'Cloud Functions integration tests against emulators' (run: pnpm emulators:test) en el job `integration-emulator` después de `verify:auth`. Stages skipped: User Stories, App Design, Units Gen, Func Design (gap-closure técnico, no afecta flujos). Criterios de cierre: GAP-08-A diferido, GAP-08-B diferido, GAP-08-C cerrado, typecheck/lint/test/build/format PASS, YAML valida, dry-run local confirma que Firebase CLI parsea comando."
+**Context**: INCEPTION - Workflow Planning complete
+
+---
+
+## SDD-08 Remediation Sprint — Code Generation + Build/Test
+
+**Timestamp**: 2026-07-17T19:45:00Z
+**User Input**: (continuación del sprint)
+**AI Response**: "Construction phase ejecutada. Cambios: `.github/workflows/ci.yml` line 99 ahora tiene el step `Cloud Functions integration tests against emulators` con `run: pnpm emulators:test`. job `integration-emulator` pasó de 8 a 9 steps. Validación YAML: 4 workflows parsean OK con yaml@2.9.0. ci.yml structural check (custom Node script): 10/10 PASS incluyendo 'integration-emulator has emulators:test step (GAP-08-C CERRADO)'. dry-run local: `firebase emulators:exec --project dev --only firestore,auth,functions` intentó arrancar los 3 emuladores (auth, firestore, functions), falló solo porque Java JRE 17 no está instalado en sandbox (CI runner SÍ lo tiene via setup-java@v4 step del job). Quality gates: typecheck PASS, lint 0 warnings, test 483/483 PASS, build PASS, format:check PASS (tras prettier --write en execution-plan-sdd08.md)."
+**Context**: CONSTRUCTION - Code Generation + Build and Test cerradas
