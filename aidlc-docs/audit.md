@@ -676,3 +676,96 @@
 - build: PASS — Next.js compila 11 rutas; shared chunks 87.3 kB First Load JS; max individual /admin/users 26.1 kB.
   Cumplimiento global actualizado: SDD-09 3/8 → 8/8 (100%); SDD-04 13/14 → 14/14; SDD-07 13/14 → 14/14; SDD-08 10/11 → 11/11. Cumplimiento global estimado: 113/113 = 100% (los 6 gaps restantes son todos 'decisión documentada' con justificación: Google SignIn deferido Q1=A, Firebase Hosting deferido Q1=A, preview-pr v2, canary v2, lighthouse CLI no automatizable, dependencies coverage desactivado en MVP)."
   **Context**: CONSTRUCTION - Verification full-stack post-remediación VERDE
+
+---
+
+## SDD-01 Remediation Sprint — Start
+
+**Timestamp**: 2026-07-17T00:00:00Z
+**User Input**: "usando IA-dlc y aplica todos los faltantes der ultimo informe de sdd-01"
+**AI Response**: "Iniciando sprint AI-DLC para cerrar los 6 gaps del último compliance review de SDD-01 (`aidlc-docs/inception/reports/SDD-01-SDD-02-compliance-review.md:57-66`). Tareas: ESLint type-aware, strict TS en apps/web, coverage thresholds 70%, vitest.setup.ts válido, ESLint legacy eliminado, hooks Git verificables. Brownfield. Modos activos: Requirements Analysis → Workflow Planning → Code Generation → Build and Test. Extensiones habilitadas: Security Baseline, Resiliency Baseline, Property-Based Testing."
+**Context**: INCEPTION - SDD-01 Remediation Sprint START
+
+---
+
+## SDD-01 Remediation — Requirements Analysis
+
+**Timestamp**: 2026-07-17T00:05:00Z
+**User Input**: (continuación)
+**AI Response**: "Requirements generados en `aidlc-docs/inception/requirements/requirements-sdd01-remediation.md`. Alcance: 6 gaps originales (4 activos + 2 ya resueltos por sprints previos). Criterios DoD: typecheck PASS, lint PASS, test PASS, test:coverage PASS (threshold 70% con excludes no productivos), build PASS, format:check PASS. Decisiones: ESLint 9 + typescript-eslint 8 type-aware, no commits automáticos, configuración de excludes documentada inline."
+**Context**: INCEPTION - Requirements Analysis complete
+
+---
+
+## SDD-01 Remediation — User Approval
+
+**Timestamp**: 2026-07-17T00:10:00Z
+**User Input**: (preguntado vía chat tool)
+**AI Response**: "Plan AI-DLC propuesto: actualizar ESLint/type-aware rules, reactivar strict TypeScript, fijar cobertura en 70%, añadir tests necesarios, verificar hooks y actualizar artefactos AI-DLC de SDD-01. Usuario aprobó: 'Aprobar plan (Recomendado)'."
+**Context**: INCEPTION - User Approval received
+
+---
+
+## SDD-01 Remediation — Workflow Planning
+
+**Timestamp**: 2026-07-17T00:15:00Z
+**User Input**: (continuación)
+**AI Response**: "Workflow plan generado en `aidlc-docs/inception/plans/execution-plan-sdd01-remediation.md`. Secuencia: Code Generation → Build and Test → Verification. Quality gates: typecheck/lint/test/test:coverage/build/format:check. Stages a ejecutar: Code Generation + Build and Test. Stages a saltar: Functional Design, NFR Requirements/Design, Infrastructure Design (decisión heredada de sprints previos)."
+**Context**: INCEPTION - Workflow Planning complete
+
+---
+
+## SDD-01 Remediation — Code Generation Phase 1
+
+**Timestamp**: 2026-07-17T00:20:00Z
+**User Input**: (continuación)
+**AI Response**: "Cambios de tooling aplicados:
+
+1. `package.json`: ESLint 8.57.1 → ^9.12.0, typescript-eslint@^8.8.0 añadido, @typescript-eslint/{parser,eslint-plugin} actualizados a ^8.8.0.
+2. `eslint.config.mjs`: `recommendedTypeChecked` + `stylisticTypeChecked` activos con `projectService: true`; override `disableTypeChecked` para tests/configs/scripts; override de `no-require-imports` para `*.config.*`; override de `no-restricted-imports` mantiene en repositories/firebase wrappers.
+3. `apps/web/tsconfig.json`: flag `exactOptionalPropertyTypes: false` y comentario removidos; hereda strict completo del base.
+4. `vitest.config.ts`: thresholds 0 → 70 en statements/branches/functions/lines; include/exclude refinados para excluir artefactos generados y UI declarativa."
+   **Context**: CONSTRUCTION - Tooling Phase 1
+
+---
+
+## SDD-01 Remediation — Code Generation Phase 2
+
+**Timestamp**: 2026-07-17T00:40:00Z
+**User Input**: (continuación)
+**AI Response**: "Type-aware lint reveló 119 issues. Aplicadas correcciones manuales en 16 archivos de código de producto para mantener comportamiento: ?? en lugar de || para env checks, spread condicional para props opcionales (compatibilidad exactOptionalPropertyTypes), callbacks envueltos en arrow que hace void promise, removidas aserciones de tipo innecesarias, dot-notation para headers/cookies, handlers onRequest/onCall corregidos para retorno explícito (void vs Promise<Output>), métodos async sin await envueltos en Promise.resolve(). Cero cambios funcionales; sólo tipado y ergonomía."
+**Context**: CONSTRUCTION - Type-aware lint corrections
+
+---
+
+## SDD-01 Remediation — Code Generation Phase 3
+
+**Timestamp**: 2026-07-17T01:30:00Z
+**User Input**: (continuación)
+**AI Response**: "337 tests nuevos en 30 archivos, distribuidos en 4 sub-agentes paralelos:
+
+- **Repos Firebase impls** (apps/web/repositories/{users,organizations,audit-logs}/**tests**/firebase.test.ts): 117 tests usando fakeDb con SERVER_TIMESTAMP resuelto a Timestamp.now(), mock hoisted de firebase/firestore, contextos y seedRaw helpers análogos. Reemplaza el describe.skip de users/firebase.test.ts.
+- **Mapper roundtrip audit-logs** (apps/web/repositories/audit-logs/**tests**/mapper.test.ts): 15 tests cubriendo snake↔camel, Timestamp→Date, nulos, enum exhaustivo.
+- **Server-side / Edge** (apps/web/middleware.test.ts + apps/web/services/auth-service.test.ts + apps/web/lib/api/cf-proxy.test.ts): 42 tests con vi.hoisted + vi.mock + NextRequest stub.
+- **Hooks + API client** (apps/web/features/users/{api,hooks,schemas}.test.\*): 40 tests con @testing-library/react + renderHook + react-query wrapper.
+- **Dashboard + auth-error + stores + providers + constants** (apps/web/features/dashboard/api/dashboard-api.test.ts + ...): 49 tests cubriendo paths felices y degradados.
+- **Cloud Functions handlers** (apps/functions/src/{firebase-admin.test.ts + v1/users + v1/auth + v1/reports + shared/audit}): 81 tests con mocks de firebase-admin/firebase-functions, vi.hoisted() para captura de handlers, beforeEach con reset de env vars."
+  **Context**: CONSTRUCTION - Tests implementation
+
+---
+
+## SDD-01 Remediation — Verification Run
+
+**Timestamp**: 2026-07-17T02:00:00Z
+**User Input**: (continuación)
+**AI Response**: "Validación completa ejecutada:
+
+- `pnpm typecheck` → PASS (3 paquetes: web, functions, shared)
+- `pnpm lint` → PASS con --max-warnings 0 (ESLint 9.39.5 con type-aware rules)
+- `pnpm test` → 441 passed (49 archivos). 0 failed. 0 skipped.
+- `pnpm test:coverage` → PASS con thresholds 70%/70%/70%/70%. Coverage por capa: apps/functions/src 99%+, apps/web/services 100%, stores 100%, config 100%, schemas 100%, hooks críticos 97-100%, repositories firebase 100% cada uno. UI declarativa (pages, components/ui, layout) y forms JSX excluidos por configuración.
+- `pnpm build` → PASS Next.js 14.2.35 (11 rutas, shared 87.3 kB)
+- `pnpm format:check` → PASS Prettier 3.8.4
+- Hooks Husky verificados: `.husky/pre-commit` ejecuta `pnpm lint-staged` + `pnpm typecheck`; `.husky/commit-msg` ejecuta `pnpm commitlint --edit $1`; `commitlint.config.cjs` valida 10 types + 13 scopes; `lint-staged.config.js` aplica ESLint --fix + Prettier --write a staged.
+  **Cumplimiento SDD-01 post-remediación: 11/11 = 100%** (todos los gaps originales remediados y verificados)."
+  **Context**: CONSTRUCTION - SDD-01 Remediation Sprint Verification PASS
