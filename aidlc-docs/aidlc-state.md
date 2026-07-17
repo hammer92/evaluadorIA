@@ -94,6 +94,9 @@
 - [x] Build and Test — 2026-06-30 (sdd-09-remediation sprint) — typecheck/lint PASS, test **104/104 + 1 skipped** (10 nuevos del roundtrip), build PASS
 - [x] Code Generation — 2026-07-17 (sdd-01-remediation sprint) — upgrade ESLint 9 + typescript-eslint 8 type-aware, reactivar strict TS en apps/web, coverage 70% con excludes no productivos, +300 tests nuevos (repos Firebase impls, mappers, hooks, API client, providers, dashboard, auth-service, middleware, CF handlers, firebase-admin)
 - [x] Build and Test — 2026-07-17 (sdd-01-remediation sprint) — typecheck PASS, lint PASS (--max-warnings 0), test **441/441** (337 nuevos), test:coverage PASS (thresholds 70%/70%/70%/70% con exclude de UI declarativa + config), build PASS Next.js 14.2.35, format:check PASS
+- [x] Code Generation — 2026-07-17 (emulators-env-hotfix) — `.env` + `.env.local.example` + `apps/functions/.secret.local[.example]` + `.gitignore` (allow `.env`, ignore `.secret.local`) + `.prettierignore` (`*.sh`) + `scripts/emulators.sh` (3-tier secret resolution)
+- [x] Build and Test — 2026-07-17 (emulators-env-hotfix) — typecheck/lint/test 441/441/build/format:check PASS, emuladores arrancan los 6 puertos sin WARNING de `SESSION_COOKIE_SECRET` (verificado con `grep "secret parameter" log` → 0 matches)
+- [x] Commit — 2026-07-17 — `dc75bfe` fix(tooling): configure .env and .secret.local for local emulators
 
 ### OPERATIONS PHASE
 

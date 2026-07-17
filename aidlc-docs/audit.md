@@ -769,3 +769,43 @@
 - Hooks Husky verificados: `.husky/pre-commit` ejecuta `pnpm lint-staged` + `pnpm typecheck`; `.husky/commit-msg` ejecuta `pnpm commitlint --edit $1`; `commitlint.config.cjs` valida 10 types + 13 scopes; `lint-staged.config.js` aplica ESLint --fix + Prettier --write a staged.
   **Cumplimiento SDD-01 post-remediación: 11/11 = 100%** (todos los gaps originales remediados y verificados)."
   **Context**: CONSTRUCTION - SDD-01 Remediation Sprint Verification PASS
+
+---
+
+## Emulators `.env` / `.secret.local` Configuration Sprint
+
+**Timestamp**: 2026-07-17T13:35:00Z
+**User Input**: "usando IA-dlc Beginning execution of ... No value found for secret parameter SESSION_COOKIE_SECRET ... configura los .env para ejecucion en local"
+**AI Response**: "Sprint focal AI-DLC ejecutado. Plan de 7 pasos presentado y aprobado (A=Aprobar plan). Implementación + verificación + commit dc75bfe."
+
+**Context**: CONSTRUCTION - Hotfix tooling (no SDD nuevo)
+
+### Cambios
+
+- `.env` (nuevo, commited): defaults de emulador (NEXT*PUBLIC_FIREBASE*\*, REPOSITORY_DRIVER=firebase, NEXT_PUBLIC_API_BASE_URL apuntando a 127.0.0.1:5001).
+- `.env.local.example` (nuevo, commited): plantilla para overrides personales.
+- `apps/functions/.secret.local.example` (nuevo, commited): plantilla para secretos de CF.
+- `apps/functions/.secret.local` (nuevo, gitignored): `SESSION_COOKIE_SECRET=dev-secret-shared-...` generado automáticamente.
+- `.gitignore`: permitir `.env` + `.env.local.example` + `.secret.local.example`; ignorar `.secret.local` y `**/.secret.local`.
+- `.prettierignore`: excluir `*.sh` y `*.bash` (Prettier no parsea shell scripts).
+- `scripts/emulators.sh`: resolución del secret en 3 niveles (process.env > .secret.local > default); loguea la fuente usada; export explícito a `setsid` subshell.
+
+### Verificación
+
+- `pnpm typecheck` → PASS (3 packages)
+- `pnpm lint` → PASS (--max-warnings 0)
+- `pnpm test` → 441/441 PASS
+- `pnpm build` → PASS (Next.js 14.2.35)
+- `pnpm format:check` → PASS
+- `pnpm emulators:detach` → arrancan los 6 puertos (4000/8080/9099/9199/5001/4400)
+- `grep "secret parameter" /tmp/opencode/firebase-emulators.log` → **0 matches** (WARNING eliminado)
+- `curl POST /v1AuthCreateSession` con fake token → 401 invalid-id-token (esperado: secret cargado correctamente, rechaza token fake)
+
+### Commit
+
+- `dc75bfe` fix(tooling): configure .env and .secret.local for local emulators
+
+### Notas
+
+- Los WARNING remanentes en el log son de `sun.misc.Unsafe` (protobuf, third-party, harmless) y `package.json indicates outdated firebase-functions` (informational). NO relacionados al secret.
+- El rename `doc/ → docs/` (37 archivos) quedó staged como cambio pendiente sin commitear (pre-existente al sprint, fuera de scope).
