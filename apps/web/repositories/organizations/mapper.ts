@@ -1,7 +1,4 @@
-import type {
-  Organization,
-  UpdateOrganizationInput,
-} from '@shared/schemas/organizations';
+import type { Organization, UpdateOrganizationInput } from '@shared/schemas/organizations';
 import type { Timestamp as FbTimestamp } from 'firebase/firestore';
 
 export interface OrganizationRaw {

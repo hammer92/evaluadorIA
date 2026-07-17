@@ -201,14 +201,14 @@ export class FirebaseUserRepository implements UserRepository {
     try {
       const ref = doc(collection(this._db, COLLECTION));
       const now = serverTimestamp();
-       const rawInput = {
-         email: input.email,
-         role: input.role,
-         ...(input.displayName !== undefined ? { displayName: input.displayName } : {}),
-         ...(input.organizationId !== undefined ? { organizationId: input.organizationId } : {}),
-       };
-       const raw: UserRaw = {
-         ...toUserInputRaw(rawInput),
+      const rawInput = {
+        email: input.email,
+        role: input.role,
+        ...(input.displayName !== undefined ? { displayName: input.displayName } : {}),
+        ...(input.organizationId !== undefined ? { organizationId: input.organizationId } : {}),
+      };
+      const raw: UserRaw = {
+        ...toUserInputRaw(rawInput),
         photo_url: null,
         last_login_at: null,
         created_at: now as unknown as UserRaw['created_at'],

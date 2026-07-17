@@ -106,12 +106,7 @@ export function UserFormModal({
           {!isEdit && (
             <div className="space-y-stack-sm">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="off"
-                {...form.register('email')}
-              />
+              <Input id="email" type="email" autoComplete="off" {...form.register('email')} />
               {emailError && <p className="text-xs text-status-error">{emailError.message}</p>}
             </div>
           )}

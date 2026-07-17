@@ -55,13 +55,13 @@ export function LoginForm({ nextUrl }: { nextUrl?: string }) {
         <p className="text-body-md text-on-surface-variant">Technical Validation System</p>
       </div>
 
-        <form
-          onSubmit={(event) => {
-            void onSubmit(event);
-          }}
-          className="space-y-stack-md"
-          noValidate
-        >
+      <form
+        onSubmit={(event) => {
+          void onSubmit(event);
+        }}
+        className="space-y-stack-md"
+        noValidate
+      >
         <div className="space-y-stack-sm">
           <label
             htmlFor="email"

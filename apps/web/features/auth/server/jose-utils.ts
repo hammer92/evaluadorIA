@@ -77,7 +77,7 @@ function toSessionPayload(payload: JWTPayload): SessionPayload | null {
     uid,
     email,
     role: role as SessionPayload['role'],
-    organizationId: (orgId) ?? null,
+    organizationId: orgId ?? null,
     iat,
     exp,
   };

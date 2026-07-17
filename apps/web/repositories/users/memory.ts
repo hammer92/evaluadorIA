@@ -40,7 +40,13 @@ export class MemoryUserRepository implements UserRepository {
     const total = items.length;
     const start = (page - 1) * pageSize;
     const paged = items.slice(start, start + pageSize);
-    return Promise.resolve({ items: paged, page, pageSize, total, hasMore: start + paged.length < total });
+    return Promise.resolve({
+      items: paged,
+      page,
+      pageSize,
+      total,
+      hasMore: start + paged.length < total,
+    });
   }
 
   async getById(uid: string, _ctx: Ctx): Promise<User | null> {

@@ -34,7 +34,7 @@ function extractClaims(raw: FirebaseUserClaims): AuthClaims | null {
   const role = raw.role;
   const orgId = raw.organizationId;
   if (orgId !== undefined && orgId !== null && typeof orgId !== 'string') return null;
-  return { role, organizationId: (orgId) ?? null };
+  return { role, organizationId: orgId ?? null };
 }
 
 export function useAuth(): AuthState {

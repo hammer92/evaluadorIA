@@ -46,18 +46,37 @@ const fakeDb = vi.hoisted(() => {
 });
 
 vi.mock('firebase/firestore', async () => {
-  const actual = await vi.importActual<typeof import('firebase/firestore')>('firebase/firestore');
+  type ActualModule = typeof import('firebase/firestore');
+  const actual = await vi.importActual<ActualModule>('firebase/firestore');
+  const real = actual as unknown as ActualModule;
 
-  interface WhereConstraint { __type: 'where'; field: string; op: string; value: unknown }
-  interface OrderByConstraint { __type: 'orderBy'; field: string; direction: 'asc' | 'desc' }
-  interface LimitConstraint { __type: 'limit'; limit: number }
+  interface WhereConstraint {
+    __type: 'where';
+    field: string;
+    op: string;
+    value: unknown;
+  }
+  interface OrderByConstraint {
+    __type: 'orderBy';
+    field: string;
+    direction: 'asc' | 'desc';
+  }
+  interface LimitConstraint {
+    __type: 'limit';
+    limit: number;
+  }
   type Constraint = WhereConstraint | OrderByConstraint | LimitConstraint;
 
   const resolveServerTimestamps = (value: unknown): unknown => {
     if (value === fakeDb.SERVER_TIMESTAMP) {
-      return actual.Timestamp.now();
+      return real.Timestamp.now();
     }
-    if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof actual.Timestamp)) {
+    if (
+      value &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      !(value instanceof actual.Timestamp)
+    ) {
       const result: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
         result[k] = resolveServerTimestamps(v);
@@ -106,18 +125,22 @@ vi.mock('firebase/firestore', async () => {
     __constraints: constraints as Constraint[],
   }));
 
-  const whereMock = vi.fn((field: string, op: string, value: unknown): WhereConstraint => ({
-    __type: 'where',
-    field,
-    op,
-    value,
-  }));
+  const whereMock = vi.fn(
+    (field: string, op: string, value: unknown): WhereConstraint => ({
+      __type: 'where',
+      field,
+      op,
+      value,
+    }),
+  );
 
-  const orderByMock = vi.fn((field: string, direction: 'asc' | 'desc' = 'asc'): OrderByConstraint => ({
-    __type: 'orderBy',
-    field,
-    direction,
-  }));
+  const orderByMock = vi.fn(
+    (field: string, direction: 'asc' | 'desc' = 'asc'): OrderByConstraint => ({
+      __type: 'orderBy',
+      field,
+      direction,
+    }),
+  );
 
   const limitMock = vi.fn((n: number): LimitConstraint => ({ __type: 'limit', limit: n }));
 
@@ -175,7 +198,11 @@ vi.mock('firebase/firestore', async () => {
     if (data === undefined) {
       return { exists: (): boolean => false, data: (): undefined => undefined, id: docId };
     }
-    return { exists: (): boolean => true, data: (): Record<string, unknown> => ({ ...data }), id: docId };
+    return {
+      exists: (): boolean => true,
+      data: (): Record<string, unknown> => ({ ...data }),
+      id: docId,
+    };
   });
 
   const setDocMock = vi.fn(async (ref: { __path: string }, data: Record<string, unknown>) => {
@@ -186,22 +213,20 @@ vi.mock('firebase/firestore', async () => {
     col.set(docId, resolveServerTimestamps(data) as Record<string, unknown>);
   });
 
-  const updateDocMock = vi.fn(
-    async (ref: { __path: string }, data: Record<string, unknown>) => {
-      const pathParts = ref.__path.split('/');
-      const docId = pathParts.pop()!;
-      const colPath = pathParts.join('/');
-      const col = fakeDb.getCollection(colPath);
-      const existing = col.get(docId);
-      if (!existing) {
-        throw new Error(`No document to update: ${ref.__path}`);
-      }
-      col.set(docId, {
-        ...existing,
-        ...(resolveServerTimestamps(data) as Record<string, unknown>),
-      });
-    },
-  );
+  const updateDocMock = vi.fn(async (ref: { __path: string }, data: Record<string, unknown>) => {
+    const pathParts = ref.__path.split('/');
+    const docId = pathParts.pop()!;
+    const colPath = pathParts.join('/');
+    const col = fakeDb.getCollection(colPath);
+    const existing = col.get(docId);
+    if (!existing) {
+      throw new Error(`No document to update: ${ref.__path}`);
+    }
+    col.set(docId, {
+      ...existing,
+      ...(resolveServerTimestamps(data) as Record<string, unknown>),
+    });
+  });
 
   const serverTimestampMock = vi.fn(() => fakeDb.SERVER_TIMESTAMP);
 
@@ -256,9 +281,7 @@ function makeUserRaw(overrides: Partial<UserRaw> = {}): UserRaw {
 }
 
 function seedUserRaw(id: string, raw: Partial<UserRaw> = {}): void {
-  fakeDb
-    .getCollection('users')
-    .set(id, makeUserRaw(raw) as unknown as Record<string, unknown>);
+  fakeDb.getCollection('users').set(id, makeUserRaw(raw) as unknown as Record<string, unknown>);
 }
 
 describe('[UserRepository:Firebase]', () => {
@@ -302,9 +325,8 @@ describe('[UserRepository:Firebase]', () => {
     });
 
     it('construye query con where + orderBy(created_at, desc) + limit', async () => {
-      const { collection, where, orderBy, limit, query, getDocs } = await import(
-        'firebase/firestore'
-      );
+      const { collection, where, orderBy, limit, query, getDocs } =
+        await import('firebase/firestore');
       seedUserRaw('a', { email: 'a@x.com', organization_id: 'org_1' });
 
       await repo.list({ organizationId: 'org_1', page: 1, pageSize: 5 }, ctxAdmin);
@@ -391,9 +413,18 @@ describe('[UserRepository:Firebase]', () => {
     });
 
     it('ordena por created_at desc', async () => {
-      seedUserRaw('a', { email: 'a@x.com', created_at: Timestamp.fromDate(new Date('2026-06-30T10:00:00Z')) });
-      seedUserRaw('b', { email: 'b@x.com', created_at: Timestamp.fromDate(new Date('2026-06-30T12:00:00Z')) });
-      seedUserRaw('c', { email: 'c@x.com', created_at: Timestamp.fromDate(new Date('2026-06-30T11:00:00Z')) });
+      seedUserRaw('a', {
+        email: 'a@x.com',
+        created_at: Timestamp.fromDate(new Date('2026-06-30T10:00:00Z')),
+      });
+      seedUserRaw('b', {
+        email: 'b@x.com',
+        created_at: Timestamp.fromDate(new Date('2026-06-30T12:00:00Z')),
+      });
+      seedUserRaw('c', {
+        email: 'c@x.com',
+        created_at: Timestamp.fromDate(new Date('2026-06-30T11:00:00Z')),
+      });
 
       const r = await repo.list({}, ctxAdmin);
       expect(r.items.map((u) => u.email)).toEqual(['b@x.com', 'c@x.com', 'a@x.com']);
@@ -593,9 +624,7 @@ describe('[UserRepository:Firebase]', () => {
       const { setDoc } = await import('firebase/firestore');
       const re = RepositoryError.internal('ya envuelto');
       (setDoc as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(re);
-      await expect(
-        repo.create({ email: 'a@x.com', role: 'expert' }, ctxAdmin),
-      ).rejects.toBe(re);
+      await expect(repo.create({ email: 'a@x.com', role: 'expert' }, ctxAdmin)).rejects.toBe(re);
     });
   });
 
@@ -608,11 +637,7 @@ describe('[UserRepository:Firebase]', () => {
 
     it('actualiza photoURL', async () => {
       seedUserRaw('u', { email: 'a@x.com' });
-      const updated = await repo.update(
-        'u',
-        { photoURL: 'https://x.com/p.png' },
-        ctxAdmin,
-      );
+      const updated = await repo.update('u', { photoURL: 'https://x.com/p.png' }, ctxAdmin);
       expect(updated.photoURL).toBe('https://x.com/p.png');
     });
 
@@ -623,25 +648,21 @@ describe('[UserRepository:Firebase]', () => {
     });
 
     it('lanza NOT_FOUND si el doc no existe', async () => {
-      await expect(
-        repo.update('nope', { displayName: 'x' }, ctxAdmin),
-      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      await expect(repo.update('nope', { displayName: 'x' }, ctxAdmin)).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
     });
 
     it('lanza PERMISSION_DENIED cuando expert intenta actualizar OTRO user', async () => {
       seedUserRaw('u', { email: 'a@x.com', role: 'expert' });
-      await expect(
-        repo.update('u', { displayName: 'x' }, ctxExpert),
-      ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+      await expect(repo.update('u', { displayName: 'x' }, ctxExpert)).rejects.toMatchObject({
+        code: 'PERMISSION_DENIED',
+      });
     });
 
     it('permite a expert actualizar su propio user (excepto role)', async () => {
       seedUserRaw('u', { email: 'a@x.com', role: 'expert' });
-      const updated = await repo.update(
-        'u',
-        { displayName: 'Self' },
-        { ...ctxExpert, uid: 'u' },
-      );
+      const updated = await repo.update('u', { displayName: 'Self' }, { ...ctxExpert, uid: 'u' });
       expect(updated.displayName).toBe('Self');
     });
 
@@ -654,11 +675,7 @@ describe('[UserRepository:Firebase]', () => {
 
     it('NO lanza PERMISSION_DENIED cuando role es el mismo valor', async () => {
       seedUserRaw('u', { email: 'a@x.com', role: 'expert' });
-      const updated = await repo.update(
-        'u',
-        { role: 'expert' },
-        { ...ctxExpert, uid: 'u' },
-      );
+      const updated = await repo.update('u', { role: 'expert' }, { ...ctxExpert, uid: 'u' });
       expect(updated.role).toBe('expert');
     });
 
@@ -681,12 +698,10 @@ describe('[UserRepository:Firebase]', () => {
     it('wraps errores de updateDoc en INTERNAL', async () => {
       seedUserRaw('u', { email: 'a@x.com' });
       const { updateDoc } = await import('firebase/firestore');
-      (updateDoc as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-        new Error('boom'),
-      );
-      await expect(
-        repo.update('u', { displayName: 'x' }, ctxAdmin),
-      ).rejects.toMatchObject({ code: 'INTERNAL' });
+      (updateDoc as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('boom'));
+      await expect(repo.update('u', { displayName: 'x' }, ctxAdmin)).rejects.toMatchObject({
+        code: 'INTERNAL',
+      });
     });
 
     it('no re-envuelve RepositoryError de updateDoc', async () => {
@@ -694,9 +709,7 @@ describe('[UserRepository:Firebase]', () => {
       const { updateDoc } = await import('firebase/firestore');
       const re = RepositoryError.internal('ya envuelto');
       (updateDoc as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(re);
-      await expect(
-        repo.update('u', { displayName: 'x' }, ctxAdmin),
-      ).rejects.toBe(re);
+      await expect(repo.update('u', { displayName: 'x' }, ctxAdmin)).rejects.toBe(re);
     });
   });
 
@@ -734,17 +747,15 @@ describe('[UserRepository:Firebase]', () => {
 
     it('lanza PERMISSION_DENIED si el rol es recruiter', async () => {
       seedUserRaw('u', { email: 'a@x.com' });
-      await expect(
-        repo.delete('u', { ...ctxExpert, role: 'recruiter' }),
-      ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+      await expect(repo.delete('u', { ...ctxExpert, role: 'recruiter' })).rejects.toMatchObject({
+        code: 'PERMISSION_DENIED',
+      });
     });
 
     it('wraps errores de updateDoc en INTERNAL', async () => {
       seedUserRaw('u', { email: 'a@x.com' });
       const { updateDoc } = await import('firebase/firestore');
-      (updateDoc as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-        new Error('boom'),
-      );
+      (updateDoc as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('boom'));
       await expect(repo.delete('u', ctxAdmin)).rejects.toMatchObject({ code: 'INTERNAL' });
     });
 

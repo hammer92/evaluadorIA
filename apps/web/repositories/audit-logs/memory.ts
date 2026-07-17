@@ -36,7 +36,13 @@ export class MemoryAuditLogRepository implements AuditLogRepository {
     const total = items.length;
     const start = (page - 1) * pageSize;
     const paged = items.slice(start, start + pageSize);
-    return Promise.resolve({ items: paged, page, pageSize, total, hasMore: start + paged.length < total });
+    return Promise.resolve({
+      items: paged,
+      page,
+      pageSize,
+      total,
+      hasMore: start + paged.length < total,
+    });
   }
 
   async getById(logId: string, _ctx: Ctx): Promise<AuditLog | null> {
