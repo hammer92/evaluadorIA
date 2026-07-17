@@ -69,3 +69,41 @@ AI-DLC: workflow closed at <stage>
 - Force pushes, branch rebases, or amend of pushed commits — never do these without explicit user request.
 - Auto-push to remote — only commit locally unless the user asks to push.
 - Auto-creation of branches — default to `main` unless the user asks for a feature branch.
+
+### Forbidden git operations (mandatory from 2026-07-17)
+
+The following operations are **forbidden** in any AI-DLC workflow because they
+are destructive and the agent cannot reliably recover from them mid-session.
+
+| Operation                            | Reason                                                                                                                                                       | Read-only alternative                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| `git stash` / `git stash pop`        | If the agent aborts the tool call mid-flight (timeout, user interrupt, error), the working tree is left in an undefined state and the stash ref can be lost. | `git log --oneline -N -- <path>`, `git show <commit>`, `git blame <path>` |
+| `git stash apply` / `git stash drop` | Same risk as above; plus `drop` is irreversible without the reflog.                                                                                          | `git stash show -p stash@{N}` (read-only inspection)                      |
+| `git reset --hard` (uncommitted)     | Discards uncommitted work without confirmation.                                                                                                              | `git diff` / `git diff --cached` (read-only)                              |
+| `git checkout -- <path>`             | Discards uncommitted changes to a tracked file.                                                                                                              | `git diff -- <path>` (read-only)                                          |
+| `git clean -fd`                      | Removes untracked files without confirmation.                                                                                                                | `git status --short` + manual confirmation by the user                    |
+
+**Rule**: When verifying whether a test failure is pre-existing (i.e. not caused
+by the current workflow), use read-only git operations only:
+
+```bash
+git log --oneline -5 -- <test-file>          # who/when last touched
+git blame <test-file>                        # which lines
+git show <commit> -- <test-file>             # what changed in a past commit
+git stash list                               # list existing stashes (read-only)
+```
+
+If the agent must compare current vs. a previous state, run `pnpm test` /
+`pnpm typecheck` and report the results **without** stashing the in-progress work.
+If a hypothetical "clean" run is strictly necessary, **ask the user explicitly**
+before any destructive git operation. Never assume the user wants to lose work.
+
+### Recovery procedure if `git stash` was already used
+
+If the agent already executed `git stash` and the working tree was lost:
+
+1. **Immediately** run `git stash list` to find the stash ref.
+2. Run `git stash show -p stash@{N}` to confirm the contents match what was stashed.
+3. Run `git stash pop` to restore.
+4. Verify with `git status --short` that all expected files are back.
+5. If `git stash pop` fails due to conflicts, **stop and ask the user** — do not force-resolve.
