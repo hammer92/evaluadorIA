@@ -44,7 +44,7 @@ export async function buildAuthContext(
   // fuente de verdad de la sesión web — la usa el middleware Next.js y la
   // ruta /api/session. La leemos acá como fallback cuando el client SDK
   // perdió auth.currentUser (e.g. después de page reload en dev/emulator).
-  const rawCookie = request.rawRequest.headers['cookie'];
+  const rawCookie = request.rawRequest.headers.cookie;
   const cookie = await verifySessionCookieFromRequest(rawCookie);
   if (!cookie) {
     throw new HttpsError('unauthenticated', 'Authentication required');

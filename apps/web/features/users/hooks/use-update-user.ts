@@ -11,7 +11,7 @@ export function useUpdateUser() {
   return useMutation({
     mutationFn: ({ uid, input }: { uid: string; input: UpdateUserInput }) => updateUser(uid, input),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['users'] });
+      void qc.invalidateQueries({ queryKey: ['users'] });
       toast.success('Usuario actualizado');
     },
     onError: (e: Error) => toast.error(e.message),

@@ -1,4 +1,7 @@
-import type { Organization } from '@shared/schemas/organizations';
+import type {
+  Organization,
+  UpdateOrganizationInput,
+} from '@shared/schemas/organizations';
 import type { Timestamp as FbTimestamp } from 'firebase/firestore';
 
 export interface OrganizationRaw {
@@ -35,13 +38,7 @@ export const toOrganizationInputRaw = (input: {
   settings: { timezone: 'UTC', locale: 'en' },
 });
 
-export const toUpdateOrgRaw = (
-  input: Partial<{
-    name: string;
-    plan: Organization['plan'];
-    settings: { timezone?: string; locale?: string };
-  }>,
-): Partial<OrganizationRaw> => {
+export const toUpdateOrgRaw = (input: UpdateOrganizationInput): Partial<OrganizationRaw> => {
   const raw: Partial<OrganizationRaw> = {};
   if (input.name !== undefined) raw.name = input.name;
   if (input.plan !== undefined) raw.plan = input.plan;

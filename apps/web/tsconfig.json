@@ -12,10 +12,8 @@
       "@/*": ["./*"],
       "@shared/*": ["../../packages/shared/src/*"]
     },
-    "allowJs": true,
-    "exactOptionalPropertyTypes": false
+    "allowJs": true
   },
-  "//": "exactOptionalPropertyTypes: false requerido por componentes generados por shadcn (DropdownMenu, Sonner). Mantener hasta migrar a shadcn CLI >= 2.x con tipos corregidos.",
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules", ".next", "dist"]
 }

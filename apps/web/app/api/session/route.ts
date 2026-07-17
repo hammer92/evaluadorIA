@@ -59,7 +59,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!cfSetCookie) {
     return NextResponse.json({ error: 'no-cookie-from-cf' }, { status: 502 });
   }
-  const match = cfSetCookie.match(/__session=([^;]+)/);
+  const match = /__session=([^;]+)/.exec(cfSetCookie);
   const sessionJwt = match?.[1];
   if (!sessionJwt) {
     return NextResponse.json({ error: 'malformed-cookie-from-cf' }, { status: 502 });

@@ -1,8 +1,8 @@
 import { getApps, getApp, initializeApp, type FirebaseApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore, type Firestore } from 'firebase/firestore';
-import { connectStorageEmulator, getStorage, type FirebaseStorage } from 'firebase/storage';
 import { connectFunctionsEmulator, getFunctions, type Functions } from 'firebase/functions';
+import { connectStorageEmulator, getStorage, type FirebaseStorage } from 'firebase/storage';
 
 import { clientEnv } from '@/env';
 
@@ -41,9 +41,7 @@ function createFirebaseApp(): FirebaseApp {
 }
 
 function ensureApp(): FirebaseApp {
-  if (!_app) {
-    _app = createFirebaseApp();
-  }
+  _app ??= createFirebaseApp();
   return _app;
 }
 
@@ -53,19 +51,19 @@ let _storage: FirebaseStorage | undefined;
 let _functions: Functions | undefined;
 
 function ensureAuth(): Auth {
-  if (!_auth) _auth = getAuth(ensureApp());
+  _auth ??= getAuth(ensureApp());
   return _auth;
 }
 function ensureDb(): Firestore {
-  if (!_db) _db = getFirestore(ensureApp());
+  _db ??= getFirestore(ensureApp());
   return _db;
 }
 function ensureStorage(): FirebaseStorage {
-  if (!_storage) _storage = getStorage(ensureApp());
+  _storage ??= getStorage(ensureApp());
   return _storage;
 }
 function ensureFunctions(): Functions {
-  if (!_functions) _functions = getFunctions(ensureApp(), 'us-central1');
+  _functions ??= getFunctions(ensureApp(), 'us-central1');
   return _functions;
 }
 

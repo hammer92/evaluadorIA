@@ -58,7 +58,13 @@ export function DeleteUserDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={del.isPending}>
             Cancelar
           </Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={del.isPending}>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              void onConfirm();
+            }}
+            disabled={del.isPending}
+          >
             {del.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Eliminar usuario
           </Button>

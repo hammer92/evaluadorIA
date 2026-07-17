@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 /**
  * verify-auth.ts — Integration test del flujo completo contra emuladores.
  * Actualizado para SDD-06 (nombres v1XxxYyy).

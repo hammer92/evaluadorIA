@@ -1,4 +1,4 @@
-import type { User } from '@shared/schemas/users';
+import type { User, UpdateUserInput } from '@shared/schemas/users';
 import type { Timestamp as FbTimestamp } from 'firebase/firestore';
 
 // =============================================================================
@@ -53,14 +53,7 @@ export const toUserInputRaw = (input: {
   status: 'invited',
 });
 
-export const toUpdateRaw = (
-  input: Partial<{
-    displayName: string | null;
-    photoURL: string | null;
-    role: User['role'];
-    status: User['status'];
-  }>,
-): Partial<UserRaw> => {
+export const toUpdateRaw = (input: UpdateUserInput): Partial<UserRaw> => {
   const raw: Partial<UserRaw> = {};
   if (input.displayName !== undefined) raw.display_name = input.displayName;
   if (input.photoURL !== undefined) raw.photo_url = input.photoURL;

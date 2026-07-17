@@ -90,7 +90,7 @@ describe('users/mapper — roundtrip', () => {
     const inputRaw = toUserInputRaw({
       email: u.email,
       role: u.role,
-      organizationId: u.organizationId ?? undefined,
+      ...(u.organizationId !== null ? { organizationId: u.organizationId } : {}),
     });
     expect(inputRaw.email).toBe(u.email);
     expect(inputRaw.role).toBe('admin');

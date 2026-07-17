@@ -28,9 +28,9 @@ function setCorsHeaders(
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 }
 
-export const v1AuthClearSession = onRequest({ cors: false }, async (req, res) => {
+export const v1AuthClearSession = onRequest({ cors: false }, (req, res) => {
   const allowed = (process.env['ALLOWED_ORIGINS'] ?? 'http://localhost:3000').split(',');
-  const origin = req.headers['origin'] as string | undefined;
+  const origin = req.headers.origin;
   setCorsHeaders(res, origin, allowed);
 
   if (req.method === 'OPTIONS') {

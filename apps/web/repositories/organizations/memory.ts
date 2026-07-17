@@ -31,13 +31,13 @@ export class MemoryOrganizationRepository implements OrganizationRepository {
     const total = items.length;
     const start = (page - 1) * pageSize;
     const paged = items.slice(start, start + pageSize);
-    return { items: paged, page, pageSize, total, hasMore: start + paged.length < total };
+    return Promise.resolve({ items: paged, page, pageSize, total, hasMore: start + paged.length < total });
   }
 
   async getById(orgId: string, _ctx: Ctx): Promise<Organization | null> {
     const o = this.store.get(orgId);
-    if (!o || o.deletedAt !== null) return null;
-    return o;
+    if (o?.deletedAt !== null) return Promise.resolve(null);
+    return Promise.resolve(o);
   }
 
   async create(input: CreateOrganizationInput, ctx: Ctx): Promise<Organization> {
@@ -60,7 +60,7 @@ export class MemoryOrganizationRepository implements OrganizationRepository {
     });
     this.store.set(orgId, org);
     this.slugs.add(input.slug);
-    return org;
+    return Promise.resolve(org);
   }
 
   async update(orgId: string, input: UpdateOrganizationInput, ctx: Ctx): Promise<Organization> {

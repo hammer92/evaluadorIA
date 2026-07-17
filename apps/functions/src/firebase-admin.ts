@@ -27,7 +27,7 @@ export function getAdminApp(): App {
   }
 
   const isEmulator = Boolean(
-    process.env['FIRESTORE_EMULATOR_HOST'] || process.env['FIREBASE_AUTH_EMULATOR_HOST'],
+    process.env['FIRESTORE_EMULATOR_HOST'] ?? process.env['FIREBASE_AUTH_EMULATOR_HOST'],
   );
 
   if (isEmulator) {

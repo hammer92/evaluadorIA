@@ -71,11 +71,11 @@ export const v1UsersList = onCall(
       // resolvemos los docs sin organization_id (campo missing) en JS para
       // incluir usuarios pre-org del bootstrap.
       if (orgId) {
-        query = query.where('organization_id', '==', orgId) as typeof query;
+        query = query.where('organization_id', '==', orgId);
       }
 
-      if (input.status) query = query.where('status', '==', input.status) as typeof query;
-      if (input.role) query = query.where('role', '==', input.role) as typeof query;
+      if (input.status) query = query.where('status', '==', input.status);
+      if (input.role) query = query.where('role', '==', input.role);
 
       const snap = await query.get();
 

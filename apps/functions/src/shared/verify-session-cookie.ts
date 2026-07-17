@@ -67,7 +67,7 @@ export async function verifySessionCookieFromRequest(
     const orgId = payload['organizationId'];
     const organizationId =
       orgId === null || orgId === undefined ? null : typeof orgId === 'string' ? orgId : null;
-    return { uid, email, role: role as CookiePayload['role'], organizationId };
+    return { uid, email, role: role, organizationId };
   } catch {
     return null;
   }

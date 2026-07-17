@@ -20,7 +20,7 @@ export class MemoryAuditLogRepository implements AuditLogRepository {
       createdAt: new Date(),
     });
     this.store.set(logId, log);
-    return log;
+    return Promise.resolve(log);
   }
 
   async list(input: ListAuditLogsInput, _ctx: Ctx): Promise<ListAuditLogsResult> {
@@ -36,11 +36,11 @@ export class MemoryAuditLogRepository implements AuditLogRepository {
     const total = items.length;
     const start = (page - 1) * pageSize;
     const paged = items.slice(start, start + pageSize);
-    return { items: paged, page, pageSize, total, hasMore: start + paged.length < total };
+    return Promise.resolve({ items: paged, page, pageSize, total, hasMore: start + paged.length < total });
   }
 
   async getById(logId: string, _ctx: Ctx): Promise<AuditLog | null> {
-    return this.store.get(logId) ?? null;
+    return Promise.resolve(this.store.get(logId) ?? null);
   }
 
   __reset(): void {

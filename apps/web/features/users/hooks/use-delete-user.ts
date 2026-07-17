@@ -10,7 +10,7 @@ export function useDeleteUser() {
   return useMutation({
     mutationFn: ({ uid }: { uid: string }) => deleteUser(uid),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['users'] });
+      void qc.invalidateQueries({ queryKey: ['users'] });
       toast.success('Usuario eliminado');
     },
     onError: (e: Error) => toast.error(e.message),

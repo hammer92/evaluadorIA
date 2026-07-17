@@ -7,7 +7,7 @@ export default function LoginPage({
 }) {
   return (
     <div className="w-full max-w-[440px]">
-      <LoginForm nextUrl={searchParams.next} />
+      <LoginForm {...(searchParams.next ? { nextUrl: searchParams.next } : {})} />
       {searchParams.error && (
         <p className="text-label-sm text-status-error mt-stack-md text-center">
           {searchParams.error === 'no-claims'

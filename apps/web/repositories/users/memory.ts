@@ -40,13 +40,13 @@ export class MemoryUserRepository implements UserRepository {
     const total = items.length;
     const start = (page - 1) * pageSize;
     const paged = items.slice(start, start + pageSize);
-    return { items: paged, page, pageSize, total, hasMore: start + paged.length < total };
+    return Promise.resolve({ items: paged, page, pageSize, total, hasMore: start + paged.length < total });
   }
 
   async getById(uid: string, _ctx: Ctx): Promise<User | null> {
     const u = this.store.get(uid);
-    if (!u || u.deletedAt !== null) return null;
-    return u;
+    if (u?.deletedAt !== null) return Promise.resolve(null);
+    return Promise.resolve(u);
   }
 
   async create(input: CreateUserInput, ctx: Ctx): Promise<User> {
@@ -71,7 +71,7 @@ export class MemoryUserRepository implements UserRepository {
     });
     this.store.set(uid, user);
     this.emails.add(input.email);
-    return user;
+    return Promise.resolve(user);
   }
 
   async update(uid: string, input: UpdateUserInput, ctx: Ctx): Promise<User> {

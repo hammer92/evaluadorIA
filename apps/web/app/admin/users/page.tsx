@@ -104,7 +104,7 @@ export default function UsersPage() {
         open={editing !== null}
         onOpenChange={(o) => !o && setEditing(null)}
         mode="edit"
-        user={editing ?? undefined}
+        {...(editing ? { user: editing } : {})}
       />
       <DeleteUserDialog
         open={deleting !== null}

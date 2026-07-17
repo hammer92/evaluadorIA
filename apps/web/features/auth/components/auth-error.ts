@@ -32,7 +32,7 @@ export function getAuthErrorCode(error: unknown): string {
   if (typeof error === 'object') {
     // FirebaseError y AuthApiError tienen .code
     if ('code' in error) {
-      const code = (error as { code: unknown }).code;
+      const code = (error).code;
       if (typeof code === 'string' && code.length > 0) return code;
     }
     // Errores de red/fetch (TypeError) no tienen .code → 'network'
@@ -52,7 +52,7 @@ export function getAuthErrorMessage(error: unknown): string {
     return error.message;
   }
   if (typeof error === 'object' && error !== null && 'message' in error) {
-    const msg = (error as { message: unknown }).message;
+    const msg = (error).message;
     if (typeof msg === 'string' && msg.length > 0) return msg;
   }
   return 'Ocurrió un error inesperado';

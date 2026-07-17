@@ -43,7 +43,12 @@ export function ProfileForm({ user }: { user: ServerAuth }): React.JSX.Element {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-stack-md">
+        <form
+          onSubmit={(event) => {
+            void onSubmit(event);
+          }}
+          className="space-y-stack-md"
+        >
           <div className="space-y-stack-sm">
             <Label htmlFor="email">Email</Label>
             <Input id="email" value={user.email} disabled readOnly />

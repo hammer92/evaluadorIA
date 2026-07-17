@@ -3,12 +3,39 @@ import prettier from 'eslint-config-prettier';
 import importPlugin from 'eslint-plugin-import';
 import tseslint from 'typescript-eslint';
 
+const nonProjectFiles = [
+  '**/*.test.{ts,tsx}',
+  '**/__tests__/**/*.{ts,tsx}',
+  '**/*.config.{ts,tsx,js,mjs,cjs}',
+  '**/vitest.setup.ts',
+  'scripts/**/*.ts',
+];
+
+const testOverrides = {
+  rules: {
+    '@typescript-eslint/no-unused-vars': 'off',
+    '@typescript-eslint/consistent-type-imports': 'off',
+    '@typescript-eslint/consistent-type-definitions': 'off',
+  },
+};
+
+const disableTypeChecked = {
+  ...tseslint.configs.disableTypeChecked,
+  files: nonProjectFiles,
+};
+
 export default tseslint.config(
-  { ignores: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/lib/**', '**/coverage/**'] },
+  { ignores: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/coverage/**', 'apps/functions/lib/**'] },
   js.configs.recommended,
-  ...tseslint.configs.recommended,
-  ...tseslint.configs.stylistic,
+  ...tseslint.configs.recommendedTypeChecked,
+  ...tseslint.configs.stylisticTypeChecked,
   {
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     plugins: { import: importPlugin },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
@@ -25,6 +52,11 @@ export default tseslint.config(
       }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
+  },
+  disableTypeChecked,
+  {
+    ...testOverrides,
+    files: nonProjectFiles,
   },
   {
     files: ['apps/web/**/*.{ts,tsx}'],
@@ -60,6 +92,12 @@ export default tseslint.config(
     ],
     rules: {
       'no-restricted-imports': 'off',
+    },
+  },
+  {
+    files: ['**/*.config.{ts,tsx,js,mjs,cjs}'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
     },
   },
   {

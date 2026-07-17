@@ -40,7 +40,7 @@ export interface ProxyAuthContext {
 }
 
 export async function readSessionCookie(): Promise<ProxyAuthContext | null> {
-  const jar = await cookies();
+  const jar = cookies();
   const cookie = jar.get(COOKIE_NAME)?.value;
   if (!cookie) return null;
 
@@ -62,7 +62,7 @@ export async function readSessionCookie(): Promise<ProxyAuthContext | null> {
     const orgId = payload['organizationId'];
     const organizationId =
       orgId === null || orgId === undefined ? null : typeof orgId === 'string' ? orgId : null;
-    return { uid, email, role: role as Role, organizationId, cookie };
+    return { uid, email, role: role, organizationId, cookie };
   } catch {
     return null;
   }

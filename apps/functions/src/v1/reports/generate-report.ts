@@ -30,16 +30,16 @@ export const v1ReportsGenerate = onCall(
     cors: (process.env['ALLOWED_ORIGINS'] ?? 'http://localhost:3000').split(','),
     secrets: ['SESSION_COOKIE_SECRET'],
   },
-  withAuth<GenerateReportInput, GenerateReportOutput>('admin', async (_ctx, data) => {
+  withAuth<GenerateReportInput, GenerateReportOutput>('admin', (_ctx, data) => {
     try {
       validateInput(inputSchema, data);
 
       const jobId = `job_${randomUUID()}`;
-      return {
+      return Promise.resolve({
         jobId,
         status: 'queued' as const,
         estimatedSeconds: 30,
-      };
+      });
     } catch (e) {
       handleError(e);
     }

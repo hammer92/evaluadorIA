@@ -35,7 +35,7 @@ export function LoginForm({ nextUrl }: { nextUrl?: string }) {
         return;
       }
       toast.success('Sesión iniciada');
-      router.push(nextUrl || '/admin');
+      router.push(nextUrl ?? '/admin');
       router.refresh();
     } catch (e) {
       console.error('[login] error:', e);
@@ -55,7 +55,13 @@ export function LoginForm({ nextUrl }: { nextUrl?: string }) {
         <p className="text-body-md text-on-surface-variant">Technical Validation System</p>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-stack-md" noValidate>
+        <form
+          onSubmit={(event) => {
+            void onSubmit(event);
+          }}
+          className="space-y-stack-md"
+          noValidate
+        >
         <div className="space-y-stack-sm">
           <label
             htmlFor="email"

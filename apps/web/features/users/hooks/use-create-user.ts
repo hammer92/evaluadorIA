@@ -10,7 +10,7 @@ export function useCreateUser() {
   return useMutation({
     mutationFn: createUser,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['users'] });
+      void qc.invalidateQueries({ queryKey: ['users'] });
       toast.success('Usuario creado');
     },
     onError: (e: Error) => toast.error(e.message),

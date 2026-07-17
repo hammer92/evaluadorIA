@@ -499,7 +499,7 @@ function SecurityProctoringCard({
           label="Retención de Video (Días)"
           options={RETENTION_OPTIONS.slice()}
           value={retention}
-          onChange={(v) => onRetentionChange(v as (typeof RETENTION_OPTIONS)[number])}
+          onChange={(v) => onRetentionChange(v)}
           formatter={(v) => `${v}`}
         />
         <ToggleRow

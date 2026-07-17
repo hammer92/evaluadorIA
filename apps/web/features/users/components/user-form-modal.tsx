@@ -71,7 +71,7 @@ export function UserFormModal({
   const onSubmit = form.handleSubmit(async (values) => {
     try {
       if (isEdit) {
-        await update.mutateAsync({ uid: user.uid, input: values as UpdateValues });
+        await update.mutateAsync({ uid: user.uid, input: values });
       } else {
         await create.mutateAsync(values as CreateValues);
       }
@@ -97,7 +97,12 @@ export function UserFormModal({
               : 'Creá un usuario y enviale la invitación por email.'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={onSubmit} className="space-y-stack-md">
+        <form
+          onSubmit={(event) => {
+            void onSubmit(event);
+          }}
+          className="space-y-stack-md"
+        >
           {!isEdit && (
             <div className="space-y-stack-sm">
               <Label htmlFor="email">Email</Label>
@@ -105,7 +110,7 @@ export function UserFormModal({
                 id="email"
                 type="email"
                 autoComplete="off"
-                {...form.register('email' as keyof CreateValues)}
+                {...form.register('email')}
               />
               {emailError && <p className="text-xs text-status-error">{emailError.message}</p>}
             </div>
@@ -121,14 +126,14 @@ export function UserFormModal({
             <Input id="displayName" autoComplete="off" {...form.register('displayName' as const)} />
             {form.formState.errors.displayName && (
               <p className="text-xs text-status-error">
-                {form.formState.errors.displayName.message as string}
+                {form.formState.errors.displayName.message!}
               </p>
             )}
           </div>
           <div className="space-y-stack-sm">
             <Label htmlFor="role">Rol</Label>
             <Select
-              value={form.watch('role' as const)}
+              value={form.watch('role' as const) ?? ''}
               onValueChange={(v) =>
                 form.setValue('role' as const, v as 'admin' | 'recruiter' | 'expert')
               }
@@ -147,7 +152,7 @@ export function UserFormModal({
             <div className="space-y-stack-sm">
               <Label htmlFor="status">Estado</Label>
               <Select
-                value={form.watch('status' as const)}
+                value={form.watch('status' as const) ?? ''}
                 onValueChange={(v) =>
                   form.setValue('status' as const, v as 'active' | 'invited' | 'suspended')
                 }

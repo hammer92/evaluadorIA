@@ -55,7 +55,7 @@ export const v1AuthCreateSession = onRequest(
   },
   async (req, res) => {
     const allowed = (process.env['ALLOWED_ORIGINS'] ?? 'http://localhost:3000').split(',');
-    const origin = req.headers['origin'] as string | undefined;
+    const origin = req.headers.origin;
     setCorsHeaders(res, origin, allowed);
 
     if (req.method === 'OPTIONS') {
@@ -81,8 +81,13 @@ export const v1AuthCreateSession = onRequest(
       return;
     }
 
-    const role = decoded['role'];
-    const organizationId = decoded['organizationId'] ?? null;
+    const roleClaim: unknown = decoded['role'];
+    const role =
+      roleClaim === 'admin' || roleClaim === 'recruiter' || roleClaim === 'expert'
+        ? roleClaim
+        : 'expert';
+    const organizationIdClaim: unknown = decoded['organizationId'];
+    const organizationId = typeof organizationIdClaim === 'string' ? organizationIdClaim : null;
     const secret = sessionSecret.value();
     if (!secret || secret.length < 32) {
       res.status(500).json({ error: 'server-misconfigured' });
@@ -92,7 +97,7 @@ export const v1AuthCreateSession = onRequest(
     const sessionJwt = await new SignJWT({
       uid: decoded.uid,
       email: decoded.email ?? '',
-      role: role ?? 'expert',
+      role,
       organizationId,
     })
       .setProtectedHeader({ alg: ALG })
@@ -109,7 +114,7 @@ export const v1AuthCreateSession = onRequest(
     res.status(200).json({
       success: true,
       uid: decoded.uid,
-      role: role ?? 'expert',
+      role,
     });
   },
 );

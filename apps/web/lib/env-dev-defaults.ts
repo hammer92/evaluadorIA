@@ -30,13 +30,9 @@ function isProductionLike(): boolean {
 export function applyDevEnvDefaults(): void {
   if (isProductionLike()) return;
   for (const [key, value] of Object.entries(DEV_FIREBASE_DEFAULTS)) {
-    if (!process.env[key]) {
-      process.env[key] = value;
-    }
+    process.env[key] ??= value;
   }
-  if (!process.env['SESSION_COOKIE_SECRET']) {
-    process.env['SESSION_COOKIE_SECRET'] = DEV_SESSION_SECRET;
-  }
+  process.env['SESSION_COOKIE_SECRET'] ??= DEV_SESSION_SECRET;
 }
 
 applyDevEnvDefaults();

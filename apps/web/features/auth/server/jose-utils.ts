@@ -60,8 +60,8 @@ function toSessionPayload(payload: JWTPayload): SessionPayload | null {
   const uid = payload['uid'];
   const email = payload['email'];
   const role = payload['role'];
-  const iat = payload['iat'];
-  const exp = payload['exp'];
+  const iat = payload.iat;
+  const exp = payload.exp;
   if (
     typeof uid !== 'string' ||
     typeof email !== 'string' ||
@@ -77,7 +77,7 @@ function toSessionPayload(payload: JWTPayload): SessionPayload | null {
     uid,
     email,
     role: role as SessionPayload['role'],
-    organizationId: (orgId as string | null | undefined) ?? null,
+    organizationId: (orgId) ?? null,
     iat,
     exp,
   };

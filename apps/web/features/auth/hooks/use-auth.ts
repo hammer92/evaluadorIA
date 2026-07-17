@@ -1,6 +1,5 @@
 'use client';
 
-import type { Role } from '@shared/schemas/common';
 import { useEffect, useState } from 'react';
 
 import type { AuthClaims, AuthState, AuthUser } from '../types';
@@ -32,10 +31,10 @@ function toAuthUser(u: FbUser): AuthUser {
 function extractClaims(raw: FirebaseUserClaims): AuthClaims | null {
   if (typeof raw.role !== 'string') return null;
   if (raw.role !== 'admin' && raw.role !== 'recruiter' && raw.role !== 'expert') return null;
-  const role = raw.role as Role;
+  const role = raw.role;
   const orgId = raw.organizationId;
   if (orgId !== undefined && orgId !== null && typeof orgId !== 'string') return null;
-  return { role, organizationId: (orgId as string | null | undefined) ?? null };
+  return { role, organizationId: (orgId) ?? null };
 }
 
 export function useAuth(): AuthState {
@@ -48,28 +47,30 @@ export function useAuth(): AuthState {
 
   useEffect(() => {
     let cancelled = false;
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (cancelled) return;
-      if (!user) {
-        setState({ user: null, claims: null, loading: false, error: null });
-        return;
-      }
-      try {
-        // forceRefresh=true para que los claims seteados por la CF (server-side)
-        // se reflejen en el cliente.
-        const tokenResult = await user.getIdTokenResult(true);
+    const unsub = onAuthStateChanged(auth, (user) => {
+      void (async () => {
         if (cancelled) return;
-        const claims = extractClaims(tokenResult.claims as FirebaseUserClaims);
-        setState({
-          user: toAuthUser(user),
-          claims,
-          loading: false,
-          error: null,
-        });
-      } catch (e) {
-        if (cancelled) return;
-        setState({ user: null, claims: null, loading: false, error: e as Error });
-      }
+        if (!user) {
+          setState({ user: null, claims: null, loading: false, error: null });
+          return;
+        }
+        try {
+          // forceRefresh=true para que los claims seteados por la CF (server-side)
+          // se reflejen en el cliente.
+          const tokenResult = await user.getIdTokenResult(true);
+          if (cancelled) return;
+          const claims = extractClaims(tokenResult.claims as FirebaseUserClaims);
+          setState({
+            user: toAuthUser(user),
+            claims,
+            loading: false,
+            error: null,
+          });
+        } catch (e) {
+          if (cancelled) return;
+          setState({ user: null, claims: null, loading: false, error: e as Error });
+        }
+      })();
     });
     return () => {
       cancelled = true;

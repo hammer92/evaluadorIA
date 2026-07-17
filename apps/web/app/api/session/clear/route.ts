@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 // /api/session: necesita ser same-origin para que el browser la borre.
 // =============================================================================
 
-export async function POST(): Promise<NextResponse> {
+export function POST(): NextResponse {
   const res = NextResponse.json({ success: true });
   res.cookies.set({
     name: '__session',
