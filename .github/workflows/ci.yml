@@ -96,13 +96,7 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools@13
 
-      - name: Verify firestore + storage rules
-        run: pnpm verify:rules
-
-      - name: Integration E2E (auth + functions + firestore via emulators)
-        run: pnpm verify:auth
-
-      - name: Cloud Functions integration tests against emulators
+      - name: Cloud Functions integration tests + rules + auth E2E (against emulators)
         run: pnpm emulators:test
 
   coverage:

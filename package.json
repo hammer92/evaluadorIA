@@ -29,7 +29,7 @@
     "verify:auth": "tsx scripts/verify-auth.ts",
     "verify:rules": "tsx scripts/verify-rules.ts",
     "verify:lighthouse": "tsx scripts/verify-lighthouse.mts",
-    "emulators:test": "firebase emulators:exec --project dev --only firestore,auth,functions 'pnpm -r build && pnpm test:integration'",
+    "emulators:test": "firebase emulators:exec --project dev --only firestore,auth,functions 'pnpm -r build && pnpm test:integration && pnpm verify:rules && pnpm verify:auth'",
     "deploy:staging": "echo 'deploy por SDD-08' && exit 1",
     "deploy:prod": "echo 'deploy por SDD-08' && exit 1",
     "prepare": "husky"
