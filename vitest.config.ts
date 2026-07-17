@@ -31,7 +31,6 @@ export default defineConfig({
         'scripts/**',
         'apps/web/app/**',
         'apps/web/components/ui/**',
-        'apps/web/components/error-boundary.tsx',
         'apps/web/components/layout/**',
         'apps/web/features/dashboard/components/**',
         'apps/web/features/settings/components/**',

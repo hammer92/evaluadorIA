@@ -13,10 +13,17 @@
 
 1. Clonar el repo
 2. `pnpm install`
-3. `cp .env.example .env.local` y completar las variables
+3. `cp .env.example .env.local` y completar las variables (alternativamente, los defaults del repo permiten arrancar contra emuladores sin configuración adicional)
 4. `pnpm prepare` (instala hooks de Husky)
 5. `pnpm typecheck` para verificar que todo compila
 6. `pnpm test` para correr la suite
+
+> **Nota sobre `pnpm dev`**: la landing pública (`/`) y el placeholder `/login` funcionan **sin emuladores**. Las rutas `/admin/**` requieren:
+>
+> - Emuladores levantados (`pnpm emulators` en otra terminal, ver sección siguiente)
+> - Cookie `__session` válida (obtenible vía signup en `/login` o vía `pnpm seed:emulators`)
+>
+> Sin esto, `middleware.ts` y `app/admin/layout.tsx` redirigen a `/login?next=/admin`.
 
 ## Firebase Emulators (SDD-03)
 
