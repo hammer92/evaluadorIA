@@ -863,3 +863,71 @@ El informe original listaba 12 gaps (6 SDD-01 + 6 SDD-02). Auditoría del estado
 
 - `aaa62c4` fix(web): remove dead sonner.tsx wrapper (GAP-02-6) — 1 file, 47 deletions
 - `5fff53f` fix(web): remediate SDD-02 GAP-02-4 (error-boundary) + Rec. #10 (README) — 6 files, +181/-15
+
+---
+
+## `pnpm dev` Hotfix
+
+**Timestamp**: 2026-07-17T14:10:00Z
+**User Input**: "el comando pnpm dev no esta funcionondo"
+**AI Response**: "Hotfix de tooling. Reemplazado placeholder (`echo && exit 1`) por orquestador real `scripts/dev.sh`. Commit `ba3ee61`."
+
+**Context**: CONSTRUCTION - Tooling Hotfix
+
+### Problema
+
+Root `package.json` script `"dev"` era literalmente:
+
+```
+"dev": "echo 'dev script por SDD-02/03' && exit 1"
+```
+
+Cualquier intento de levantar el entorno de desarrollo fallaba con `ELIFECYCLE Command failed with exit code 1` y cero guía. El spec SDD-02/03 dice que `pnpm dev` debe "levantar Next.js + emuladores".
+
+### Solución
+
+#### `scripts/dev.sh` (nuevo)
+
+Orquestador que:
+
+1. Arranca emuladores vía `scripts/emulators.sh start-detached` (background).
+2. Polea puertos 4000/8080/9099/9199/5001/4400 hasta `MAX_WAIT_SECONDS=90`.
+3. Lanza `pnpm exec next dev --port 3000` desde `apps/web/` en foreground.
+4. Trap en EXIT/INT/TERM: cleanup() mata Next.js (`kill -TERM $NEXT_PID` + `pkill -9 -f "next dev --port 3000"`) y llama `scripts/emulators.sh stop`.
+
+Subcomandos: ``(default: ambos),`web`(solo Next.js, asume emuladores),`emulators` (solo emuladores).
+
+#### `package.json` (root)
+
+```diff
+-"dev": "echo 'dev script por SDD-02/03' && exit 1",
++"dev": "bash scripts/dev.sh",
++"dev:web": "bash scripts/dev.sh web",
++"dev:emulators": "bash scripts/dev.sh emulators",
+```
+
+#### `scripts/emulators.sh` cmd_stop
+
+Ampliado para matar también `functionsEmulatorRuntime` y auth emulator worker (antes solo main + firestore + storage). Previene subprocesses huérfanos.
+
+#### `README.md`
+
+- Nota post-Setup local documenta que Ctrl+C en `pnpm dev` detiene ambos.
+- Tabla de comandos añade `dev:web` y `dev:emulators`.
+
+### Verificación E2E
+
+- `pnpm dev` en background → emuladores up en ~12s, Next.js Ready in 2s
+- `GET /` → 200, `GET /login` → 200, `GET /admin` → 307 redirect a `/login?next=/admin`
+- `POST /v1AuthCreateSession` (fake token) → 401 (esperado)
+- `kill -INT <bash_dev.sh_pid>` → trap fires, todos los puertos liberados, 0 procesos huérfanos
+
+### Quality Gates
+
+- `pnpm typecheck` → PASS
+- `pnpm lint --max-warnings 0` → PASS
+- `pnpm test` → PASS (446/446)
+
+### Commit
+
+- `ba3ee61` fix(tooling): make `pnpm dev` actually start the dev environment — 4 files, +155/-12

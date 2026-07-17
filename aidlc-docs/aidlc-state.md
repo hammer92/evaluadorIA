@@ -101,6 +101,9 @@
 - [x] Build and Test — 2026-07-17 (sdd-02-gaps-remediation sprint) — typecheck PASS, lint PASS (--max-warnings 0), test **446/446** (5 nuevos de error-boundary), test:coverage PASS (thresholds 70/70/70/70; global 97.54% stmts / 93.4% branches / 90% funcs / 97.54% lines), build PASS Next.js 14.2.35, format:check PASS
 - [x] Commit — 2026-07-17 — `aaa62c4` fix(web): remove dead sonner.tsx wrapper (GAP-02-6) — 1 file, 47 deletions
 - [x] Commit — 2026-07-17 — `5fff53f` fix(web): remediate SDD-02 GAP-02-4 (error-boundary) + Rec. #10 (README) — 6 files, 181 insertions / 15 deletions
+- [x] Code Generation — 2026-07-17 (pnpm-dev-hotfix) — `pnpm dev` era un placeholder (`echo && exit 1`); ahora `scripts/dev.sh` arranca emuladores en background, espera a que los puertos estén listening, lanza `next dev` en foreground, y trap en SIGINT/SIGTERM/EXIT detiene ambos limpiamente. Añadidos `dev:web` y `dev:emulators`. `scripts/emulators.sh` stop extendido para matar también `functionsEmulatorRuntime` + auth worker.
+- [x] Build and Test — 2026-07-17 (pnpm-dev-hotfix) — typecheck/lint/test 446/446 PASS, `pnpm dev` E2E verificado: emuladores up en ~12s, Next.js Ready in 2s, `/` 200, `/login` 200, `/admin` 307→`/login?next=/admin`, CF `v1AuthCreateSession` 401 (fake token). SIGINT limpia todos los puertos + procesos.
+- [x] Commit — 2026-07-17 — `ba3ee61` fix(tooling): make `pnpm dev` actually start the dev environment — 4 files, +155/-12
 
 ### OPERATIONS PHASE
 
