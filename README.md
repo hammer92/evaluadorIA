@@ -4,7 +4,7 @@
 
 ## Requisitos
 
-- Node.js 20 LTS (usar `nvm install 20` si tenés nvm)
+- Node.js 22 LTS (usar `nvm install 22` si tenés nvm)
 - pnpm 9+ (`npm install -g pnpm`)
 - Firebase CLI (`npm install -g firebase-tools`) — **requerido desde SDD-03**
 - Java JRE 11+ (lo usan los emuladores de Firestore/Storage)

@@ -32,11 +32,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm --filter @platform/shared build
 
       - name: Lint
         run: pnpm lint
@@ -81,11 +84,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm --filter @platform/shared build
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools@13
@@ -121,9 +127,11 @@ jobs:
           version: 9
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Build workspace packages
+        run: pnpm --filter @platform/shared build
       - name: Coverage
         run: pnpm test:coverage
       - name: Upload to Codecov

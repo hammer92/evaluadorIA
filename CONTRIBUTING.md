@@ -90,7 +90,7 @@ git config --global core.editor "code --wait"
 
 ## Setup local
 
-Prereqs: **Node ≥ 20**, **pnpm ≥ 9**, **Java JRE ≥ 11** (Firebase emulators).
+Prereqs: **Node ≥ 22**, **pnpm ≥ 9**, **Java JRE ≥ 11** (Firebase emulators).
 
 ```bash
 git clone <repo-url>
