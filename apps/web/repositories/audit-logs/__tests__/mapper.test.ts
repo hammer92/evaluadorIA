@@ -183,32 +183,94 @@ describe('audit-logs mapper', () => {
   });
 
   describe('round-trip toAuditLog ↔ toAuditLogInputRaw', () => {
+    const baseInput = {
+      organizationId: 'org_1',
+      actorId: 'u_actor',
+      actorEmail: 'actor@x.com',
+      action: 'user.created',
+      targetType: 'user',
+      targetId: 'u_target',
+      metadata: { foo: 'bar' },
+      ip: '127.0.0.1',
+      userAgent: 'vitest',
+    } as const;
+
     it('input → raw → log conserva campos (excepto logId/createdAt)', () => {
-      const input = {
-        organizationId: 'org_1' as const,
-        actorId: 'u_actor',
-        actorEmail: 'actor@x.com',
-        action: 'user.created' as const,
-        targetType: 'user' as const,
-        targetId: 'u_target',
-        metadata: { foo: 'bar' },
-        ip: '127.0.0.1',
-        userAgent: 'vitest',
-      };
       const ts = Timestamp.fromDate(new Date('2026-06-30T12:00:00Z'));
-      const raw: AuditLogRaw = { ...toAuditLogInputRaw(input), created_at: ts };
+      const raw: AuditLogRaw = { ...toAuditLogInputRaw(baseInput), created_at: ts };
       const log = toAuditLog('log_1', raw);
       expect(log.logId).toBe('log_1');
-      expect(log.organizationId).toBe(input.organizationId);
-      expect(log.actorId).toBe(input.actorId);
-      expect(log.actorEmail).toBe(input.actorEmail);
-      expect(log.action).toBe(input.action);
-      expect(log.targetType).toBe(input.targetType);
-      expect(log.targetId).toBe(input.targetId);
-      expect(log.metadata).toEqual(input.metadata);
-      expect(log.ip).toBe(input.ip);
-      expect(log.userAgent).toBe(input.userAgent);
+      expect(log.organizationId).toBe(baseInput.organizationId);
+      expect(log.actorId).toBe(baseInput.actorId);
+      expect(log.actorEmail).toBe(baseInput.actorEmail);
+      expect(log.action).toBe(baseInput.action);
+      expect(log.targetType).toBe(baseInput.targetType);
+      expect(log.targetId).toBe(baseInput.targetId);
+      expect(log.metadata).toEqual(baseInput.metadata);
+      expect(log.ip).toBe(baseInput.ip);
+      expect(log.userAgent).toBe(baseInput.userAgent);
       expect(log.createdAt.toISOString()).toBe(ts.toDate().toISOString());
+    });
+
+    it('roundtrip preserva nulls en campos opcionales', () => {
+      const input = {
+        organizationId: null,
+        actorId: 'u_actor',
+        actorEmail: 'actor@x.com',
+        action: 'auth.login',
+        targetType: 'system',
+        targetId: null,
+        metadata: {},
+        ip: null,
+        userAgent: null,
+      } as const;
+      const ts = Timestamp.fromDate(new Date('2026-06-30T12:00:00Z'));
+      const raw: AuditLogRaw = { ...toAuditLogInputRaw(input), created_at: ts };
+      const log = toAuditLog('log_2', raw);
+      expect(log.organizationId).toBeNull();
+      expect(log.targetId).toBeNull();
+      expect(log.ip).toBeNull();
+      expect(log.userAgent).toBeNull();
+      expect(log.metadata).toEqual({});
+    });
+
+    it('roundtrip preserva todos los action enum values', () => {
+      const actions = [
+        'user.created',
+        'user.updated',
+        'user.deleted',
+        'user.role_changed',
+        'user.suspended',
+        'organization.created',
+        'organization.updated',
+        'auth.login',
+        'auth.failed_login',
+        'auth.role_escalation_blocked',
+      ] as const;
+      const ts = Timestamp.fromDate(new Date('2026-06-30T12:00:00Z'));
+      for (const action of actions) {
+        const input = { ...baseInput, action };
+        const raw: AuditLogRaw = { ...toAuditLogInputRaw(input), created_at: ts };
+        const log = toAuditLog('log_x', raw);
+        expect(log.action).toBe(action);
+      }
+    });
+
+    it('roundtrip preserva metadata como referencia (mismo contenido)', () => {
+      const metadata = { nested: { a: 1 }, list: [1, 2, 3], flag: true };
+      const input = { ...baseInput, metadata };
+      const ts = Timestamp.fromDate(new Date('2026-06-30T12:00:00Z'));
+      const raw: AuditLogRaw = { ...toAuditLogInputRaw(input), created_at: ts };
+      const log = toAuditLog('log_3', raw);
+      expect(log.metadata).toEqual(metadata);
+    });
+
+    it('roundtrip timestamps via createdAt conservan precisión de milisegundos', () => {
+      const date = new Date('2026-01-01T12:34:56.789Z');
+      const ts = Timestamp.fromDate(date);
+      const raw: AuditLogRaw = { ...toAuditLogInputRaw(baseInput), created_at: ts };
+      const log = toAuditLog('log_4', raw);
+      expect(log.createdAt.getTime()).toBe(date.getTime());
     });
   });
 });
