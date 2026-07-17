@@ -6,7 +6,7 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useRole } from '@/features/auth/components/role-provider';
 import { DeleteUserDialog } from '@/features/users/components/delete-user-dialog';
 import { UsersFilters } from '@/features/users/components/user-filters';
 import { UserFormModal } from '@/features/users/components/user-form-modal';
@@ -21,8 +21,7 @@ export default function UsersPage() {
   const [deleting, setDeleting] = useState<User | null>(null);
 
   const { data, isLoading, isError, error } = useUsersList(filters);
-  const { claims } = useAuth();
-  const role = claims?.role;
+  const role = useRole();
   const canEdit = role === 'admin';
   const canDelete = role === 'admin';
 

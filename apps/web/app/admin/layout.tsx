@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
+import { RoleProvider } from '@/features/auth/components/role-provider';
 import { verifyAuth } from '@/services/auth-service';
 
 // =============================================================================
@@ -15,6 +16,11 @@ import { verifyAuth } from '@/services/auth-service';
 // `robots: noindex,nofollow` indica a crawlers (Googlebot, Lighthouse SEO
 // audit, etc.) que esta zona es solo para usuarios autenticados. Cumple
 // GAP-07-A del SDD-07.
+//
+// `RoleProvider` expone el rol del cookie (mismo que Header/Sidebar) al
+// client tree para que los Client Components de /admin/** (e.g., users/page)
+// puedan condicionar UI sin depender del Firebase Auth client, que puede
+// tener claims desactualizados.
 // =============================================================================
 
 export const dynamic = 'force-dynamic';
@@ -30,14 +36,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect('/login?next=/admin');
   }
   return (
-    <div className="flex min-h-screen bg-surface-neutral">
-      <Sidebar role={auth.role} />
-      <div className="flex flex-1 flex-col min-w-0">
-        <Header email={auth.email} role={auth.role} />
-        <main className="flex-1 px-container-padding py-stack-lg overflow-x-auto">
-          <div className="mx-auto w-full max-w-7xl space-y-stack-lg">{children}</div>
-        </main>
+    <RoleProvider role={auth.role}>
+      <div className="flex min-h-screen bg-surface-neutral">
+        <Sidebar role={auth.role} />
+        <div className="flex flex-1 flex-col min-w-0">
+          <Header email={auth.email} role={auth.role} />
+          <main className="flex-1 px-container-padding py-stack-lg overflow-x-auto">
+            <div className="mx-auto w-full max-w-7xl space-y-stack-lg">{children}</div>
+          </main>
+        </div>
       </div>
-    </div>
+    </RoleProvider>
   );
 }
