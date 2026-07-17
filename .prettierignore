@@ -3,3 +3,6 @@ node_modules
 dist
 coverage
 .firebase
+# Prettier no parsea shell scripts.
+*.sh
+*.bash

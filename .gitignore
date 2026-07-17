@@ -21,10 +21,20 @@ coverage/
 *.lcov
 
 # Env
-.env
+# `.env` se commitea con defaults de emulador (12-factor dev workflow).
+# Los overrides personales van en `.env.local` / `.env.*.local` (gitignored).
+# Plantillas commiteadas: `.env.example`, `.env.local.example`.
 .env.local
 .env.*.local
+!.env
 !.env.example
+!.env.local.example
+
+# Firebase Functions secrets (gitignored; plantillas: `*.secret.local.example`).
+# El emulator los lee nativamente como fallback de `process.env` para `defineSecret()`.
+.secret.local
+**/.secret.local
+!.secret.local.example
 
 # IDE
 .vscode/
