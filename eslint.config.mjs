@@ -8,7 +8,7 @@ const nonProjectFiles = [
   '**/__tests__/**/*.{ts,tsx}',
   '**/*.config.{ts,tsx,js,mjs,cjs}',
   '**/vitest.setup.ts',
-  'scripts/**/*.ts',
+  'scripts/**/*.{ts,mts}',
 ];
 
 const testOverrides = {

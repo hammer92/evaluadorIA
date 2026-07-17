@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
 import { Header } from '@/components/layout/header';
@@ -10,9 +11,18 @@ import { verifyAuth } from '@/services/auth-service';
 // `verifyAuth()` valida la cookie `__session` (HS256). Si es inválida o no
 // existe, redirect a /login. Esto se ejecuta en CADA navegación a /admin/**,
 // por eso `dynamic = 'force-dynamic'` (evita que Next.js cachee la RSC).
+//
+// `robots: noindex,nofollow` indica a crawlers (Googlebot, Lighthouse SEO
+// audit, etc.) que esta zona es solo para usuarios autenticados. Cumple
+// GAP-07-A del SDD-07.
 // =============================================================================
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Admin · Plataforma',
+  robots: { index: false, follow: false },
+};
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const auth = await verifyAuth();
