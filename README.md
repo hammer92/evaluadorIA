@@ -24,6 +24,8 @@
 > - Cookie `__session` válida (obtenible vía signup en `/login` o vía `pnpm seed:emulators`)
 >
 > Sin esto, `middleware.ts` y `app/admin/layout.tsx` redirigen a `/login?next=/admin`.
+>
+> Si usás `pnpm dev` (en lugar de `pnpm dev:web`), los emuladores se arrancan automáticamente en background; Ctrl+C detiene **ambos** (Next.js + emuladores) limpiamente vía trap en `scripts/dev.sh`.
 
 ## Firebase Emulators (SDD-03)
 
@@ -61,14 +63,16 @@ Para detalles ver [.agents/AGENTS.md](.agents/AGENTS.md).
 
 ## Comandos principales
 
-| Comando              | Qué hace                                             |
-| -------------------- | ---------------------------------------------------- |
-| `pnpm dev`           | Levanta Next.js + emuladores (definido en SDD-02/03) |
-| `pnpm build`         | Build de todos los paquetes                          |
-| `pnpm test`          | Corre Vitest una vez                                 |
-| `pnpm test:watch`    | Modo watch                                           |
-| `pnpm test:coverage` | Con coverage                                         |
-| `pnpm lint`          | ESLint sobre todo el repo                            |
-| `pnpm typecheck`     | TS en todos los paquetes                             |
-| `pnpm format`        | Prettier write                                       |
-| `pnpm emulators`     | Levanta los emuladores de Firebase                   |
+| Comando              | Qué hace                                                                  |
+| -------------------- | ------------------------------------------------------------------------- |
+| `pnpm dev`           | Levanta Next.js + emuladores (script `scripts/dev.sh`, cleanup en Ctrl+C) |
+| `pnpm dev:web`       | Solo Next.js (asume emuladores ya corriendo)                              |
+| `pnpm dev:emulators` | Solo emuladores (sin Next.js)                                             |
+| `pnpm build`         | Build de todos los paquetes                                               |
+| `pnpm test`          | Corre Vitest una vez                                                      |
+| `pnpm test:watch`    | Modo watch                                                                |
+| `pnpm test:coverage` | Con coverage                                                              |
+| `pnpm lint`          | ESLint sobre todo el repo                                                 |
+| `pnpm typecheck`     | TS en todos los paquetes                                                  |
+| `pnpm format`        | Prettier write                                                            |
+| `pnpm emulators`     | Levanta los emuladores de Firebase                                        |

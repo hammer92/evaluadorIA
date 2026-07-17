@@ -7,7 +7,9 @@
     "pnpm": ">=9"
   },
   "scripts": {
-    "dev": "echo 'dev script por SDD-02/03' && exit 1",
+    "dev": "bash scripts/dev.sh",
+    "dev:web": "bash scripts/dev.sh web",
+    "dev:emulators": "bash scripts/dev.sh emulators",
     "build": "pnpm -r build",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "pnpm -r typecheck",

@@ -55,6 +55,10 @@ cmd_stop() {
   pkill -9 -f "cloud-firestore-emulator" 2>/dev/null || true
   # storage rules runtime java
   pkill -9 -f "cloud-storage-rules-runtime" 2>/dev/null || true
+  # functions runtime (Cloud Functions emulator worker)
+  pkill -9 -f "functionsEmulatorRuntime" 2>/dev/null || true
+  # auth emulator worker
+  pkill -9 -f "firebase-tools/lib/emulator/auth" 2>/dev/null || true
   echo "Emuladores detenidos."
 }
 
