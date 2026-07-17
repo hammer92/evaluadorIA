@@ -94,6 +94,7 @@ JSON
 - **Require conversation resolution before merging**: ✓
 - **Do not allow force pushes**: ✓
 - **Do not allow deletions**: ✓
+- **Allow auto-merge**: ✓ (CI + review pasan → merge automático, sin intervención manual)
 
 Setup via `gh api` (idempotente):
 
@@ -103,20 +104,71 @@ gh api --method PUT repos/:owner/:repo/branches/main/protection \
 {
   "required_status_checks": {
     "strict": true,
-    "contexts": ["lint-typecheck-test-build"]
+    "contexts": [
+      "lint-typecheck-test-build",
+      "integration-emulator",
+      "coverage"
+    ]
   },
   "enforce_admins": true,
   "required_pull_request_reviews": {
     "dismissal_restrictions": {},
     "dismiss_stale_reviews": true,
-    "require_code_owner_reviews": false,
+    "require_code_owner_reviews": true,
     "required_approving_review_count": 1
   },
   "restrictions": null,
-  "required_conversation_resolution": true
+  "required_conversation_resolution": true,
+  "required_linear_history": true,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "block_creations": false,
+  "required_signatures": false,
+  "lock_branch": false,
+  "allow_fork_syncing": false
 }
 JSON
 ```
+
+**Notas**:
+
+- `require_code_owner_reviews: true` fuerza review del CODEOWNERS para paths
+  sensibles (CI/CD, reglas Firebase, AI-DLC, auth, secrets).
+- `required_linear_history: true` rechaza PRs con merge commits (trunk-based
+  requiere squash o rebase merge).
+- `allow_force_pushes: false` + `allow_deletions: false` refuerzan la regla
+  de AI-DLC de NO reescribir historia de main.
+- Los 3 status checks corresponden a los 3 jobs del workflow `ci.yml`.
+
+Configurar el repo para usar **squash merge** (preserva historial lineal):
+
+```bash
+gh api --method PATCH repos/:owner/:repo \
+  --input - <<'JSON'
+{
+  "allow_squash_merge": true,
+  "allow_merge_commit": false,
+  "allow_rebase_merge": true,
+  "delete_branch_on_merge": true
+}
+JSON
+```
+
+### CODEOWNERS
+
+El archivo `CODEOWNERS` (raíz del repo) define quién puede aprobar cambios
+en paths sensibles. GitHub automáticamente pide review a esos owners cuando
+un PR toca un archivo matcheado. Ver sintaxis en
+<https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-customizations/about-code-owners>.
+
+Paths críticos en este repo (requieren owner review):
+
+- `.github/workflows/` (CI/CD)
+- `firebase.json`, `firestore.rules`, `storage.rules` (config Firebase)
+- `apps/web/middleware.ts`, `apps/web/services/`, `apps/web/features/auth/` (auth)
+- `apps/functions/src/v1/auth/`, `apps/functions/src/shared/with-auth.ts` (auth backend)
+- `aidlc-docs/` (audit trail AI-DLC)
+- `SECURITY.md`, `DEPLOY.md`, `CONTRIBUTING.md`, `ARCHITECTURE.md` (governance)
 
 ## Cómo correr un deploy
 

@@ -45,6 +45,37 @@ Estrategia **trunk-based** con ramas cortas:
 Para trabajo experimental: prefix `spike/<topic>` (sin PR, sin merge; se
 borra después).
 
+### Enforcement (machine + human gates)
+
+La estrategia trunk-based está reforzada por **dos capas**:
+
+**Machine gate** (automático en GitHub Actions, sin review humano):
+
+- Branch protection en `main` rechaza el merge si los CI checks fallan.
+- Required checks: `lint-typecheck-test-build`, `integration-emulator`, `coverage`.
+- Ver `docs/CI-CD.md` §Branch protection para el setup via `gh api`.
+
+**Human gate** (CODEOWNERS + branch protection):
+
+- Todo PR a `main` requiere **al menos 1 reviewer aprobando** (configurado
+  en branch protection: `required_pull_request_reviews.required_approving_review_count: 1`).
+- Paths críticos (CI/CD, reglas Firebase, AI-DLC, auth, secrets) requieren
+  review explícito del owner del repo (ver `CODEOWNERS`).
+- Stale reviews se descartan automáticamente al pushear nuevos commits
+  (`dismiss_stale_reviews: true`).
+
+**Forbidden git operations** (enforced por regla de AI-DLC + AGENTS.md):
+
+| Operación                              | Por qué está prohibida                    |
+| -------------------------------------- | ----------------------------------------- |
+| `git stash` / `pop` / `apply` / `drop` | Recovery puede perderse mid-flight        |
+| `git reset --hard` (uncommitted)       | Descarta trabajo sin confirmación         |
+| `git checkout -- <path>`               | Descarta cambios sin confirmación         |
+| `git clean -fd`                        | Borra archivos untracked sin confirmación |
+| `git push --force` a `main`            | Reescribe historia compartida             |
+
+Alternativas read-only: `git log`, `git show`, `git blame`, `git diff`.
+
 ### Configuración recomendada (una sola vez)
 
 ```bash

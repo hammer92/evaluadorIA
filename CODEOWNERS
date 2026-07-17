@@ -1,0 +1,54 @@
+# =============================================================================
+# CODEOWNERS — Trunk-Based Hardening
+# =============================================================================
+# GitHub CODEOWNERS syntax: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-customizations/about-code-owners
+#
+# En trunk-based, CODEOWNERS define QUIÉN puede aprobar un PR antes de mergear
+# a `main`. Esto es el "human gate" complementario al "machine gate" de CI
+# (lint/typecheck/test/build).
+#
+# Estrategia:
+# - Default owner = repo owner (hammer92). Cualquier PR requiere su review.
+# - Paths críticos (workflows, reglas Firebase, AI-DLC docs, arquitectura)
+#   requieren review explícito del owner para hacer merge, incluso si hay
+#   otros reviewers. Esto evita PRs que bypasean CI o cambian infra crítica
+#   sin oversight.
+#
+# Cómo agregar más owners:
+#   /apps/web/                    @user1 @user2
+# =============================================================================
+
+# Default owners for everything
+*                                               @hammer92
+
+# Architectural decisions (require owner review)
+/ARCHITECTURE.md                                @hammer92
+/docs/sdd-package/                              @hammer92
+/docs/CI-CD.md                                  @hammer92
+/docs/INFORME-ESTADO-PROYECTO.md                @hammer92
+/docs/Plan-Desarrollo.md                        @hammer92
+/docs/Propuesta-Negocio.md                      @hammer92
+/docs/System-Design.md                          @hammer92
+
+# CI/CD changes (require owner review — workflows + firebase config)
+/.github/                                       @hammer92
+/.github/workflows/                             @hammer92
+/firebase.json                                  @hammer92
+/firestore.rules                                @hammer92
+/firestore.indexes.json                         @hammer92
+/storage.rules                                  @hammer92
+/.size-limit.json                               @hammer92
+/release-please-config.json                     @hammer92
+
+# AI-DLC artifacts (audit trail + state)
+/aidlc-docs/                                    @hammer92
+
+# Security-sensitive (auth, secrets, middleware)
+/apps/web/middleware.ts                         @hammer92
+/apps/web/services/                             @hammer92
+/apps/web/features/auth/                        @hammer92
+/apps/functions/src/v1/auth/                    @hammer92
+/apps/functions/src/shared/with-auth.ts          @hammer92
+/SECURITY.md                                    @hammer92
+/DEPLOY.md                                      @hammer92
+/CONTRIBUTING.md                                @hammer92
