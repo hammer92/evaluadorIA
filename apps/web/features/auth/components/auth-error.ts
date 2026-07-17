@@ -16,6 +16,16 @@ const MESSAGES: Record<string, string> = {
   'auth/wrong-password': 'Email o contraseña incorrectos',
   'auth/too-many-requests': 'Demasiados intentos. Probá de nuevo en unos minutos',
   'auth/network-request-failed': 'Error de red. Verificá tu conexión',
+  // Firebase Auth — phone provider
+  'auth/invalid-phone-number':
+    'Número de teléfono inválido. Usá formato internacional (ej: +5491155554444)',
+  'auth/missing-phone-number': 'Falta el número de teléfono',
+  'auth/quota-exceeded': 'Se agotó la cuota de SMS. Contactá al admin',
+  'auth/captcha-check-failed': 'Verificación anti-bot falló. Recargá la página',
+  'auth/invalid-verification-code': 'Código inválido. Verificá e intentá de nuevo',
+  'auth/invalid-verification-id': 'La sesión de verificación expiró. Pedí un código nuevo',
+  'auth/code-expired': 'El código expiró. Pedí uno nuevo',
+  'auth/popup-closed-by-user': '',
   // Firebase Functions
   'functions/permission-denied': 'No tenés permisos para hacer esto',
   'functions/not-found': 'Función no encontrada',

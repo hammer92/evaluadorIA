@@ -1,19 +1,23 @@
 # SDD-05 — Auth/Authorization Execution Plan
 
 **Sprint**: SDD-05 (Auth/Authorization)
-**Decisions**: Q1=A (email/password), Q2=A (jose HS256), Q3=C (híbrido bootstrap admin)
-**Date**: 2026-06-29T08:00Z
+**Decisions**: Q1=C (email + phone), Q2=A (jose HS256), Q3=C (híbrido bootstrap admin)
+**Date**: 2026-06-29T08:00Z (Q1 reverted 2026-07-17 a Q1=A → Q1=C)
+**ADR**: `docs/sdd-package/01-architecture/decisions/0007-auth-providers-email-and-phone.md`
 
 ---
 
 ## 1. Decisiones de implementación
 
-### Q1 = A — Email/password solamente
+### Q1 = C — Email + Phone (sin Google)
 
-- **No Google provider**: omitir `social-buttons.tsx`, `signInWithGoogle()` y `GoogleAuthProvider`.
-- Auth emulator: `auth:9099` solo necesita config por default (no providers adicionales).
-- Tests: `signInWithEmailAndPassword` + `createUserWithEmailAndPassword` solamente.
-- Reducción de scope: ~3 archivos menos que en spec.
+- **Providers habilitados**: `password` (Firebase Auth email/password) + `phone` (Firebase Auth phone con OTP).
+- **NO Google**: omitir `social-buttons.tsx`, `signInWithGoogle()`, `GoogleAuthProvider` y OAuth setup en Firebase Console.
+- **Phone login only** (no self-signup por phone): el admin crea el user con `phoneNumber` vía `v1UsersCreate` CF + Admin SDK. El cliente usa OTP puro (`signInWithPhoneNumber` → `ConfirmationResult.confirm`).
+- **RecaptchaVerifier invisible** montado en `<div id="login-recaptcha-container">` (compartido entre tabs).
+- **Auth emulator**: acepta ambos providers sin config adicional. Phone usa código `123456` universal en emulador.
+- **Reducción de scope vs spec original**: -Google (+Phone). Phone = 4 archivos nuevos (schema, API, UI, tests).
+- **Audit log extendido**: `auth.phone_login`, `auth.phone_otp_requested`, `auth.phone_otp_failed`.
 
 ### Q2 = A — HS256 con `jose`
 

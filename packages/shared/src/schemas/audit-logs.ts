@@ -18,6 +18,9 @@ export const auditActionSchema = z.enum([
   'auth.login',
   'auth.failed_login',
   'auth.role_escalation_blocked',
+  'auth.phone_login',
+  'auth.phone_otp_requested',
+  'auth.phone_otp_failed',
 ]);
 export type AuditAction = z.infer<typeof auditActionSchema>;
 

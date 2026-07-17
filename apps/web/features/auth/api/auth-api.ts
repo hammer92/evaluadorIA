@@ -1,18 +1,23 @@
 'use client';
 
+import { phoneE164Schema } from '../schemas';
+
 import {
   auth,
   functions,
   httpsCallable,
+  RecaptchaVerifier,
   signInWithEmailAndPassword,
+  signInWithPhoneNumber,
   signOut,
+  type ConfirmationResult,
   type User,
 } from '@/lib/firebase/auth';
 
 // =============================================================================
 // Auth API — cliente (signIn/signUp/signOut + session helpers).
 // =============================================================================
-// Q1=A (email/password only). Q3=C (híbrido: primer user admin, resto por invitación).
+// Q1=C (email/password + phone). Q3=C (híbrido: primer user admin, resto por invitación).
 //
 // El flow de signup es SIMPLE:
 //   1. signUpWithEmail({ email, password, displayName })
@@ -27,6 +32,16 @@ import {
 // (a) requiere que el cliente ya esté autenticado para llamar la CF que
 //     decide first-user-admin (raro), (b) hace rollback complejo si la CF
 //     rechaza. Es más limpio delegar todo a la CF.
+//
+// PHONE AUTH (login only, no self-signup):
+//   - User YA EXISTE en Auth con phoneNumber (admin lo invitó vía
+//     v1UsersCreate + Admin SDK updatePhoneNumber o directamente
+//     auth.createUser({ phoneNumber })).
+//   - 1. signInWithPhone({ phoneNumber, recaptchaContainerId })
+//        → signInWithPhoneNumber() retorna ConfirmationResult
+//   - 2. verifyPhoneCode(confirmationResult, code)
+//        → confirmationResult.confirm(code) → user
+//   - 3. createSession(user) → cookie httpOnly (igual que email)
 // =============================================================================
 
 const COOKIE_NAME = '__session';
@@ -125,6 +140,73 @@ export async function createSession(user: User): Promise<boolean> {
     return false;
   }
   return true;
+}
+
+/**
+ * SignIn con teléfono (phone OTP). El user YA EXISTE en Auth con ese
+ * phoneNumber (admin lo invitó). Devuelve el `ConfirmationResult` que
+ * el caller debe guardar y pasar a {@link verifyPhoneCode} con el código
+ * de 6 dígitos que el usuario recibió por SMS.
+ *
+ * @param phoneNumber - E.164 canónico (ej: `+5491155554444`). Validado
+ *   contra `phoneE164Schema` antes de invocar el SDK.
+ * @param recaptchaContainerId - ID del div en el DOM donde se monta el
+ *   `RecaptchaVerifier` invisible. Si el div no existe, Firebase Auth
+ *   lanza `auth/captcha-check-failed`.
+ *
+ * @throws AuthApiError si la validación falla o si Firebase rechaza el
+ *   número (`auth/invalid-phone-number`, `auth/quota-exceeded`, etc).
+ */
+export async function signInWithPhone(input: {
+  phoneNumber: string;
+  recaptchaContainerId: string;
+}): Promise<ConfirmationResult> {
+  const parse = phoneE164Schema.safeParse(input.phoneNumber);
+  if (!parse.success) {
+    throw new AuthApiError(
+      'auth/invalid-phone-number',
+      parse.error.issues[0]?.message ?? 'Número inválido',
+    );
+  }
+  const verifier = new RecaptchaVerifier(auth, input.recaptchaContainerId, {
+    size: 'invisible',
+  });
+  try {
+    return await signInWithPhoneNumber(auth, input.phoneNumber, verifier);
+  } catch (e) {
+    const err = e as { code?: string; message?: string };
+    console.error('[signInWithPhone] failed:', err.code, err.message);
+    throw new AuthApiError(
+      err.code ?? 'auth/unknown',
+      err.message ?? 'No se pudo enviar el código',
+    );
+  }
+}
+
+/**
+ * Confirma el código OTP de 6 dígitos recibido por SMS y devuelve el user.
+ *
+ * Después de llamar a esta función, el caller debe invocar
+ * {@link createSession} para setear la cookie httpOnly (igual que en el
+ * flow de email).
+ *
+ * @throws AuthApiError si el código es inválido/expirado.
+ */
+export async function verifyPhoneCode(
+  confirmation: ConfirmationResult,
+  code: string,
+): Promise<User> {
+  if (!/^\d{6}$/.test(code)) {
+    throw new AuthApiError('auth/invalid-verification-code', 'El código debe tener 6 dígitos');
+  }
+  try {
+    const result = await confirmation.confirm(code);
+    return result.user;
+  } catch (e) {
+    const err = e as { code?: string; message?: string };
+    console.error('[verifyPhoneCode] failed:', err.code, err.message);
+    throw new AuthApiError(err.code ?? 'auth/unknown', err.message ?? 'Código inválido o expirado');
+  }
 }
 
 /**

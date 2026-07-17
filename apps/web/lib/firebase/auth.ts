@@ -9,9 +9,12 @@
 
 import {
   onAuthStateChanged,
+  RecaptchaVerifier,
   signInWithEmailAndPassword,
+  signInWithPhoneNumber,
   signOut as fbSignOut,
   type Auth,
+  type ConfirmationResult,
   type User,
 } from 'firebase/auth';
 import { httpsCallable, type Functions } from 'firebase/functions';
@@ -19,5 +22,12 @@ import { httpsCallable, type Functions } from 'firebase/functions';
 import { auth, functions } from './client';
 
 export { auth, functions };
-export { onAuthStateChanged, signInWithEmailAndPassword, fbSignOut as signOut, httpsCallable };
-export type { Auth, User, Functions };
+export {
+  onAuthStateChanged,
+  RecaptchaVerifier,
+  signInWithEmailAndPassword,
+  signInWithPhoneNumber,
+  fbSignOut as signOut,
+  httpsCallable,
+};
+export type { Auth, ConfirmationResult, Functions, User };

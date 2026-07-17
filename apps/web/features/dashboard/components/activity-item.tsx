@@ -13,6 +13,9 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   'auth.login': 'inició sesión',
   'auth.failed_login': 'falló al iniciar sesión',
   'auth.role_escalation_blocked': 'bloqueó un intento de escalación de rol',
+  'auth.phone_login': 'inició sesión por teléfono',
+  'auth.phone_otp_requested': 'solicitó código OTP por teléfono',
+  'auth.phone_otp_failed': 'falló al verificar código OTP',
 };
 
 const ACTION_TONE: Record<AuditAction, 'info' | 'success' | 'warning' | 'error' | 'neutral'> = {
@@ -26,6 +29,9 @@ const ACTION_TONE: Record<AuditAction, 'info' | 'success' | 'warning' | 'error' 
   'auth.login': 'neutral',
   'auth.failed_login': 'error',
   'auth.role_escalation_blocked': 'warning',
+  'auth.phone_login': 'neutral',
+  'auth.phone_otp_requested': 'info',
+  'auth.phone_otp_failed': 'error',
 };
 
 const TONE_DOT: Record<'info' | 'success' | 'warning' | 'error' | 'neutral', string> = {

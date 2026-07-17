@@ -1,5 +1,7 @@
 import 'server-only';
 
+import type { AuditAction } from '@shared/schemas/audit-logs';
+
 import { getUserRepository, getAuditLogRepository } from '@/repositories';
 import type { Ctx } from '@/repositories/users';
 import { requireAuth, type ServerAuth } from '@/services/auth-service';
@@ -18,17 +20,7 @@ export interface DashboardStats {
 export interface RecentAuditLog {
   logId: string;
   actorEmail: string;
-  action:
-    | 'user.created'
-    | 'user.updated'
-    | 'user.deleted'
-    | 'user.role_changed'
-    | 'user.suspended'
-    | 'organization.created'
-    | 'organization.updated'
-    | 'auth.login'
-    | 'auth.failed_login'
-    | 'auth.role_escalation_blocked';
+  action: AuditAction;
   targetId: string | null;
   createdAt: string;
 }

@@ -27,6 +27,21 @@ vi.mock('@/lib/firebase/auth', () => {
     displayName: 'Fake User',
     getIdToken: vi.fn().mockResolvedValue('fake-id-token'),
   };
+  const fakePhoneUser = {
+    uid: 'u_phone',
+    email: null,
+    phoneNumber: '+5491155554444',
+    displayName: null,
+    getIdToken: vi.fn().mockResolvedValue('fake-phone-id-token'),
+  };
+  const fakeConfirmation = {
+    confirm: vi.fn().mockImplementation(async (code: string) => {
+      if (code === '000000') {
+        throw { code: 'auth/invalid-verification-code', message: 'invalid' };
+      }
+      return { user: fakePhoneUser };
+    }),
+  };
   const httpsCallableMock = vi.fn((_fns: unknown, name: string) => {
     return vi.fn(async (data: unknown) => {
       if (name === 'v1AuthSignUp') {
@@ -45,6 +60,17 @@ vi.mock('@/lib/firebase/auth', () => {
     signInWithEmailAndPassword: vi.fn().mockResolvedValue({ user: fakeUser }),
     signOut: vi.fn().mockResolvedValue(undefined),
     httpsCallable: httpsCallableMock,
+    RecaptchaVerifier: vi.fn().mockImplementation(function () {
+      return { render: vi.fn(), verify: vi.fn().mockResolvedValue(undefined), clear: vi.fn() };
+    }),
+    signInWithPhoneNumber: vi
+      .fn()
+      .mockImplementation(async (_auth: unknown, phoneNumber: string) => {
+        if (phoneNumber === '+15555555555') {
+          throw { code: 'auth/invalid-phone-number', message: 'invalid phone' };
+        }
+        return fakeConfirmation;
+      }),
   };
 });
 
@@ -57,7 +83,14 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-import { AuthApiError, signInWithEmail, signOutCurrent, signUpWithEmail } from './auth-api';
+import {
+  AuthApiError,
+  signInWithEmail,
+  signInWithPhone,
+  signOutCurrent,
+  signUpWithEmail,
+  verifyPhoneCode,
+} from './auth-api';
 
 describe('signInWithEmail', () => {
   it('returns the user from Firebase Auth', async () => {
@@ -113,5 +146,54 @@ describe('signOutCurrent', () => {
   it('does not throw if logout endpoint fails (offline-safe)', async () => {
     fetchMock.mockRejectedValueOnce(new Error('network'));
     await expect(signOutCurrent()).resolves.toBeUndefined();
+  });
+});
+
+describe('signInWithPhone', () => {
+  it('validates phone E.164 format and throws AuthApiError for invalid', async () => {
+    await expect(
+      signInWithPhone({ phoneNumber: '1155554444', recaptchaContainerId: 'x' }),
+    ).rejects.toThrow(AuthApiError);
+  });
+
+  it('returns ConfirmationResult for valid E.164 number', async () => {
+    const result = await signInWithPhone({
+      phoneNumber: '+5491155554444',
+      recaptchaContainerId: 'x',
+    });
+    expect(result.confirm).toBeDefined();
+  });
+
+  it('wraps SDK errors as AuthApiError with original code', async () => {
+    await expect(
+      signInWithPhone({ phoneNumber: '+15555555555', recaptchaContainerId: 'x' }),
+    ).rejects.toMatchObject({ code: 'auth/invalid-phone-number' });
+  });
+});
+
+describe('verifyPhoneCode', () => {
+  it('rejects codes that are not 6 digits before calling SDK', async () => {
+    await expect(verifyPhoneCode({ confirm: vi.fn() } as never, '12345')).rejects.toThrow(
+      AuthApiError,
+    );
+  });
+
+  it('confirms and returns user for valid 6-digit code', async () => {
+    const confirmation = {
+      confirm: vi.fn().mockResolvedValue({
+        user: { uid: 'u_p', phoneNumber: '+5491155554444', getIdToken: vi.fn() },
+      }),
+    };
+    const user = await verifyPhoneCode(confirmation as never, '123456');
+    expect(user.uid).toBe('u_p');
+  });
+
+  it('wraps SDK invalid-code error as AuthApiError', async () => {
+    const confirmation = {
+      confirm: vi.fn().mockRejectedValue({ code: 'auth/invalid-verification-code' }),
+    };
+    await expect(verifyPhoneCode(confirmation as never, '000000')).rejects.toMatchObject({
+      code: 'auth/invalid-verification-code',
+    });
   });
 });
