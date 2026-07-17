@@ -96,8 +96,14 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools@13
 
-      - name: Cloud Functions integration tests + rules + auth E2E (against emulators)
+      - name: Integration tests (Cloud Functions vs emulators)
         run: pnpm emulators:test
+
+      - name: Rules verification (firestore + storage vs emulators)
+        run: pnpm emulators:rules
+
+      - name: Auth E2E (signup + session + claims vs emulators)
+        run: pnpm emulators:auth
 
   coverage:
     runs-on: ubuntu-latest
