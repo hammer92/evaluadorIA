@@ -3,9 +3,18 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // Usar el JSX automatic runtime (React 17+) para no requerir
+  // `import React from 'react'` en cada componente .tsx testeado desde root.
+  esbuild: {
+    jsx: 'automatic',
+  },
   test: {
     environment: 'node',
     globals: true,
+    // Setup inline (no archivo externo) porque root setup solo necesita
+    // jest-dom cuando se carga un test con `// @vitest-environment jsdom`.
+    // Usar require dinámico para no romper tests con environment node
+    // (que es el default desde root y no tiene @testing-library/jest-dom).
     setupFiles: ['./vitest.setup.ts'],
     passWithNoTests: true,
     coverage: {

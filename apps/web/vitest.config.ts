@@ -3,6 +3,11 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // Usar el JSX automatic runtime (React 17+) para no requerir
+  // `import React from 'react'` en cada componente .tsx testeado.
+  esbuild: {
+    jsx: 'automatic',
+  },
   test: {
     environment: 'jsdom',
     globals: true,

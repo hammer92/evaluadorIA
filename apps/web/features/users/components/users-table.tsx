@@ -41,6 +41,8 @@ export function UsersTable({
 }): React.JSX.Element {
   const [sorting, setSorting] = useState<SortingState>([]);
 
+  const showActions = canEdit || canDelete;
+
   const columns: ColumnDef<User>[] = [
     {
       accessorKey: 'email',
@@ -82,38 +84,42 @@ export function UsersTable({
       ),
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
-    {
-      id: 'actions',
-      header: () => (
-        <div className="text-right font-hanken text-label-sm uppercase tracking-wider text-outline-tv">
-          Acciones
-        </div>
-      ),
-      cell: ({ row }) => (
-        <div className="flex justify-end gap-2">
-          {canEdit && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(row.original)}
-              className="text-on-surface-variant hover:text-navy"
-            >
-              Editar
-            </Button>
-          )}
-          {canDelete && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onDelete(row.original)}
-              className="text-on-surface-variant hover:text-status-error"
-            >
-              Eliminar
-            </Button>
-          )}
-        </div>
-      ),
-    },
+    ...(showActions
+      ? [
+          {
+            id: 'actions',
+            header: () => (
+              <div className="text-right font-hanken text-label-sm uppercase tracking-wider text-outline-tv">
+                Acciones
+              </div>
+            ),
+            cell: ({ row }: { row: { original: User } }) => (
+              <div className="flex justify-end gap-2">
+                {canEdit && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEdit(row.original)}
+                    className="text-on-surface-variant hover:text-navy"
+                  >
+                    Editar
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDelete(row.original)}
+                    className="text-on-surface-variant hover:text-status-error"
+                  >
+                    Eliminar
+                  </Button>
+                )}
+              </div>
+            ),
+          },
+        ]
+      : []),
   ];
 
   const table = useReactTable({
