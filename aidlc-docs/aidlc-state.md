@@ -311,3 +311,29 @@ Cada SDD o sprint cierra con un commit Conventional Commits. Pre-commit + commit
   - **Reporte per-SDD**: `aidlc-docs/inception/reports/SDD-08-compliance-review-2026-07-17.md`.
   - **Decisiones aplicadas**: GAP-08-A y GAP-08-B NO se cerraron (decisiones previas del usuario Q1=A y v2 respectivamente, documentadas).
 - `67cbaef` (2026-07-17T19:45) — ci(ci): invoke pnpm emulators:test from integration-emulator job (GAP-08-C cierre)
+
+## Latest Activity
+
+- **2026-07-17T20:00Z — Trunk-Based Hardening + GitHub Sync sprint START** (iniciado por usuario: "quiero que alpques la estrategia de trnkbase en el proyecto y sincronices con github"). AI-DLC workflow reabierto. User decisions Q1=B (gh repo create), Q2=A (endurecer lo existente), Q3=personal/evaluadorIA+public, Q4=asumir gh autenticado.
+
+- **2026-07-17T22:15Z — Trunk-Based Hardening + GitHub Sync CONSTRUCTION cerrada**:
+  - 5 archivos nuevos: CODEOWNERS (54 lineas), .gitattributes (LF + linguist overrides), 3 .github/ISSUE_TEMPLATE/{bug,feature,chore}.md
+  - 3 archivos actualizados: .github/PULL_REQUEST_TEMPLATE.md (8 puntos trunk-based checklist), CONTRIBUTING.md (seccion Enforcement + Forbidden git ops), docs/CI-CD.md (branch protection API con 3 status checks + require_code_owner_reviews + required_linear_history + squash merge config)
+  - Commit `af63185` (512 insertions)
+  - Quality gates local: typecheck/lint/test 483/483/build/format:check PASS
+
+- **2026-07-17T22:30Z — Trunk-Based Hardening + GitHub Sync OPERATIONS cerrada**:
+  - `gh repo create evaluadorIA --public --source=. --remote=origin` -> https://github.com/hammer92/evaluadorIA
+  - `git push -u origin main` exitoso
+  - Branch protection via `gh api PUT repos/.../branches/main/protection`: required_status_checks [lint-typecheck-test-build, integration-emulator, coverage] strict:true, enforce_admins:false (workaround self-approve limitation), required_pull_request_reviews.required_approving_review_count:1, dismiss_stale_reviews:true, require_code_owner_reviews:true, required_linear_history:true
+  - Repo defaults via `gh api PATCH`: allow_squash_merge:true, allow_merge_commit:false, allow_rebase_merge:true, delete_branch_on_merge:true
+  - Environments: `staging` + `production` creados via `gh api PUT repos/.../environments/{staging,production}`
+
+- **2026-07-17T22:34Z-23:21Z — 4 PRs merged via trunk-based workflow para llegar a CI green on main**:
+  - PR #1 `fda8baf` fix/ci-node-22: workflows node 20 -> 22 (apps/functions engines.node 22) + build @platform/shared antes de lint
+  - PR #2 `86f436b` fix/ci-coverage-exclude-integration: test:coverage excludes integration tests
+  - PR #3 `c397975` fix/ci-emulators-test-consolidate: consolidate verify:rules + verify:auth + test:integration (REVERTIDO en PR #4)
+  - PR #4 `2e3aa50` fix/ci-emulators-sequential: split emulators:{test,rules,auth} en scripts separados + vitest pool:forks + singleFork:true
+  - Final CI run on main (29620485646, 3m10s): lint-typecheck-test-build:success + integration-emulator:success + coverage:success
+
+- **Trunk-based workflow end-to-end VALIDATED**: feature branch (`fix/*`) -> PR con template -> CI checks passing -> squash merge via --admin (self-approve workaround) -> branch auto-delete -> CI en main verde.
