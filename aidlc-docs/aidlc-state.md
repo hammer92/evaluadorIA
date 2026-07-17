@@ -97,6 +97,10 @@
 - [x] Code Generation — 2026-07-17 (emulators-env-hotfix) — `.env` + `.env.local.example` + `apps/functions/.secret.local[.example]` + `.gitignore` (allow `.env`, ignore `.secret.local`) + `.prettierignore` (`*.sh`) + `scripts/emulators.sh` (3-tier secret resolution)
 - [x] Build and Test — 2026-07-17 (emulators-env-hotfix) — typecheck/lint/test 441/441/build/format:check PASS, emuladores arrancan los 6 puertos sin WARNING de `SESSION_COOKIE_SECRET` (verificado con `grep "secret parameter" log` → 0 matches)
 - [x] Commit — 2026-07-17 — `dc75bfe` fix(tooling): configure .env and .secret.local for local emulators
+- [x] Code Generation — 2026-07-17 (sdd-02-gaps-remediation sprint) — auditoría del compliance review SDD-01/SDD-02 (2026-06-28) contra el estado actual del repo. De los 12 gaps originales, **9 ya estaban remediados** por el sprint `sdd-01-remediation` (ESLint type-aware, strict TS en apps/web via extends, coverage thresholds 70/70/70/70, vitest.setup.ts correcto, .eslintrc.json eliminado, Husky hooks verificados, helpers.test.ts con 9 tests, `radix-ui`/`shadcn` SÍ son paquetes válidos publicados en npm). **3 gaps abiertos aplicados**: GAP-02-4 (reemplazar stub de `components/error-boundary.tsx` con wrapper real de `react-error-boundary@4.1.2` + 5 tests + quitar de coverage exclude), GAP-02-6 (eliminar `components/ui/sonner.tsx` dead code nunca importado), Rec. #10 (documentar en README que `/admin/**` requiere emuladores + cookie `__session`).
+- [x] Build and Test — 2026-07-17 (sdd-02-gaps-remediation sprint) — typecheck PASS, lint PASS (--max-warnings 0), test **446/446** (5 nuevos de error-boundary), test:coverage PASS (thresholds 70/70/70/70; global 97.54% stmts / 93.4% branches / 90% funcs / 97.54% lines), build PASS Next.js 14.2.35, format:check PASS
+- [x] Commit — 2026-07-17 — `aaa62c4` fix(web): remove dead sonner.tsx wrapper (GAP-02-6) — 1 file, 47 deletions
+- [x] Commit — 2026-07-17 — `5fff53f` fix(web): remediate SDD-02 GAP-02-4 (error-boundary) + Rec. #10 (README) — 6 files, 181 insertions / 15 deletions
 
 ### OPERATIONS PHASE
 

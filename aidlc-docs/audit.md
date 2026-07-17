@@ -809,3 +809,57 @@
 
 - Los WARNING remanentes en el log son de `sun.misc.Unsafe` (protobuf, third-party, harmless) y `package.json indicates outdated firebase-functions` (informational). NO relacionados al secret.
 - El rename `doc/ → docs/` (37 archivos) quedó staged como cambio pendiente sin commitear (pre-existente al sprint, fuera de scope).
+
+---
+
+## SDD-02 Gaps Remediation Sprint
+
+**Timestamp**: 2026-07-17T13:55:00Z
+**User Input**: "usando IA-dlc y aplica todos los faltantes der ultimo informe de sdd-02"
+**AI Response**: "AI-DLC sprint focal ejecutado. Auditoría del compliance review SDD-01/SDD-02 (2026-06-28) contra el estado actual: 9 de 12 gaps ya remediados por sprints previos. 3 gaps abiertos aplicados: GAP-02-4 (error-boundary real), GAP-02-6 (sonner.tsx dead code), Rec. #10 (README pnpm dev). Plan presentado y aprobado (A=Aprobar plan). 2 commits: `aaa62c4` (sonner) + `5fff53f` (error-boundary + README)."
+
+**Context**: CONSTRUCTION - SDD-02 Compliance Gaps Remediation
+
+### Auditoría inicial del informe (2026-06-28)
+
+El informe original listaba 12 gaps (6 SDD-01 + 6 SDD-02). Auditoría del estado actual del repo mostró:
+
+| Gap                                                     | Estado                                                                                                           | Remediation sprint |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------ |
+| GAP-01-1 (recommendedTypeChecked)                       | ✅ Ya remediado                                                                                                  | sdd-01-remediation |
+| GAP-01-2 (strict flags apps/web)                        | ✅ Ya remediado (extends de tsconfig.base.json)                                                                  | sdd-01-remediation |
+| GAP-01-3 (coverage thresholds=0)                        | ✅ Ya remediado (ahora 70/70/70/70)                                                                              | sdd-01-remediation |
+| GAP-01-4 (vitest.setup.ts malformado)                   | ✅ Ya remediado (ahora `export {};`)                                                                             | sdd-01-remediation |
+| GAP-01-5 (apps/web/.eslintrc.json legacy)               | ✅ Ya remediado (eliminado)                                                                                      | sdd-01-remediation |
+| GAP-01-6 (Husky hooks no verificados)                   | ✅ Ya remediado (verificado en vivo)                                                                             | sdd-01-remediation |
+| GAP-02-1 (typedRoutes experimental)                     | ⚠️ Decisión documentada (SDD Open Q#3)                                                                           | n/a                |
+| GAP-02-2 (helpers.ts sin tests)                         | ✅ Ya remediado (helpers.test.ts con 9 tests)                                                                    | sdd-01-remediation |
+| GAP-02-3 (login/page.tsx placeholder)                   | ⚠️ Decisión pragmática                                                                                           | n/a                |
+| GAP-02-4 (components/error-boundary.tsx stub)           | ❌ Pendiente → REMEDIADO en este sprint                                                                          | este sprint        |
+| GAP-02-5 (shadcn/radix-ui deps inválidas)               | ✅ Falso positivo del reporte (ambos SÍ están publicados; `radix-ui` es meta-paquete usado por 9 componentes UI) | n/a                |
+| GAP-02-6 (double sonner wrapper)                        | ❌ Pendiente → REMEDIADO en este sprint                                                                          | este sprint        |
+| Recomendación #10 (README pnpm dev requiere emuladores) | ❌ Pendiente → REMEDIADO en este sprint                                                                          | este sprint        |
+
+### Cambios aplicados
+
+- `apps/web/components/ui/sonner.tsx` **eliminado** (dead code, nunca importado; el único `<Toaster>` montado es `components/providers/toast-provider.tsx`)
+- `apps/web/components/error-boundary.tsx` **reescrito**: stub (que solo retornaba children sin capturar nada) → wrapper real sobre `react-error-boundary@4.1.2` con fallback por defecto (`role="alert"` + Reintentar button + mensaje del error) y prop opcional `fallback`
+- `apps/web/components/error-boundary.test.tsx` **nuevo**: 5 tests (renders children, fallback default, onError log, custom fallback, resetErrorBoundary recovery)
+- `apps/web/package.json`: añadida dep `react-error-boundary@^4.1.2`
+- `pnpm-lock.yaml`: actualizado
+- `vitest.config.ts`: removido `apps/web/components/error-boundary.tsx` de coverage exclude (ahora cubierto)
+- `README.md`: nota post "Setup local" aclarando que `/` y `/login` funcionan sin emuladores pero `/admin/**` los requiere; `.env.local` opcional (el nuevo `.env` commited trae defaults funcionales)
+
+### Verificación
+
+- `pnpm typecheck` → PASS (3 packages)
+- `pnpm lint --max-warnings 0` → PASS
+- `pnpm test` → PASS (446/446 tests en 50 files; +5 nuevos de error-boundary)
+- `pnpm build` → PASS (Next.js 14.2.35, 11 routes, shared 87.3 kB)
+- `pnpm test:coverage` → PASS thresholds 70/70/70/70; global 97.54% stmts / 93.4% branches / 90% funcs / 97.54% lines
+- `pnpm format:check` → PASS
+
+### Commits
+
+- `aaa62c4` fix(web): remove dead sonner.tsx wrapper (GAP-02-6) — 1 file, 47 deletions
+- `5fff53f` fix(web): remediate SDD-02 GAP-02-4 (error-boundary) + Rec. #10 (README) — 6 files, +181/-15
