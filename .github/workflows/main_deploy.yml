@@ -93,11 +93,12 @@ jobs:
       - name: Setup gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Set env vars on CF runtime via gcloud --env-vars-file
+      - name: Set env vars on CF runtime via gcloud run services update
         run: |
-          # Usa --env-vars-file (YAML) en vez de --update-env-vars=KEY=VAL,KEY=VAL
-          # para evitar problemas de escaping cuando un valor (ej. ALLOWED_ORIGINS)
-          # contiene comas. gcloud acepta YAML con KEY: "VALUE" por entrada.
+          # gcloud functions deploy re-compila la function (pnpm install falla
+          # en Cloud Build). Usamos gcloud run services update directamente
+          # (CFv2 functions = Cloud Run services detras de escena), que NO
+          # re-compila — solo actualiza el service config.
           cat > /tmp/cf_envvars.yaml <<EOF
           SESSION_COOKIE_SECRET: "$SESSION_COOKIE_SECRET"
           ALLOWED_ORIGINS: "$ALLOWED_ORIGINS"
@@ -112,15 +113,15 @@ jobs:
           # Sincroniza env vars en TODAS las CFs (gcfv2). El runtime service
           # config es donde process.env los lee cuando la CF se ejecuta.
           for FN in \
-            v1UsersCreate \
-            v1UsersDelete \
-            v1UsersList \
-            v1UsersUpdate \
-            v1UsersSetRole \
-            v1AuthSignUp \
-            v1ReportsGenerate; do
+            v1-users-create \
+            v1-users-delete \
+            v1-users-list \
+            v1-users-update \
+            v1-users-set-role \
+            v1-auth-sign-up \
+            v1-reports-generate; do
             echo "→ Updating $FN env vars..."
-            gcloud functions deploy "$FN" \
+            gcloud run services update "$FN" \
               --project="$PROJECT" \
               --region="$REGION" \
               --env-vars-file=/tmp/cf_envvars.yaml \
