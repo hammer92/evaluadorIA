@@ -49,8 +49,7 @@
     {
       "source": "apps/functions",
       "codebase": "default",
-      "ignore": ["node_modules", ".git", "*.log"],
-      "predeploy": ["pnpm --filter @platform/functions build"]
+      "ignore": ["node_modules", ".git", ".next", "*.log", "scripts", "coverage"]
     }
   ],
   "emulators": {
