@@ -28,6 +28,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # --- BLOQUE FRONTEND (WEB) ---
+      # Next.js con output: 'export' genera apps/web/out/ estatico (sin SSR).
+      # Solo requiere NEXT_PUBLIC_* env vars en build time.
       - name: Install & Build Web
         run: pnpm build
         env:
@@ -36,33 +38,21 @@ jobs:
           NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
 
       # --- BLOQUE DESPLIEGUE FINAL ---
-      # firebase-tools v15.24.0 removio --set-env-vars del top-level `deploy`.
-      # Workaround oficial de w9jds/firebase-action@master (env vars via
-      # Firebase Runtime Config API legacy):
-      #   1. FIREBASE_CLI_EXPERIMENTS=legacyRuntimeConfigCommands habilita
-      #      `firebase functions:config:set` (gated por experimento en v15+).
-      #   2. CONFIG_VALUES ejecuta `firebase functions:config:set
-      #      $CONFIG_VALUES` ANTES del deploy, escribiendo a Firebase Runtime
-      #      Config API. Las CFs leen los valores via `functions.config()`.
-      #   3. Los secretos viven en GitHub Secrets (single source of truth);
-      #      el workflow los inyecta aqui y la accion los propaga al deploy.
+      # Arquitectura estática (sin SSR):
+      #   - Frontend estatico → Firebase Hosting (apps/web/out/)
+      #   - Backend → Cloud Functions v2 (usando firebase-functions@5)
       #
-      # NOTA: en la rama principal del Runtime Config API (`firebase` namespace)
-      # esta deprecada y sera removida antes de marzo 2027. Antes de esa fecha
-      # migrar a Firebase Functions Secrets (`firebase functions:secrets:set` +
-      # `defineSecret()` en apps/functions/src/env.ts).
+      # firebase-tools v15+ ya no soporta `--set-env-vars` ni `--update-env-vars`
+      # en `deploy --only functions`. Tampoco `functions.config()` en CFv2
+      # (lanza error si K_CONFIGURATION está seteado).
       #
-      # API expuesta a las CFs (apps/functions/src/env.ts):
-      #   env.SESSION_COOKIE_SECRET      <- functions.config().session.cookie_secret
-      #   env.ALLOWED_ORIGINS            <- functions.config().allowed.origins
-      #   env.REPOSITORY_DRIVER          <- functions.config().repository.driver
-      #   env.FIREBASE_ADMIN_PROJECT_ID  <- functions.config().admin.project_id
-      #   env.OPENAI_API_KEY             <- functions.config().openai.api_key
-      #   env.NODE_ENV                   <- process.env.NODE_ENV (auto en CF runtime)
-      #
-      # Requiere rol adicional en la SA: roles/runtimeconfig.admin para que
-      # `firebase functions:config:set` pueda escribir al Runtime Config API.
-      - name: Deploy functions (env vars via CONFIG_VALUES)
+      # Solución:
+      #   1. `firebase deploy --only functions` (sube el código a Cloud Run)
+      #   2. `gcloud functions deploy FN --update-env-vars` POST-DEPLOY
+      #      (setea env vars en el service config del CF runtime, donde
+      #      process.env los lee). El CF env.ts lee de process.env con
+      #      defaults seguros para deploy-time analysis.
+      - name: Deploy functions (code via firebase deploy)
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only functions --non-interactive
@@ -70,26 +60,65 @@ jobs:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PROJECT_ID: agente-entrevistador-ia
 
-          # Habilita `firebase functions:config:set` (removido por default en
-          # v15+; deprecado antes de marzo 2027).
-          FIREBASE_CLI_EXPERIMENTS: legacyRuntimeConfigCommands
+      - name: Auth to GCP for gcloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
-          # Inyecta env vars al Runtime Config API. La accion corre
-          # `firebase functions:config:set $CONFIG_VALUES` antes del deploy.
-          CONFIG_VALUES: >-
-            session.cookie_secret=${{ secrets.SESSION_COOKIE_SECRET }}
-            allowed.origins=${{ secrets.ALLOWED_ORIGINS }}
-            admin.project_id=${{ secrets.FIREBASE_ADMIN_PROJECT_ID }}
-            openai.api_key=${{ secrets.OPENAI_API_KEY }}
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
 
-          # Habilita `firebase functions:config:set` (removido por default en v15+,
-          # deprecado antes de marzo 2027 — migrar a Firebase Functions Secrets).
-          REPOSITORY_DRIVER: firebase
+      - name: Set env vars on CF runtime via gcloud --env-vars-file
+        run: |
+          # Usa --env-vars-file (YAML) en vez de --update-env-vars=KEY=VAL,KEY=VAL
+          # para evitar problemas de escaping cuando un valor (ej. ALLOWED_ORIGINS)
+          # contiene comas. gcloud acepta YAML con KEY: "VALUE" por entrada.
+          cat > /tmp/cf_envvars.yaml <<EOF
+          SESSION_COOKIE_SECRET: "$SESSION_COOKIE_SECRET"
+          ALLOWED_ORIGINS: "$ALLOWED_ORIGINS"
+          REPOSITORY_DRIVER: "firebase"
+          FIREBASE_ADMIN_PROJECT_ID: "$FIREBASE_ADMIN_PROJECT_ID"
+          OPENAI_API_KEY: "$OPENAI_API_KEY"
+          EOF
 
-      - name: Deploy static + rules (Hosting + Firestore + Storage)
+          REGION="us-central1"
+          PROJECT="agente-entrevistador-ia"
+
+          # Sincroniza env vars en TODAS las CFs (gcfv2). El runtime service
+          # config es donde process.env los lee cuando la CF se ejecuta.
+          for FN in \
+            v1UsersCreate \
+            v1UsersDelete \
+            v1UsersList \
+            v1UsersUpdate \
+            v1UsersSetRole \
+            v1AuthSignUp \
+            v1ReportsGenerate; do
+            echo "→ Updating $FN env vars..."
+            gcloud functions deploy "$FN" \
+              --project="$PROJECT" \
+              --region="$REGION" \
+              --env-vars-file=/tmp/cf_envvars.yaml \
+              --quiet || echo "::warning::Failed to update $FN (skipping)"
+          done
+        env:
+          SESSION_COOKIE_SECRET: ${{ secrets.SESSION_COOKIE_SECRET }}
+          ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+          FIREBASE_ADMIN_PROJECT_ID: ${{ secrets.FIREBASE_ADMIN_PROJECT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Deploy static (Hosting)
         uses: w9jds/firebase-action@master
         with:
-          args: deploy --only hosting,firestore,storage --non-interactive
+          args: deploy --only hosting --non-interactive
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          PROJECT_ID: agente-entrevistador-ia
+
+      - name: Deploy rules (Firestore + Storage)
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only firestore,storage --non-interactive
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PROJECT_ID: agente-entrevistador-ia
