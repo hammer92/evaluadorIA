@@ -38,8 +38,9 @@ jobs:
 
       # --- BLOQUE DESPLIEGUE FINAL ---
       # firebase-tools v15+ removio `--set-env-vars` del top-level `deploy`.
-      # Workaround: split en 2 invocations — el `--only functions` SI acepta
-      # la flag, el resto (hosting/firestore/storage) no la necesita.
+      # Workaround: split en 2 invocations:
+      #   5a. hosting + firestore + storage (top-level deploy, sin env vars)
+      #   5b. functions via SUBCOMMAND `functions:deploy` (aun soporta --set-env-vars)
       - name: Deploy static + rules (Hosting + Firestore + Storage)
         uses: w9jds/firebase-action@master
         with:
@@ -52,8 +53,7 @@ jobs:
         uses: w9jds/firebase-action@master
         with:
           args: >-
-            deploy
-            --only functions
+            functions:deploy
             --non-interactive
             --set-env-vars
             "SESSION_COOKIE_SECRET=${{ secrets.SESSION_COOKIE_SECRET }},ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }},REPOSITORY_DRIVER=firebase,FIREBASE_ADMIN_PROJECT_ID=${{ secrets.FIREBASE_ADMIN_PROJECT_ID }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
