@@ -37,40 +37,45 @@ jobs:
           NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
 
       # --- BLOQUE DESPLIEGUE FINAL ---
-      # firebase-tools v13+ auto-carga archivos .env* del directorio `source`
-      # de las CFs (apps/functions, ver `firebase.json`) y los inyecta como
-      # runtime env vars de las Cloud Functions v2 (leidas via process.env.X).
-      # El proyecto solo tiene un alias (`default` en .firebaserc), por lo que
-      # alcanza con `apps/functions/.env`. El archivo es gitignored y se
-      # reconstruye aqui en cada deploy a partir de GitHub Secrets.
-      - name: Build apps/functions/.env from secrets
-        working-directory: apps/functions
-        run: |
-          {
-            printf 'SESSION_COOKIE_SECRET=%s\n' "$SESSION_COOKIE_SECRET"
-            printf 'ALLOWED_ORIGINS=%s\n'      "$ALLOWED_ORIGINS"
-            printf 'REPOSITORY_DRIVER=firebase\n'
-            printf 'FIREBASE_ADMIN_PROJECT_ID=%s\n' "$FIREBASE_ADMIN_PROJECT_ID"
-            printf 'OPENAI_API_KEY=%s\n'       "$OPENAI_API_KEY"
-          } > .env
+      # firebase-tools v15+ removio `--set-env-vars` del top-level `deploy`.
+      # Workaround oficial de w9jds/firebase-action@master:
+      #   1. `FIREBASE_CLI_EXPERIMENTS=legacyRuntimeConfigCommands` habilita
+      #      `firebase functions:config:set` (gated por experimento en v15+).
+      #   2. `CONFIG_VALUES` la accion ejecuta `firebase functions:config:set
+      #      $CONFIG_VALUES` ANTES del deploy, escribiendo a Firebase Runtime
+      #      Config API. Las CFs leen los valores via `functions.config()`.
+      #   3. Los secrets viven en GitHub Secrets (single source of truth);
+      #      el workflow los inyecta aqui y la accion los propaga al deploy.
+      #
+      # API expuesta a las CFs (apps/functions/src/env.ts):
+      #   env.SESSION_COOKIE_SECRET      <- functions.config().session.cookie_secret
+      #   env.ALLOWED_ORIGINS            <- functions.config().allowed.origins
+      #   env.REPOSITORY_DRIVER          <- functions.config().repository.driver
+      #   env.FIREBASE_ADMIN_PROJECT_ID  <- functions.config().admin.project_id
+      #   env.OPENAI_API_KEY             <- functions.config().openai.api_key
+      #   env.NODE_ENV                   <- process.env.NODE_ENV (auto en CF runtime)
+      #
+      # El top-level `firebase deploy` (sin --only) cubre hosting, firestore,
+      # storage y functions en una sola pasada.
+      - name: Deploy functions (env vars via CONFIG_VALUES)
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only functions --non-interactive
         env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          PROJECT_ID: agente-entrevistador-ia
+          # Tambien en process.env del container (no llegan a las CFs en v15+;
+          # las CFs leen de functions.config() por CONFIG_VALUES).
           SESSION_COOKIE_SECRET: ${{ secrets.SESSION_COOKIE_SECRET }}
           ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
           FIREBASE_ADMIN_PROJECT_ID: ${{ secrets.FIREBASE_ADMIN_PROJECT_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          REPOSITORY_DRIVER: firebase
 
       - name: Deploy static + rules (Hosting + Firestore + Storage)
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only hosting,firestore,storage --non-interactive
-        env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          PROJECT_ID: agente-entrevistador-ia
-
-      - name: Deploy functions (auto-loads apps/functions/.env)
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only functions --non-interactive
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PROJECT_ID: agente-entrevistador-ia
