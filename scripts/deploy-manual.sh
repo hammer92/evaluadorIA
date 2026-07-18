@@ -119,7 +119,7 @@ if [[ $SKIP_TESTS -eq 0 ]]; then
 fi
 
 step "Build"
-pnpm build 2>&1 | tail -10
+NEXT_PUBLIC_APP_ENV=prod pnpm build 2>&1 | tail -10
 ok "Build completo"
 
 # =============================================================================
