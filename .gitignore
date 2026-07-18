@@ -24,11 +24,15 @@ coverage/
 # `.env` se commitea con defaults de emulador (12-factor dev workflow).
 # Los overrides personales van en `.env.local` / `.env.*.local` (gitignored).
 # Plantillas commiteadas: `.env.example`, `.env.local.example`.
+#
+# `apps/functions/.env` se regenera en CI (main_deploy.yml) con secrets
+# inyectados al deploy; nunca debe commitearse (contiene valores reales).
 .env.local
 .env.*.local
 !.env
 !.env.example
 !.env.local.example
+/apps/functions/.env
 
 # Firebase Functions secrets (gitignored; plantillas: `*.secret.local.example`).
 # El emulator los lee nativamente como fallback de `process.env` para `defineSecret()`.
