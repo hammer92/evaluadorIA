@@ -80,9 +80,9 @@ if ! echo "$FIREBASE_USE" | grep -q "$PROJECT"; then
 fi
 ok "Proyecto: $PROJECT"
 
-ACTIVE=$(firebase login:list 2>/dev/null | grep -i "active" | head -1)
-[[ -n "$ACTIVE" ]] || fail "firebase login requerido. Ejecuta: firebase login"
-ok "Firebase CLI autenticado"
+ACTIVE=$(firebase login:list 2>/dev/null | head -1)
+[[ "$ACTIVE" == *"Logged in"* || "$ACTIVE" == *"active"* ]] || fail "firebase login requerido. Ejecuta: firebase login"
+ok "Firebase CLI autenticado: $ACTIVE"
 
 # =============================================================================
 # Secrets
@@ -149,7 +149,7 @@ if [[ -z "$ONLY" || "$ONLY" == "functions" || "$ONLY" == "secrets" ]]; then
 
   sync_secret SESSION_COOKIE_SECRET    "$SESSION_COOKIE_SECRET"
   sync_secret ALLOWED_ORIGINS          "$ALLOWED_ORIGINS"
-  sync_secret FIREBASE_ADMIN_PROJECT_ID "$FIREBASE_ADMIN_PROJECT_ID"
+  sync_secret ADMIN_PROJECT_ID "$FIREBASE_ADMIN_PROJECT_ID"
   sync_secret OPENAI_API_KEY           "$OPENAI_API_KEY"
 
   ok "Secrets sincronizados"

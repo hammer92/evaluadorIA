@@ -1,7 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
-import { env } from '../../env.js';
+import { ALLOWED_ORIGINS_DEPLOY } from '../../deploy-config.js';
 import { getAdminAuth, getAdminDb } from '../../firebase-admin.js';
 import { writeAuditLog } from '../../shared/audit.js';
 import { RepositoryError } from '../../shared/errors.js';
@@ -45,7 +45,7 @@ const validateEmail = (s: unknown): s is string => typeof s === 'string' && /.+@
 
 export const v1AuthSignUp = onCall<SignUpInput, Promise<SignUpOutput>>(
   {
-    cors: env.ALLOWED_ORIGINS.split(','),
+    cors: ALLOWED_ORIGINS_DEPLOY,
   },
   async (req) => {
     const { email, password, displayName } = req.data ?? ({} as SignUpInput);

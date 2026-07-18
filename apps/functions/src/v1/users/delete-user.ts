@@ -2,7 +2,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { onCall } from 'firebase-functions/v2/https';
 import { z } from 'zod';
 
-import { env } from '../../env.js';
+import { ALLOWED_ORIGINS_DEPLOY } from '../../deploy-config.js';
 import { getAdminDb } from '../../firebase-admin.js';
 import { writeAuditLog } from '../../shared/audit.js';
 import { RepositoryError } from '../../shared/errors.js';
@@ -17,7 +17,7 @@ type DeleteUserRequest = z.input<typeof deleteUserRequestSchema>;
 
 export const v1UsersDelete = onCall(
   {
-    cors: env.ALLOWED_ORIGINS.split(','),
+    cors: ALLOWED_ORIGINS_DEPLOY,
     enforceAppCheck: false,
   },
   withAuth<DeleteUserRequest, unknown>('admin', async (ctx: AuthedContext, data) => {

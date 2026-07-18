@@ -29,9 +29,8 @@ export const SESSION_COOKIE_SECRET: ReturnType<typeof defineSecret> =
   defineSecret('SESSION_COOKIE_SECRET');
 export const ALLOWED_ORIGINS: ReturnType<typeof defineString> = defineString('ALLOWED_ORIGINS');
 export const REPOSITORY_DRIVER: ReturnType<typeof defineString> = defineString('REPOSITORY_DRIVER');
-export const FIREBASE_ADMIN_PROJECT_ID: ReturnType<typeof defineSecret> = defineSecret(
-  'FIREBASE_ADMIN_PROJECT_ID',
-);
+export const FIREBASE_ADMIN_PROJECT_ID: ReturnType<typeof defineSecret> =
+  defineSecret('ADMIN_PROJECT_ID');
 export const OPENAI_API_KEY: ReturnType<typeof defineSecret> = defineSecret('OPENAI_API_KEY');
 
 export interface Env {

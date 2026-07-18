@@ -3,7 +3,7 @@ import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { onCall } from 'firebase-functions/v2/https';
 import { z } from 'zod';
 
-import { env } from '../../env.js';
+import { ALLOWED_ORIGINS_DEPLOY } from '../../deploy-config.js';
 import { getAdminAuth, getAdminDb } from '../../firebase-admin.js';
 import { writeAuditLog } from '../../shared/audit.js';
 import { RepositoryError } from '../../shared/errors.js';
@@ -42,7 +42,7 @@ function mapUserDoc(uid: string, raw: Record<string, unknown>) {
 
 export const v1UsersUpdate = onCall(
   {
-    cors: env.ALLOWED_ORIGINS.split(','),
+    cors: ALLOWED_ORIGINS_DEPLOY,
     enforceAppCheck: false,
   },
   withAuth<UpdateUserRequest, unknown>(undefined, async (ctx: AuthedContext, data) => {
