@@ -30,7 +30,7 @@ const disableTypeChecked = {
 };
 
 export default tseslint.config(
-  { ignores: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/coverage/**', 'apps/functions/lib/**'] },
+  { ignores: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/coverage/**', 'apps/functions/lib/**', 'apps/web/out/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,

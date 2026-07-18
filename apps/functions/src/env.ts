@@ -70,7 +70,7 @@ function flatten(config: Record<string, unknown> | undefined): Record<string, st
     REPOSITORY_DRIVER: section('repository')['driver'] as string | undefined,
     FIREBASE_ADMIN_PROJECT_ID: section('admin')['project_id'] as string | undefined,
     OPENAI_API_KEY: section('openai')['api_key'] as string | undefined,
-    NODE_ENV: process.env.NODE_ENV,
+    NODE_ENV: process.env['NODE_ENV'],
   };
 }
 

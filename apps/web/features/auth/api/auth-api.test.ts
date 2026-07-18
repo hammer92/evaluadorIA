@@ -134,17 +134,7 @@ describe('signUpWithEmail', () => {
 });
 
 describe('signOutCurrent', () => {
-  it('signs out from Firebase and calls logout endpoint', async () => {
-    fetchMock.mockResolvedValueOnce({ ok: true });
-    await signOutCurrent();
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/session/clear'), {
-      method: 'POST',
-      credentials: 'include',
-    });
-  });
-
-  it('does not throw if logout endpoint fails (offline-safe)', async () => {
-    fetchMock.mockRejectedValueOnce(new Error('network'));
+  it('signs out from Firebase only (no cookie endpoint)', async () => {
     await expect(signOutCurrent()).resolves.toBeUndefined();
   });
 });

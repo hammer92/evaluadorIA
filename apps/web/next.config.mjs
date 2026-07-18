@@ -2,13 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  // Standalone output produces un bundle minimo que se puede deploy a
-  // cualquier Node.js host. Necesario para Firebase Hosting + Cloud Run
-  // SSR (ver apps/functions/src/v1/hosting/ssr.ts). El output queda en
-  // apps/web/.next/standalone/ y los assets estaticos en
-  // apps/web/.next/static/.
-  output: 'standalone',
+  // Static export (output: 'export') — no SSR, no server runtime.
+  // El output queda en apps/web/out/ y se sube tal cual a Firebase Hosting.
+  // El cliente llama a Cloud Functions directamente via httpsCallable() de
+  // firebase/functions (callable CFs) o fetch() (HTTP CFs). No hay
+  // middleware de Next.js (Edge runtime no existe en static export).
+  output: 'export',
   experimental: { typedRoutes: true },
+  images: { unoptimized: true },
   async headers() {
     return [
       {

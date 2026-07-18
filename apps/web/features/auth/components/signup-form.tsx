@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
-import { createSession, signUpWithEmail } from '../api/auth-api';
+import { signUpWithEmail } from '../api/auth-api';
 import { signupSchema, type SignupInput } from '../schemas';
 
 import { getAuthErrorMessage } from './auth-error';
@@ -28,16 +28,11 @@ export function SignupForm() {
   const onSubmit = form.handleSubmit(async (values) => {
     setServerError(null);
     try {
-      const { user, isFirstUser } = await signUpWithEmail({
+      const { isFirstUser } = await signUpWithEmail({
         email: values.email,
         password: values.password,
         displayName: values.displayName,
       });
-      const ok = await createSession(user);
-      if (!ok) {
-        setServerError('No se pudo crear la sesión. Reintentá.');
-        return;
-      }
       toast.success(
         isFirstUser ? '¡Bienvenido! Sos el primer usuario, sos admin.' : 'Cuenta creada',
       );

@@ -1,5 +1,7 @@
 import type { CreateUserInput, UpdateUserInput, User } from '@shared/schemas/users';
 
+import { functions, httpsCallable } from '@/lib/firebase/auth';
+
 export interface ListUsersFilters {
   status?: string;
   role?: string;
@@ -16,36 +18,37 @@ export interface ListUsersResult {
   hasMore: boolean;
 }
 
-async function jsonFetch<TInput, TOutput>(
-  url: string,
-  method: 'POST' | 'PATCH' | 'DELETE',
-  body: TInput,
-): Promise<TOutput> {
-  const res = await fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(err.error ?? `${method} ${url} failed (${res.status})`);
-  }
-  return (await res.json()) as TOutput;
+// =============================================================================
+// Users API (cliente) — llama a Cloud Functions callable via httpsCallable.
+// =============================================================================
+// Arquitectura estática (sin /api/* routes). El cliente incluye el
+// Firebase Auth ID token automáticamente en cada httpsCallable; las CFs
+// verifican el token + extraen role/claims via buildAuthContext().
+// =============================================================================
+
+function unwrapData<T>(p: Promise<{ data: T }>): Promise<T> {
+  return p.then((r) => r.data);
 }
 
-export async function listUsers(filters: ListUsersFilters): Promise<ListUsersResult> {
-  return jsonFetch<unknown, ListUsersResult>('/api/users/list', 'POST', filters);
+export function listUsers(filters: ListUsersFilters): Promise<ListUsersResult> {
+  const fn = httpsCallable<ListUsersFilters, ListUsersResult>(functions, 'v1UsersList');
+  return unwrapData(fn(filters));
 }
 
-export async function createUser(input: CreateUserInput): Promise<User> {
-  return jsonFetch<unknown, User>('/api/users', 'POST', input);
+export function createUser(input: CreateUserInput): Promise<User> {
+  const fn = httpsCallable<CreateUserInput, User>(functions, 'v1UsersCreate');
+  return unwrapData(fn(input));
 }
 
-export async function updateUser(uid: string, input: UpdateUserInput): Promise<User> {
-  return jsonFetch<unknown, User>(`/api/users/${uid}`, 'PATCH', { ...input });
+export function updateUser(uid: string, input: UpdateUserInput): Promise<User> {
+  const fn = httpsCallable<UpdateUserInput & { uid: string }, User>(functions, 'v1UsersUpdate');
+  return unwrapData(fn({ uid, ...input }));
 }
 
-export async function deleteUser(uid: string): Promise<{ uid: string; deletedAt: string }> {
-  return jsonFetch<unknown, { uid: string; deletedAt: string }>(`/api/users/${uid}`, 'DELETE', {});
+export function deleteUser(uid: string): Promise<{ uid: string; deletedAt: string }> {
+  const fn = httpsCallable<{ uid: string }, { uid: string; deletedAt: string }>(
+    functions,
+    'v1UsersDelete',
+  );
+  return unwrapData(fn({ uid }));
 }

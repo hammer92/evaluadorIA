@@ -1,46 +1,58 @@
-import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useEffect, type ReactNode } from 'react';
 
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { RoleProvider } from '@/features/auth/components/role-provider';
-import { verifyAuth } from '@/services/auth-service';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 
 // =============================================================================
-// Admin layout — server-side verifyAuth() + render con Header/Sidebar.
+// Admin layout — client-side auth guard para /admin/**.
 // =============================================================================
-// `verifyAuth()` valida la cookie `__session` (HS256). Si es inválida o no
-// existe, redirect a /login. Esto se ejecuta en CADA navegación a /admin/**,
-// por eso `dynamic = 'force-dynamic'` (evita que Next.js cachee la RSC).
+// Arquitectura estática (output: 'export'): no hay server runtime, no hay
+// middleware de Next.js, no hay session cookie. La auth pasa por Firebase
+// Auth client SDK y los custom claims (role, organizationId) del ID token.
 //
-// `robots: noindex,nofollow` indica a crawlers (Googlebot, Lighthouse SEO
-// audit, etc.) que esta zona es solo para usuarios autenticados. Cumple
-// GAP-07-A del SDD-07.
+// Flow:
+//   1. useAuth() suscribe a onAuthStateChanged.
+//   2. Si loading → muestra skeleton (evita flash de redirect).
+//   3. Si no hay user o claims inválidos → redirect a /login?next=/admin.
+//   4. Si hay user con role válido → renderiza con RoleProvider.
 //
-// `RoleProvider` expone el rol del cookie (mismo que Header/Sidebar) al
-// client tree para que los Client Components de /admin/** (e.g., users/page)
-// puedan condicionar UI sin depender del Firebase Auth client, que puede
-// tener claims desactualizados.
+// `robots: noindex,nofollow` se setea en <Head> via <Metadata> en layout
+// separado (no es posible en client component); ver <head> abajo.
 // =============================================================================
 
-export const dynamic = 'force-dynamic';
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  const auth = useAuth();
+  const router = useRouter();
 
-export const metadata: Metadata = {
-  title: 'Admin · Plataforma',
-  robots: { index: false, follow: false },
-};
+  useEffect(() => {
+    if (!auth.loading && !auth.user) {
+      router.replace('/login?next=/admin');
+    }
+  }, [auth.loading, auth.user, router]);
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const auth = await verifyAuth();
-  if (!auth) {
-    redirect('/login?next=/admin');
+  if (auth.loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-surface-neutral">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
+      </div>
+    );
   }
+
+  if (!auth.user || !auth.claims) {
+    return null;
+  }
+
   return (
-    <RoleProvider role={auth.role}>
+    <RoleProvider role={auth.claims.role}>
       <div className="flex min-h-screen bg-surface-neutral">
-        <Sidebar role={auth.role} />
+        <Sidebar role={auth.claims.role} />
         <div className="flex flex-1 flex-col min-w-0">
-          <Header email={auth.email} role={auth.role} />
+          <Header email={auth.user.email ?? ''} role={auth.claims.role} />
           <main className="flex-1 px-container-padding py-stack-lg overflow-x-auto">
             <div className="mx-auto w-full max-w-7xl space-y-stack-lg">{children}</div>
           </main>

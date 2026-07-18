@@ -1,12 +1,11 @@
 {
   "hosting": {
-    "public": "apps/web/.next/static",
+    "public": "apps/web/out",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "**",
-        "function": "ssr",
-        "region": "us-central1"
+        "destination": "/index.html"
       }
     ],
     "headers": [
@@ -49,13 +48,12 @@
     {
       "source": "apps/functions",
       "codebase": "default",
-      "ignore": ["node_modules", ".git", ".next", "*.log", "scripts", "coverage"]
+      "ignore": ["node_modules", ".git", ".next", "*.log", "scripts", "coverage", "lib/.next"]
     }
   ],
   "emulators": {
     "auth": { "port": 9099 },
     "firestore": { "port": 8080 },
-    "functions": { "port": 5001 },
     "storage": { "port": 9199 },
     "ui": { "enabled": true, "port": 4000 },
     "singleProjectMode": true

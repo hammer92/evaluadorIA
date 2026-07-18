@@ -15,46 +15,25 @@ import {
 } from '@/lib/firebase/auth';
 
 // =============================================================================
-// Auth API — cliente (signIn/signUp/signOut + session helpers).
+// Auth API — cliente (signIn/signUp/signOut).
 // =============================================================================
-// Q1=C (email/password + phone). Q3=C (híbrido: primer user admin, resto por invitación).
-//
-// El flow de signup es SIMPLE:
+// Arquitectura estática (sin SSR, sin /api/* routes, sin middleware):
 //   1. signUpWithEmail({ email, password, displayName })
 //      → Llama CF v1AuthSignUp (pública, no requiere auth previa) con el
 //        form data. La CF crea el user en Auth via Admin SDK + setea claims
 //        (admin si first-user, rejected si no).
 //   2. Si la CF retorna OK → signInWithEmailAndPassword (login normal)
-//   3. createSession(user) → llama CF onRequest que setea cookie httpOnly
-//   4. router.push('/admin')
-//
-// NO usamos createUserWithEmailAndPassword directo del SDK porque
-// (a) requiere que el cliente ya esté autenticado para llamar la CF que
-//     decide first-user-admin (raro), (b) hace rollback complejo si la CF
-//     rechaza. Es más limpio delegar todo a la CF.
+//   3. NO hay cookie httpOnly. La auth pasa por Firebase Auth ID token que
+//      el cliente incluye automáticamente en cada httpsCallable.
+//   4. router.push('/admin') — admin layout hace check client-side con useAuth.
 //
 // PHONE AUTH (login only, no self-signup):
 //   - User YA EXISTE en Auth con phoneNumber (admin lo invitó vía
 //     v1UsersCreate + Admin SDK updatePhoneNumber o directamente
 //     auth.createUser({ phoneNumber })).
 //   - 1. signInWithPhone({ phoneNumber, recaptchaContainerId })
-//        → signInWithPhoneNumber() retorna ConfirmationResult
-//   - 2. verifyPhoneCode(confirmationResult, code)
-//        → confirmationResult.confirm(code) → user
-//   - 3. createSession(user) → cookie httpOnly (igual que email)
+//   - 2. verifyPhoneCode({ confirmation, code }) → user con claims
 // =============================================================================
-
-const COOKIE_NAME = '__session';
-
-function getSessionEndpoint(): string {
-  // Same-origin: la cookie queda en localhost:3000, no en 127.0.0.1:5001
-  // (ver apps/web/app/api/session/route.ts para la explicación completa).
-  return '/api/session';
-}
-
-function getLogoutEndpoint(): string {
-  return '/api/session/clear';
-}
 
 export class AuthApiError extends Error {
   constructor(
@@ -82,14 +61,13 @@ export async function signInWithEmail(email: string, password: string): Promise<
  * Flow:
  *   1. CF v1AuthSignUp({ email, password, displayName }) - pública, no auth
  *   2. Si OK → signInWithEmailAndPassword (login normal)
- *   3. createSession (cookie httpOnly)
+ *   3. Firebase Auth ID token contiene role/claims para client-side guards
  */
 export async function signUpWithEmail(input: {
   email: string;
   password: string;
   displayName: string;
 }): Promise<{ user: User; isFirstUser: boolean }> {
-  // 1. Crear user via CF (server-authoritative)
   const signUpFn = httpsCallable<
     { email: string; password: string; displayName: string },
     { uid: string; role: string; isFirstUser: boolean }
@@ -116,30 +94,10 @@ export async function signUpWithEmail(input: {
     );
   }
 
-  // 2. Login normal (para tener una sesión Firebase Auth + poder llamar createSession)
+  // 2. Login normal (para tener una sesión Firebase Auth con claims)
   const user = await signInWithEmail(input.email, input.password);
 
   return { user, isFirstUser: result.isFirstUser };
-}
-
-/**
- * Crea la cookie de sesión httpOnly. Llama a la Cloud Function onRequest
- * v1AuthCreateSession que verifica el idToken contra Firebase Admin SDK,
- * firma un JWT con jose HS256, y setea la cookie via Set-Cookie.
- */
-export async function createSession(user: User): Promise<boolean> {
-  const idToken = await user.getIdToken(true);
-  const res = await fetch(getSessionEndpoint(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken }),
-    credentials: 'include',
-  });
-  if (!res.ok) {
-    console.error('[createSession] failed:', res.status, await res.text().catch(() => ''));
-    return false;
-  }
-  return true;
 }
 
 /**
@@ -148,14 +106,8 @@ export async function createSession(user: User): Promise<boolean> {
  * el caller debe guardar y pasar a {@link verifyPhoneCode} con el código
  * de 6 dígitos que el usuario recibió por SMS.
  *
- * @param phoneNumber - E.164 canónico (ej: `+5491155554444`). Validado
- *   contra `phoneE164Schema` antes de invocar el SDK.
- * @param recaptchaContainerId - ID del div en el DOM donde se monta el
- *   `RecaptchaVerifier` invisible. Si el div no existe, Firebase Auth
- *   lanza `auth/captcha-check-failed`.
- *
  * @throws AuthApiError si la validación falla o si Firebase rechaza el
- *   número (`auth/invalid-phone-number`, `auth/quota-exceeded`, etc).
+ *   número.
  */
 export async function signInWithPhone(input: {
   phoneNumber: string;
@@ -185,12 +137,6 @@ export async function signInWithPhone(input: {
 
 /**
  * Confirma el código OTP de 6 dígitos recibido por SMS y devuelve el user.
- *
- * Después de llamar a esta función, el caller debe invocar
- * {@link createSession} para setear la cookie httpOnly (igual que en el
- * flow de email).
- *
- * @throws AuthApiError si el código es inválido/expirado.
  */
 export async function verifyPhoneCode(
   confirmation: ConfirmationResult,
@@ -210,13 +156,8 @@ export async function verifyPhoneCode(
 }
 
 /**
- * Cierra sesión: limpia Firebase Auth + borra cookie httpOnly.
+ * Cierra sesión Firebase Auth (no hay cookie httpOnly que limpiar).
  */
 export async function signOutCurrent(): Promise<void> {
   await signOut(auth);
-  await fetch(getLogoutEndpoint(), { method: 'POST', credentials: 'include' }).catch(
-    () => undefined,
-  );
 }
-
-export { COOKIE_NAME };

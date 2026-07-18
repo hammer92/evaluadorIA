@@ -1,31 +1,73 @@
+'use client';
+
 import { UserCheck, UserPlus, Users, UserX } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { getRecentAuditLogs, getUsersStats } from '@/features/dashboard/api/dashboard-api';
-import { RecentActivity } from '@/features/dashboard/components/recent-activity';
+import {
+  RecentActivity,
+  type RecentActivityItem,
+} from '@/features/dashboard/components/recent-activity';
 import { StatsCard } from '@/features/dashboard/components/stats-card';
-import { verifyAuth } from '@/services/auth-service';
 
-export const dynamic = 'force-dynamic';
+// =============================================================================
+// DashboardPage — client component (output: 'export' = sin server runtime).
+// =============================================================================
+// Llama a las CFs via httpsCallable. Auth via Firebase Auth ID token
+// (incluido automáticamente por el SDK cliente).
+// =============================================================================
 
-export default async function DashboardPage() {
-  const auth = await verifyAuth();
-  if (!auth) {
+export default function DashboardPage() {
+  const auth = useAuth();
+  const [stats, setStats] = useState<{
+    total: number;
+    active: number;
+    invited: number;
+    suspended: number;
+  }>({
+    total: 0,
+    active: 0,
+    invited: 0,
+    suspended: 0,
+  });
+  const [activity, setActivity] = useState<RecentActivityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!auth.user) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [s, a] = await Promise.all([getUsersStats(), getRecentAuditLogs(5)]);
+        if (cancelled) return;
+        setStats(s);
+        setActivity(a as RecentActivityItem[]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.user]);
+
+  if (loading) {
     return (
-      <div className="space-y-stack-md">
-        <h1 className="font-hanken text-display-lg text-on-surface">Dashboard</h1>
-        <p className="text-body-md text-on-surface-variant">Sin sesión activa.</p>
+      <div className="flex items-center justify-center py-stack-lg">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
       </div>
     );
   }
 
-  const [stats, activity] = await Promise.all([getUsersStats(auth), getRecentAuditLogs(5, auth)]);
+  const emailPrefix = auth.user?.email?.split('@')[0] ?? 'admin';
 
   return (
     <div className="space-y-stack-lg">
       <header className="space-y-stack-sm">
         <p className="text-label-sm text-outline-tv">DASHBOARD</p>
         <h1 className="font-hanken text-display-lg text-on-surface">
-          Bienvenido, <span className="text-navy">{auth.email.split('@')[0]}</span>
+          Bienvenido, <span className="text-navy">{emailPrefix}</span>
         </h1>
         <p className="text-body-lg text-on-surface-variant">
           Resumen general del sistema y actividad reciente.

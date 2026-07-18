@@ -8,7 +8,7 @@ import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
-import { createSession, signInWithEmail, signInWithPhone, verifyPhoneCode } from '../api/auth-api';
+import { signInWithEmail, signInWithPhone, verifyPhoneCode } from '../api/auth-api';
 import { loginSchema, phoneE164Schema, type LoginInput } from '../schemas';
 
 import { getAuthErrorMessage } from './auth-error';
@@ -130,12 +130,7 @@ function EmailLoginForm({ nextUrl }: { nextUrl?: string | undefined }) {
   const onSubmit = form.handleSubmit(async (values) => {
     setServerError(null);
     try {
-      const user = await signInWithEmail(values.email, values.password);
-      const ok = await createSession(user);
-      if (!ok) {
-        setServerError('No se pudo crear la sesión. Reintentá.');
-        return;
-      }
+      await signInWithEmail(values.email, values.password);
       toast.success('Sesión iniciada');
       router.push(nextUrl ?? '/admin');
       router.refresh();
@@ -313,12 +308,7 @@ function PhoneLoginForm({ nextUrl }: { nextUrl?: string | undefined }) {
     }
     setBusy(true);
     try {
-      const user = await verifyPhoneCode(confirmationRef.current, code);
-      const ok = await createSession(user);
-      if (!ok) {
-        setServerError('No se pudo crear la sesión. Reintentá.');
-        return;
-      }
+      await verifyPhoneCode(confirmationRef.current, code);
       toast.success('Sesión iniciada');
       router.push(nextUrl ?? '/admin');
       router.refresh();
