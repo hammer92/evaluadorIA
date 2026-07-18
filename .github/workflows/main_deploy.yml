@@ -55,7 +55,7 @@ jobs:
       - name: Deploy functions (code via firebase deploy)
         uses: w9jds/firebase-action@master
         with:
-          args: deploy --only functions --non-interactive --force
+          args: deploy --only functions --non-interactive
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PROJECT_ID: agente-entrevistador-ia
