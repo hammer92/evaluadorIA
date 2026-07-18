@@ -5,11 +5,11 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "outDir": "./lib",
-    "rootDir": "./src",
+    "rootDir": ".",
     "noEmit": false,
     "declaration": true,
     "sourceMap": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "lib", "**/__tests__/**"]
 }

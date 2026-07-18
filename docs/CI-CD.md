@@ -198,10 +198,15 @@ firebase functions:list --project staging             # muestra las funciones de
 firebase firestore:rules:get --project staging       # confirma rules
 ```
 
-> **SDD-08 NO incluye hosting config**: el frontend se deploya vía
-> `next build` + `next start` por ahora (manual / Vercel). Para hosting
-> automático vía Firebase Hosting + Cloud Run SSR, ver SDD futuro (ver
-> `firebase.json` sección `hosting` en spec §4.5).
+> **Firebase Hosting + SSR via Cloud Function `ssr`**: activado en
+> `firebase.json` sección `hosting`. Frontend se deploya automaticamente
+> en cada push a main. Assets estaticos (`/_next/static/**`) servidos
+> directamente desde Hosting con cache 1 año. Rutas dinamicas (`/admin/**`,
+> `/login`, etc.) se redirigen via rewrite → Cloud Function `ssr` que
+> ejecuta Next.js via `next({ dev: false }).getRequestHandler()`. Build
+> flow: `pnpm --filter web build` (output standalone) → `pnpm --filter
+functions build` (tsc + copy `.next/` a `lib/.next/`) → `firebase deploy
+--only functions,hosting`.
 
 ## Bundle size check
 
@@ -279,9 +284,6 @@ Revisar:
 
 ## Lo que NO está en este SDD (out of scope)
 
-- **Firebase Hosting config + SSR via Cloud Run**: deferido. Requiere crear
-  CF `ssr` onRequest como server-side rendering helper. Documentado en
-  spec §4.5 pero no aplicado (decisión Q1=A).
 - **Preview deployments por PR**: deferido. v2.
 - **Canary releases** (Cloud Run traffic split): v2.
 - **Mobile CI/CD**: N/A.

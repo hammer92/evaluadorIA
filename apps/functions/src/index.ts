@@ -25,5 +25,8 @@ export { v1UsersDelete } from './v1/users/delete-user.js';
 // v1/reports
 export { v1ReportsGenerate } from './v1/reports/generate-report.js';
 
+// v1/hosting (Firebase Hosting SSR — Next.js handler)
+export { ssr } from './v1/hosting/ssr.js';
+
 // Utility (no se deploya como endpoint — uso interno desde otras CFs)
 export { setUserRole } from './v1/users/set-role.js';

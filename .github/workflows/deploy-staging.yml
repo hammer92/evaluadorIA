@@ -39,6 +39,11 @@ jobs:
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
 
+      - name: Deploy Firebase Hosting (Next.js SSR)
+        run: pnpm exec firebase deploy --only hosting --project staging
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
+
       - name: Notify (optional)
         if: always()
         run: |
