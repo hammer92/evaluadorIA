@@ -407,29 +407,41 @@ gcloud services enable \
 ```
 
 Estas son las **4 APIs obligatorias** del protocolo. Adicionalmente, las
-APIs de runtime (Cloud Functions, Cloud Run, Firebase Hosting, Firestore,
-Firebase Admin, Cloud Storage, Identity Toolkit) deben estar habilitadas —
-Firebase las activa al inicializar el proyecto, pero verificá con
-`gcloud services list --enabled`.
+APIs de runtime (Cloud Functions, Firebase Hosting, Firestore, Firebase
+Admin, Cloud Storage, Identity Toolkit) deben estar habilitadas — Firebase
+las activa al inicializar el proyecto. **Cloud Functions v2 también
+requiere** (habilitar manualmente si falla el deploy):
+
+```bash
+gcloud services enable \
+  run.googleapis.com \
+  eventarc.googleapis.com \
+  --project agente-entrevistador-ia
+```
 
 ### Secrets requeridos en GitHub (5 secrets totales)
 
-| Secret                         | Para                                                                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `FIREBASE_SERVICE_ACCOUNT`     | JSON key de la SA `github-deploy-agent@…iam...` (consumido por `w9jds/firebase-action`)                                   |
-| `FIREBASE_API_KEY`             | Firebase Web SDK — auth cliente (mapeada a `NEXT_PUBLIC_FIREBASE_API_KEY` en build)                                       |
-| `FIREBASE_AUTH_DOMAIN`         | Firebase Auth (mapeada a `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`)                                                              |
-| `FIREBASE_APP_ID`              | Firebase App ID (mapeada a `NEXT_PUBLIC_FIREBASE_APP_ID`)                                                                 |
-| `SESSION_COOKIE_SECRET`        | HS256 secret para cookie `__session` (inyectado via `--set-env-vars` al deploy)                                           |
-| `ALLOWED_ORIGINS`              | CSV de dominios CORS permitidos para las CFs onRequest                                                                    |
-| `FIREBASE_ADMIN_PROJECT_ID`    | Project ID de Firebase Admin SDK (default `agente-entrevistador-ia`; puede sobreescribirse via Secret para multi-project) |
-| `OPENAI_API_KEY`               | API key de OpenAI (si las CFs la consumen; opcional)                                                                      |
-| `CODECOV_TOKEN` (opcional)     | Upload coverage a Codecov en `ci.yml`                                                                                     |
-| `SLACK_WEBHOOK_URL` (opcional) | Notificaciones post-deploy a Slack                                                                                        |
+| Secret                         | Para                                                                                                                        |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `FIREBASE_SERVICE_ACCOUNT`     | JSON key de la SA `github-deploy-agent@…iam...` (consumido por `w9jds/firebase-action`)                                     |
+| `FIREBASE_API_KEY`             | Firebase Web SDK — auth cliente (mapeada a `NEXT_PUBLIC_FIREBASE_API_KEY` en build)                                         |
+| `FIREBASE_AUTH_DOMAIN`         | Firebase Auth (mapeada a `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`)                                                                |
+| `FIREBASE_APP_ID`              | Firebase App ID (mapeada a `NEXT_PUBLIC_FIREBASE_APP_ID`)                                                                   |
+| `SESSION_COOKIE_SECRET`        | HS256 secret para cookie `__session` (inyectado via `CONFIG_VALUES` → `functions.config().session.cookie_secret` al deploy) |
+| `ALLOWED_ORIGINS`              | CSV de dominios CORS permitidos (inyectado via `CONFIG_VALUES` → `functions.config().allowed.origins`)                      |
+| `FIREBASE_ADMIN_PROJECT_ID`    | Project ID de Firebase Admin SDK (vía `CONFIG_VALUES` → `functions.config().admin.project_id`)                              |
+| `OPENAI_API_KEY`               | API key de OpenAI (vía `CONFIG_VALUES` → `functions.config().openai.api_key`; opcional)                                     |
+| `CODECOV_TOKEN` (opcional)     | Upload coverage a Codecov en `ci.yml`                                                                                       |
+| `SLACK_WEBHOOK_URL` (opcional) | Notificaciones post-deploy a Slack                                                                                          |
 
 > `SESSION_COOKIE_SECRET` (secret HS256) se setea como **GitHub Secret**
-> y se inyecta en el deploy via `--set-env-vars` (NO via Firebase Secret
-> Manager — más simple, evita dependencia con `secretmanager.googleapis.com`).
+> y se inyecta al deploy via `CONFIG_VALUES` (que la acción
+> `w9jds/firebase-action@master` traduce a `firebase functions:config:set`
+> gracias al experimento `legacyRuntimeConfigCommands`). Las CFs lo leen
+> via `functions.config().session.cookie_secret` en `apps/functions/src/env.ts`.
+> NO usa Firebase Secret Manager — más simple, evita dependencia con
+> `secretmanager.googleapis.com`. **NOTA:** `functions.config()` será
+> removido en marzo 2027 — migrar a `defineSecret()` antes de esa fecha.
 > Generar con `openssl rand -base64 48` (≥32 chars) y mantener el mismo
 > valor en local dev (`.env.local`) y en GitHub Secret.
 
