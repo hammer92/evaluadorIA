@@ -1,4 +1,24 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('firebase-functions', () => ({
+  config: () => ({
+    session: {
+      cookie_secret: process.env['SESSION_COOKIE_SECRET'] ?? '',
+    },
+    allowed: {
+      origins: process.env['ALLOWED_ORIGINS'] ?? '',
+    },
+    repository: {
+      driver: process.env['REPOSITORY_DRIVER'] ?? 'memory',
+    },
+    admin: {
+      project_id: process.env['FIREBASE_ADMIN_PROJECT_ID'] ?? 'demo-test',
+    },
+    openai: {
+      api_key: process.env['OPENAI_API_KEY'],
+    },
+  }),
+}));
 
 import { __resetEnv, env, type Env } from './env.js';
 

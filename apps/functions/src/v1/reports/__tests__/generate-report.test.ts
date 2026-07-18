@@ -47,6 +47,26 @@ vi.mock('firebase-functions/v2', async () => {
   };
 });
 
+vi.mock('firebase-functions', () => ({
+  config: () => ({
+    session: {
+      cookie_secret: process.env['SESSION_COOKIE_SECRET'] ?? '',
+    },
+    allowed: {
+      origins: process.env['ALLOWED_ORIGINS'] ?? '',
+    },
+    repository: {
+      driver: process.env['REPOSITORY_DRIVER'] ?? 'memory',
+    },
+    admin: {
+      project_id: process.env['FIREBASE_ADMIN_PROJECT_ID'] ?? 'demo-test',
+    },
+    openai: {
+      api_key: process.env['OPENAI_API_KEY'],
+    },
+  }),
+}));
+
 const { v1ReportsGenerate } = await import('../generate-report.js');
 
 interface ReportData {

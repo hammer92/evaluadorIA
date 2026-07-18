@@ -28,6 +28,26 @@ vi.mock('firebase-functions/v2/https', async () => {
   };
 });
 
+vi.mock('firebase-functions', () => ({
+  config: () => ({
+    session: {
+      cookie_secret: process.env['SESSION_COOKIE_SECRET'] ?? '',
+    },
+    allowed: {
+      origins: process.env['ALLOWED_ORIGINS'] ?? '',
+    },
+    repository: {
+      driver: process.env['REPOSITORY_DRIVER'] ?? 'memory',
+    },
+    admin: {
+      project_id: process.env['FIREBASE_ADMIN_PROJECT_ID'] ?? 'demo-test',
+    },
+    openai: {
+      api_key: process.env['OPENAI_API_KEY'],
+    },
+  }),
+}));
+
 const { SESSION_COOKIE_NAME: COOKIE_NAME } = await import('../create-session.js');
 const { v1AuthClearSession: v1AuthClearSessionFn } = await import('../clear-session.js');
 

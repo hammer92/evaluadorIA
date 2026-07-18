@@ -47,6 +47,26 @@ vi.mock('firebase-functions/params', () => ({
   }),
 }));
 
+vi.mock('firebase-functions', () => ({
+  config: () => ({
+    session: {
+      cookie_secret: process.env['SESSION_COOKIE_SECRET'] ?? '',
+    },
+    allowed: {
+      origins: process.env['ALLOWED_ORIGINS'] ?? '',
+    },
+    repository: {
+      driver: process.env['REPOSITORY_DRIVER'] ?? 'memory',
+    },
+    admin: {
+      project_id: process.env['FIREBASE_ADMIN_PROJECT_ID'] ?? 'demo-test',
+    },
+    openai: {
+      api_key: process.env['OPENAI_API_KEY'],
+    },
+  }),
+}));
+
 vi.mock('firebase-admin/firestore', async () => {
   hoisted._firebase_admin_firestore ??= await vi.importActual('firebase-admin/firestore');
   const actual = hoisted._firebase_admin_firestore;
