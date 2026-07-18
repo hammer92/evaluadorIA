@@ -142,16 +142,33 @@ Si el frontend requiere `firebaseConfig` durante la compilación, registrar:
 
 ### C. Secretos para Cloud Functions (Backend)
 
-Si las funciones requieren claves de terceros (ej: OpenAI):
+Estos secrets se inyectan en el runtime de las CFs via `--set-env-vars` en
+el step de deploy (NO via Firebase Secret Manager — más simple, evita
+dependencia con `secretmanager.googleapis.com`).
 
-| Secreto          | Para                                       |
-| ---------------- | ------------------------------------------ |
-| `OPENAI_API_KEY` | API key de OpenAI (si las CFs la consumen) |
+| Secreto                 | Para                                                                                                                                                                         | Requerido |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `SESSION_COOKIE_SECRET` | HS256 secret para firmar/verificar la cookie `__session` (CFs `v1_auth_create_session` y `shared/verify-session-cookie`). Generar con `openssl rand -base64 48` (≥32 chars). | Sí        |
+| `ALLOWED_ORIGINS`       | Dominios CORS permitidos para las CFs onRequest (CSV: `https://agente-entrevistador-ia.web.app,https://agente-entrevistador-ia.firebaseapp.com`)                             | Sí        |
+| `OPENAI_API_KEY`        | API key de OpenAI (si las CFs la consumen)                                                                                                                                   | No        |
 
-> Si las CFs no usan OpenAI ni otros servicios externos, este secret puede
-> omitirse. Se inyecta en el step de deploy via
-> `env: OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}` para que esté
-> disponible como `process.env.OPENAI_API_KEY` en el runtime de las CFs.
+> **Variables de runtime adicionales (no son secrets, se hardcodean en
+> el workflow):**
+>
+> - `REPOSITORY_DRIVER=firebase` — fija el driver del repositorio de users/orgs
+> - `FIREBASE_ADMIN_PROJECT_ID=agente-entrevistador-ia` — project ID para Firebase Admin SDK
+>
+> Estas se setean en `.github/workflows/main_deploy.yml` directamente,
+> sin pasar por GitHub Secrets, porque son valores no-sensibles.
+
+> **Generar `SESSION_COOKIE_SECRET`** (una sola vez, mismo valor en
+> local dev y prod):
+>
+> ```bash
+> openssl rand -base64 48
+> # Copiar el output a GitHub Secret SESSION_COOKIE_SECRET
+> # Y al .env.local como SESSION_COOKIE_SECRET=...
+> ```
 
 ---
 
@@ -467,5 +484,8 @@ La Cloud Function `ssr` no arrancó. Verificar:
    `ssr` con estado `ACTIVE`
 2. `firebase functions:log --project agente-entrevistador-ia` muestra el
    error de runtime
-3. Variables de env requeridas (`SESSION_COOKIE_SECRET`, etc.) están
-   configuradas — ver `apps/functions/src/index.ts` y `apps/web/env.ts`
+3. Variables de env requeridas (`SESSION_COOKIE_SECRET`,
+   `ALLOWED_ORIGINS`, `REPOSITORY_DRIVER`, `FIREBASE_ADMIN_PROJECT_ID`,
+   `OPENAI_API_KEY`) están configuradas como GitHub Secrets y se pasan
+   al deploy via `--set-env-vars` en `.github/workflows/main_deploy.yml`.
+   Verificá en la consola de la CF (Runtime environment variables).

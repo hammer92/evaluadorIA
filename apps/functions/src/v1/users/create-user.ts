@@ -2,6 +2,7 @@ import { createUserInputSchema, type CreateUserInput } from '@platform/shared';
 import { FieldValue } from 'firebase-admin/firestore';
 import { onCall } from 'firebase-functions/v2/https';
 
+import { env } from '../../env.js';
 import { getAdminAuth, getAdminDb } from '../../firebase-admin.js';
 import { writeAuditLog } from '../../shared/audit.js';
 import { RepositoryError } from '../../shared/errors.js';
@@ -21,9 +22,8 @@ export interface CreateUserOutput {
 
 export const v1UsersCreate = onCall(
   {
-    cors: (process.env['ALLOWED_ORIGINS'] ?? 'http://localhost:3000').split(','),
+    cors: env.ALLOWED_ORIGINS.split(','),
     enforceAppCheck: false,
-    secrets: ['SESSION_COOKIE_SECRET'],
   },
   withAuth<CreateUserInput, CreateUserOutput>('admin', async (ctx: AuthedContext, data) => {
     try {

@@ -308,8 +308,10 @@ Verificar:
 2. El cliente hace `fetch(..., { credentials: 'include' })`.
 3. HTTPS está activo (cookies `Secure` solo se setean sobre HTTPS).
 4. `SameSite` es `Lax` (no `None`) para same-origin.
-5. `SESSION_COOKIE_SECRET` está configurado como Firebase Secret
-   (`firebase functions:secrets:get SESSION_COOKIE_SECRET`).
+5. `SESSION_COOKIE_SECRET` está configurado como **GitHub Secret** y se
+   pasa via `--set-env-vars` al `firebase deploy` (no via Firebase Secret
+   Manager). Verificá en la consola de la CF (Runtime environment
+   variables) que aparece seteado.
 
 ### Bundle > 200 KB en landing
 

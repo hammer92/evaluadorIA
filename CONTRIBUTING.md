@@ -420,13 +420,17 @@ Firebase las activa al inicializar el proyecto, pero verificá con
 | `FIREBASE_API_KEY`             | Firebase Web SDK — auth cliente (mapeada a `NEXT_PUBLIC_FIREBASE_API_KEY` en build)     |
 | `FIREBASE_AUTH_DOMAIN`         | Firebase Auth (mapeada a `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`)                            |
 | `FIREBASE_APP_ID`              | Firebase App ID (mapeada a `NEXT_PUBLIC_FIREBASE_APP_ID`)                               |
+| `SESSION_COOKIE_SECRET`        | HS256 secret para cookie `__session` (inyectado via `--set-env-vars` al deploy)         |
+| `ALLOWED_ORIGINS`              | CSV de dominios CORS permitidos para las CFs onRequest                                  |
 | `OPENAI_API_KEY`               | API key de OpenAI (si las CFs la consumen; opcional)                                    |
 | `CODECOV_TOKEN` (opcional)     | Upload coverage a Codecov en `ci.yml`                                                   |
 | `SLACK_WEBHOOK_URL` (opcional) | Notificaciones post-deploy a Slack                                                      |
 
-> `SESSION_COOKIE_SECRET` (secret HS256) se setea como **Firebase Secret**
-> (no GitHub Secret) via `firebase functions:secrets:set` — más seguro y
-> permite rotación independiente.
+> `SESSION_COOKIE_SECRET` (secret HS256) se setea como **GitHub Secret**
+> y se inyecta en el deploy via `--set-env-vars` (NO via Firebase Secret
+> Manager — más simple, evita dependencia con `secretmanager.googleapis.com`).
+> Generar con `openssl rand -base64 48` (≥32 chars) y mantener el mismo
+> valor en local dev (`.env.local`) y en GitHub Secret.
 
 ### Workflows
 

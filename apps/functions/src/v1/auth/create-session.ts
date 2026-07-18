@@ -1,7 +1,7 @@
-import { defineSecret } from 'firebase-functions/params';
 import { onRequest } from 'firebase-functions/v2/https';
 import { SignJWT } from 'jose';
 
+import { env } from '../../env.js';
 import { getAdminAuth } from '../../firebase-admin.js';
 
 // =============================================================================
@@ -19,9 +19,10 @@ import { getAdminAuth } from '../../firebase-admin.js';
 // IMPORTANTE: Set-Cookie requiere Access-Control-Allow-Credentials: true
 // en respuestas CORS. firebase-functions v2 onRequest NO lo setea por default.
 // Lo agregamos manualmente en cada response.
+//
+// Las env vars (`SESSION_COOKIE_SECRET`, `ALLOWED_ORIGINS`, `NODE_ENV`)
+// se validan via Zod en `env.ts` (fail-fast al module-load si falta config).
 // =============================================================================
-
-const sessionSecret = defineSecret('SESSION_COOKIE_SECRET');
 
 const COOKIE_NAME = '__session';
 const ISSUER = 'admin-platform';
@@ -51,10 +52,9 @@ function setCorsHeaders(
 export const v1AuthCreateSession = onRequest(
   {
     cors: false,
-    secrets: [sessionSecret],
   },
   async (req, res) => {
-    const allowed = (process.env['ALLOWED_ORIGINS'] ?? 'http://localhost:3000').split(',');
+    const allowed = env.ALLOWED_ORIGINS.split(',');
     const origin = req.headers.origin;
     setCorsHeaders(res, origin, allowed);
 
@@ -88,11 +88,7 @@ export const v1AuthCreateSession = onRequest(
         : 'expert';
     const organizationIdClaim: unknown = decoded['organizationId'];
     const organizationId = typeof organizationIdClaim === 'string' ? organizationIdClaim : null;
-    const secret = sessionSecret.value();
-    if (!secret || secret.length < 32) {
-      res.status(500).json({ error: 'server-misconfigured' });
-      return;
-    }
+    const secret = env.SESSION_COOKIE_SECRET;
 
     const sessionJwt = await new SignJWT({
       uid: decoded.uid,
@@ -109,7 +105,7 @@ export const v1AuthCreateSession = onRequest(
     res.setHeader(
       'Set-Cookie',
       `${COOKIE_NAME}=${sessionJwt}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${MAX_AGE_SECONDS}` +
-        (process.env.NODE_ENV === 'production' ? '; Secure' : ''),
+        (env.NODE_ENV === 'production' ? '; Secure' : ''),
     );
     res.status(200).json({
       success: true,

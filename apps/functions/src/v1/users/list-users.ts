@@ -2,6 +2,7 @@ import { roleSchema, userStatusSchema } from '@platform/shared';
 import { onCall } from 'firebase-functions/v2/https';
 import { z } from 'zod';
 
+import { env } from '../../env.js';
 import { getAdminDb } from '../../firebase-admin.js';
 import { handleError } from '../../shared/handle-error.js';
 import { withAuth } from '../../shared/on-call-auth.js';
@@ -52,8 +53,7 @@ function mapUserDoc(id: string, raw: Record<string, unknown>): UserSummary {
 
 export const v1UsersList = onCall(
   {
-    cors: (process.env['ALLOWED_ORIGINS'] ?? 'http://localhost:3000').split(','),
-    secrets: ['SESSION_COOKIE_SECRET'],
+    cors: env.ALLOWED_ORIGINS.split(','),
   },
   withAuth<ListUsersInput, ListUsersOutput>(['admin', 'recruiter'], async (ctx, data) => {
     try {

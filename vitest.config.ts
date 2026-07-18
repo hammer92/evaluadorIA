@@ -17,6 +17,14 @@ export default defineConfig({
     // (que es el default desde root y no tiene @testing-library/jest-dom).
     setupFiles: ['./vitest.setup.ts'],
     passWithNoTests: true,
+    // Env vars requeridas por apps/functions/src/env.ts (Zod validation
+    // fail-fast). Los tests individuales de functions las sobreescriben
+    // segun corresponda, pero estos defaults permiten que el modulo se
+    // cargue sin throw al ejecutar `pnpm test` desde root.
+    env: {
+      SESSION_COOKIE_SECRET: 'test-secret-for-vitest-must-be-at-least-32-chars-long',
+      ALLOWED_ORIGINS: 'http://localhost:3000',
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],

@@ -143,15 +143,14 @@ describe('verifySessionCookieFromRequest', () => {
   });
 
   it('returns null when SESSION_COOKIE_SECRET is missing/short', async () => {
+    // Con Zod validation en env.ts, un secret corto FALLA al module-load
+    // (no al runtime del CF). Aqui validamos que env.ts rechaza el secret
+    // antes de que verifySessionCookieFromRequest pueda ejecutarse.
     process.env['SESSION_COOKIE_SECRET'] = 'short';
-    const cookie = signSession({
-      uid: 'u',
-      email: 'a@b.c',
-      role: 'admin',
-      organizationId: null,
-    });
-    const result = await verifySessionCookieFromRequest(`__session=${cookie}`);
-    expect(result).toBeNull();
+    const { __resetEnv } = await import('../../env.js');
+    __resetEnv();
+    const { env: envMod } = await import('../../env.js');
+    expect(() => envMod.SESSION_COOKIE_SECRET).toThrow(/32 caracteres/);
   });
 
   it('returns payload for valid cookie', async () => {
