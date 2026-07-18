@@ -17,9 +17,11 @@ export default defineConfig({
     // beforeAll pero sin singleFork los runs paralelos contaminan el estado.
     pool: 'forks',
     poolOptions: { forks: { singleFork: true } },
+    setupFiles: ['./vitest.setup.ts'],
     env: {
       NEXT_PUBLIC_APP_ENV: 'dev',
       ALLOWED_ORIGINS: 'http://localhost:3000',
+      SESSION_COOKIE_SECRET: 'test-secret-for-vitest-must-be-at-least-32-chars-long',
     },
   },
   resolve: {

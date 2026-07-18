@@ -126,16 +126,11 @@ describe('v1AuthCreateSession', () => {
   });
 
   it('responde 500 si SESSION_COOKIE_SECRET es corto', async () => {
-    process.env['SESSION_COOKIE_SECRET'] = 'short';
-    hoisted.auth.verifyIdToken.mockResolvedValueOnce({
-      uid: 'u1',
-      email: 'a@b.co',
-      role: 'admin',
-    });
-    const { req, res } = makeReqRes({ body: { idToken: 'valid' } });
-    await callHandler(req, res);
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({ error: 'server-misconfigured' });
+    // Con Zod validation en env.ts, un secret corto FALLA al module-load
+    // (no al request). El handler nunca se invocaria con secret corto en
+    // produccion — la CF no arrancaria. Por eso este test verifica que
+    // env.ts rechaza el secret antes (test especifico en env.test.ts).
+    // Removemos este test obsoleto; la validacion se cubre en env.test.ts.
   });
 
   it('happy path: setea cookie httpOnly con SameSite=Lax', async () => {
@@ -169,6 +164,11 @@ describe('v1AuthCreateSession', () => {
   it('usa Secure cuando NODE_ENV=production', async () => {
     process.env['SESSION_COOKIE_SECRET'] = 'test-secret-for-vitest-must-be-at-least-32-chars-long';
     process.env['NODE_ENV'] = 'production';
+    // Reset env cache para que el cambio de NODE_ENV tome efecto
+    const { __resetEnv } = await import('../../../env.js');
+    __resetEnv();
+    const { env: envMod } = await import('../../../env.js');
+    expect(envMod.NODE_ENV).toBe('production');
     hoisted.auth.verifyIdToken.mockResolvedValueOnce({
       uid: 'u1',
       email: 'a@b.co',
@@ -177,8 +177,11 @@ describe('v1AuthCreateSession', () => {
     const { req, res } = makeReqRes({ body: { idToken: 'valid' } });
     await callHandler(req, res);
     const setCookieCall = res.setHeader.mock.calls.find((c) => c[0] === 'Set-Cookie');
-    expect((setCookieCall?.[1] as string).trim().endsWith('Secure')).toBe(true);
+    const cookieValue = setCookieCall?.[1] as string;
+    expect(cookieValue).toBeDefined();
+    expect(cookieValue.trim().endsWith('Secure')).toBe(true);
     delete process.env['NODE_ENV'];
+    __resetEnv();
   });
 
   it('acepta role recruiter/expert y default a expert si claim inválido', async () => {

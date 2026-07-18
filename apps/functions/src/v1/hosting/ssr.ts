@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { onRequest } from 'firebase-functions/v2/https';
 import next from 'next';
 
+import { env } from '../../env.js';
+
 // =============================================================================
 // Cloud Function: ssr (SSR adapter para Next.js)
 // =============================================================================
@@ -25,6 +27,8 @@ import next from 'next';
 //   - cwd = root del package desplegado (= apps/functions/lib en runtime)
 //   - .next/ esta al lado de lib/ despues del copy
 //   - next({ dev: false }) lee el .next/ relativo a cwd y construye el handler
+//
+// Las env vars (ALLOWED_ORIGINS, NODE_ENV) se validan via Zod en `env.ts`.
 //
 // Limitaciones:
 //   - Cold start ~3-5s en primera request (mitigado con minInstances: 1 en prod)
@@ -48,7 +52,7 @@ function ensurePrepared(): Promise<void> {
 
 export const ssr = onRequest(
   {
-    cors: (process.env['ALLOWED_ORIGINS'] ?? 'http://localhost:3000').split(','),
+    cors: env.ALLOWED_ORIGINS.split(','),
     region: 'us-central1',
     timeoutSeconds: 60,
     memory: '512MiB',
@@ -62,10 +66,9 @@ export const ssr = onRequest(
       const err = e as Error;
       console.error('[ssr] request handler failed', { message: err.message, stack: err.stack });
       if (!res.headersSent) {
-        const isProd = process.env.NODE_ENV === 'production';
         res.status(500).json({
           error: 'SSR handler failed',
-          message: isProd ? undefined : err.message,
+          message: env.NODE_ENV === 'production' ? undefined : err.message,
         });
       }
     }

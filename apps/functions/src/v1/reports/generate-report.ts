@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { onCall } from 'firebase-functions/v2/https';
 import { z } from 'zod';
 
+import { env } from '../../env.js';
 import { handleError } from '../../shared/handle-error.js';
 import { withAuth } from '../../shared/on-call-auth.js';
 import { validateInput } from '../../shared/validate-input.js';
@@ -27,8 +28,7 @@ export interface GenerateReportOutput {
 
 export const v1ReportsGenerate = onCall(
   {
-    cors: (process.env['ALLOWED_ORIGINS'] ?? 'http://localhost:3000').split(','),
-    secrets: ['SESSION_COOKIE_SECRET'],
+    cors: env.ALLOWED_ORIGINS.split(','),
   },
   withAuth<GenerateReportInput, GenerateReportOutput>('admin', (_ctx, data) => {
     try {

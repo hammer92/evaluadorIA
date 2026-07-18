@@ -1,5 +1,7 @@
 import { onRequest } from 'firebase-functions/v2/https';
 
+import { env } from '../../env.js';
+
 import { SESSION_COOKIE_NAME } from './create-session.js';
 
 // =============================================================================
@@ -29,7 +31,7 @@ function setCorsHeaders(
 }
 
 export const v1AuthClearSession = onRequest({ cors: false }, (req, res) => {
-  const allowed = (process.env['ALLOWED_ORIGINS'] ?? 'http://localhost:3000').split(',');
+  const allowed = env.ALLOWED_ORIGINS.split(',');
   const origin = req.headers.origin;
   setCorsHeaders(res, origin, allowed);
 

@@ -1,5 +1,6 @@
-import { defineSecret } from 'firebase-functions/params';
 import { jwtVerify } from 'jose';
+
+import { env } from '../env.js';
 
 // =============================================================================
 // verifySessionCookieFromRequest — fallback auth para onCall CFs.
@@ -16,9 +17,10 @@ import { jwtVerify } from 'jose';
 // el AuthedContext desde su payload. La cookie está firmada con jose HS256
 // usando el mismo secret que el middleware Next.js, así que es la fuente
 // de verdad de la sesión.
+//
+// El secret se valida via `env.SESSION_COOKIE_SECRET` (Zod schema en
+// `env.ts`); si falta o es <32 chars el modulo falla al importarse.
 // =============================================================================
-
-const sessionSecret = defineSecret('SESSION_COOKIE_SECRET');
 
 const COOKIE_NAME = '__session';
 const ALG = 'HS256';
@@ -50,8 +52,7 @@ export async function verifySessionCookieFromRequest(
 ): Promise<CookiePayload | null> {
   const cookie = readCookie(rawCookieHeader, COOKIE_NAME);
   if (!cookie) return null;
-  const secret = sessionSecret.value();
-  if (!secret || secret.length < 32) return null;
+  const secret = env.SESSION_COOKIE_SECRET;
   try {
     const { payload } = await jwtVerify(cookie, new TextEncoder().encode(secret), {
       algorithms: [ALG],
