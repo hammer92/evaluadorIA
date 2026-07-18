@@ -328,64 +328,113 @@ git fetch -p                            # borrar referencias remotas
 
 ## Deploy
 
-El deploy a staging/prod es **automático** via GitHub Actions cuando se mergea
-a `main` (staging) o se dispara el workflow `Deploy Prod` con `confirm="deploy-prod"`.
+El deploy a **staging** es **automático** via GitHub Actions cuando se mergea
+a `main` (dispara `.github/workflows/main_deploy.yml`). El deploy a **prod**
+es **manual** vía `workflow_dispatch` en el mismo workflow con
+`environment=prod` y requiere aprobación del GitHub Environment `production`.
 
 ### Stack desplegado
 
 Cada deploy sube **todo el stack Firebase** en un solo comando:
 
 ```bash
-firebase deploy --only hosting,functions,firestore,storage
+firebase deploy \
+  --only hosting,functions,firestore,storage \
+  --project admin-platform-<staging|prod> \
+  --non-interactive
 ```
 
 - **Hosting**: assets estáticos (`apps/web/.next/static/`) + rewrites a CF `ssr`
-- **Functions**: `apps/functions/lib/` con la CF `ssr` + endpoints de auth/users/reports
+- **Functions**: `apps/functions/lib/` con la CF `ssr` (Next.js SSR) + endpoints v1 (auth, users, reports)
 - **Firestore**: `firestore.rules` + `firestore.indexes.json`
 - **Storage**: `storage.rules`
 
+### Autenticación: Service Account (Service Account JSON Key)
+
+El workflow usa [`google-github-actions/auth@v2`](https://github.com/google-github-actions/auth)
+con el **JSON key de la Service Account** (no `firebase login:ci` token).
+Las claves se generan via:
+
+```bash
+gcloud iam service-accounts keys create ./sa-key.json \
+  --iam-account=github-deploy-agent@<project>.iam.gserviceaccount.com \
+  --project=<project>
+```
+
+Y se pegan (contenido íntegro) en los secrets:
+
+- `FIREBASE_SERVICE_ACCOUNT_STAGING` — JSON key para `admin-platform-staging`
+- `FIREBASE_SERVICE_ACCOUNT_PROD` — JSON key para `admin-platform-prod`
+
+> **Ventaja sobre tokens de larga duración**: las keys son rotables (90 días
+> recomendado) y revocables desde GCP Console sin tocar GitHub Secrets. Si
+> una key se filtra, se borra desde IAM & Admin → Service Accounts → Keys.
+
 ### Service Account IAM roles (REQUERIDO)
 
-El token de CI representa una Google Cloud Service Account. Para que el
-`firebase deploy` funcione, la SA debe tener estos 6 roles en el proyecto
-GCP correspondiente (`staging` o `prod`):
+La SA `github-deploy-agent` debe tener estos **5 roles obligatorios** en el
+proyecto GCP correspondiente:
 
-| Rol                              | Cubre                                          |
-| -------------------------------- | ---------------------------------------------- |
-| `roles/firebase.admin`           | Hosting + reglas de Firestore + Storage        |
-| `roles/datastore.admin`          | Índices de Firestore                           |
-| `roles/cloudfunctions.admin`     | Deploy de Cloud Functions                      |
-| `roles/iam.serviceAccountUser`   | Runtime SA de las CFs                          |
-| `roles/cloudbuild.builds.editor` | Cloud Build (CF 2nd gen)                       |
-| `roles/artifactregistry.admin`   | Artifact Registry (CF 2nd gen)                 |
-| `roles/run.invoker`              | Para que la CF `ssr` reciba tráfico de Hosting |
+| Rol                              | Cubre                                   |
+| -------------------------------- | --------------------------------------- |
+| `roles/firebase.admin`           | Hosting + reglas de Firestore + Storage |
+| `roles/cloudfunctions.admin`     | Deploy de Cloud Functions               |
+| `roles/iam.serviceAccountUser`   | Runtime SA de las CFs                   |
+| `roles/cloudbuild.builds.editor` | Cloud Build (CF 2nd gen)                |
+| `roles/datastore.owner`          | Índices y reglas de Firestore           |
 
-Además, **habilitar la API de Cloud Resource Manager** (`cloudresourcemanager.googleapis.com`)
-— sin esto el deploy falla con `Permission denied` al validar permisos.
+**Roles de mantenimiento** (agregar solo si falla el deploy):
 
-Setup completo paso a paso: ver [`docs/CI-CD.md` §Service Account IAM Roles](./docs/CI-CD.md#service-account-iam-roles-crítico-para-deploy).
+- `roles/artifactregistry.admin` — si falla con `Permission denied` en
+  Artifact Registry (CF 2nd gen sube imágenes ahí)
 
-> **Troubleshooting**: si el deploy falla con
-> `Permission denied to deploy rules / indexes`, agregar temporalmente
-> `roles/editor` (Project Editor) a la SA para descartar bloqueos de API.
-> Si con Editor funciona, refinar a los 6 roles específicos.
+### APIs a habilitar (GCP)
+
+Antes del primer deploy, en cada proyecto (`staging` y `prod`):
+
+```bash
+gcloud services enable \
+  iam.googleapis.com \
+  cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com \
+  cloudresourcemanager.googleapis.com \
+  cloudfunctions.googleapis.com \
+  run.googleapis.com \
+  firebasehosting.googleapis.com \
+  firestore.googleapis.com \
+  firebase.googleapis.com \
+  storage-api.googleapis.com \
+  identitytoolkit.googleapis.com \
+  --project <project>
+```
 
 ### Secrets requeridos en GitHub
 
-| Secret                         | Para                               |
-| ------------------------------ | ---------------------------------- |
-| `FIREBASE_TOKEN_STAGING`       | Token de la SA para `staging`      |
-| `FIREBASE_TOKEN_PROD`          | Token de la SA para `prod`         |
-| `CODECOV_TOKEN` (opcional)     | Upload coverage a Codecov          |
-| `SLACK_WEBHOOK_URL` (opcional) | Notificaciones post-deploy a Slack |
+| Secret                                      | Para                                      |
+| ------------------------------------------- | ----------------------------------------- |
+| `FIREBASE_SERVICE_ACCOUNT_STAGING`          | JSON key de la SA para `staging`          |
+| `FIREBASE_SERVICE_ACCOUNT_PROD`             | JSON key de la SA para `prod`             |
+| `NEXT_PUBLIC_FIREBASE_API_KEY`              | Firebase Web SDK — auth cliente           |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`          | Firebase Auth                             |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID`           | Firebase Project ID                       |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`       | Firebase Storage                          |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`  | Firebase Cloud Messaging                  |
+| `NEXT_PUBLIC_FIREBASE_APP_ID`               | Firebase App ID                           |
+| `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` (opt) | Firebase Analytics                        |
+| `NEXT_PUBLIC_API_BASE_URL` (opt)            | URL del API                               |
+| `ALLOWED_ORIGINS`                           | Dominio del frontend para CORS de las CFs |
+| `CODECOV_TOKEN` (opcional)                  | Upload coverage a Codecov                 |
+| `SLACK_WEBHOOK_URL` (opcional)              | Notificaciones post-deploy a Slack        |
 
-Setup: `firebase login:ci --project <staging|prod>` → pegar el token en el secret.
+> `SESSION_COOKIE_SECRET` (secret HS256) se setea como **Firebase Secret**
+> (no GitHub Secret) via `firebase functions:secrets:set` — más seguro y
+> permite rotación independiente.
 
 ### Workflows
 
 - `ci.yml` — lint + typecheck + test + build + integration + coverage (PR + main)
-- `deploy-staging.yml` — push a main → deploy full stack a staging
-- `deploy-prod.yml` — manual dispatch con `confirm="deploy-prod"` → deploy full stack a prod
+- **`main_deploy.yml`** — push a main → deploy full stack a staging; manual
+  dispatch con `environment=staging|prod` → deploy full stack al env target
 - `release-please.yml` — auto-release PRs con changelog semántico
 
 Detalles completos: [`docs/CI-CD.md`](./docs/CI-CD.md).

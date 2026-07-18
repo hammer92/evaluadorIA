@@ -1,0 +1,108 @@
+name: Deploy Full Firebase Stack
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - prod
+        default: staging
+
+concurrency:
+  group: deploy-${{ inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy (${{ inputs.environment || 'staging' }})
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'staging' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (web + functions)
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_API_BASE_URL }}
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@13
+
+      - name: Resolve Firebase project ID
+        id: fb
+        run: |
+          if [ "${{ inputs.environment || 'staging' }}" = "prod" ]; then
+            echo "project=admin-platform-prod" >> "$GITHUB_OUTPUT"
+          else
+            echo "project=admin-platform-staging" >> "$GITHUB_OUTPUT"
+          fi
+          echo "env=${{ inputs.environment || 'staging' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to Google Cloud (Service Account)
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          project_id: ${{ steps.fb.outputs.project }}
+
+      - name: Deploy full Firebase stack (Hosting + Functions + Firestore + Storage)
+        run: |
+          firebase deploy \
+            --only hosting,functions,firestore,storage \
+            --project "${{ steps.fb.outputs.project }}" \
+            --non-interactive \
+            --set-env-vars "REPOSITORY_DRIVER=firebase,ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }},FIREBASE_ADMIN_PROJECT_ID=${{ steps.fb.outputs.project }}"
+
+      - name: Post-deploy smoke test (Hosting URL reachable)
+        if: success()
+        run: |
+          if [ "${{ steps.fb.outputs.env }}" = "prod" ]; then
+            URL="https://admin-platform-prod.web.app"
+          else
+            URL="https://admin-platform-staging.web.app"
+          fi
+          echo "Smoke-testing $URL ..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 30 "$URL")
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 400 ]; then
+            echo "::error::Smoke test failed for $URL (HTTP $HTTP_STATUS)"
+            exit 1
+          fi
+          echo "Smoke test OK ($URL → HTTP $HTTP_STATUS)"
+
+      - name: Notify Slack (optional)
+        if: always()
+        run: |
+          if [ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
+            STATUS=$([ "${{ job.status }}" = "success" ] && echo ":white_check_mark:" || echo ":x:")
+            ENV_NAME=${{ steps.fb.outputs.env }}
+            curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"text\":\"${STATUS} Deploy *${ENV_NAME}* → ${GITHUB_SHA::7} (${{ job.status }})\"}"
+          fi
