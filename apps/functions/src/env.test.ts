@@ -1,66 +1,70 @@
-import { afterEach, describe, expect, it } from 'vitest';
-
-import { __resetEnv, env, type Env } from './env.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // =============================================================================
-// env.ts — Tests de lectura de process.env
+// env.ts — Tests de lectura via defineSecret/defineString (Firebase params).
 // =============================================================================
 // El setup global (vitest.setup.ts) esta vacio intencionalmente; los tests
-// que mutan process.env llaman __resetEnv() explicitamente para invalidar
-// el cache de `env`.
+// que mutan process.env pueden hacerlo y los params (mockeados en cada test
+// file individualmente) leen process.env reactivamente.
 // =============================================================================
+
+vi.mock('firebase-functions/params', () => ({
+  defineSecret: (name: string) => ({
+    value: () => process.env[name],
+  }),
+  defineString: (name: string) => ({
+    value: () => process.env[name] ?? '',
+  }),
+}));
 
 const VALID_SECRET = 'a-valid-32-char-secret-here-for-testing-purposes';
 const VALID_ORIGINS = 'http://localhost:3000';
 
 describe('env', () => {
   afterEach(() => {
-    process.env['SESSION_COOKIE_SECRET'] = VALID_SECRET;
-    process.env['ALLOWED_ORIGINS'] = VALID_ORIGINS;
-    Reflect.deleteProperty(process.env, 'REPOSITORY_DRIVER');
-    Reflect.deleteProperty(process.env, 'NODE_ENV');
-    __resetEnv();
-  });
-
-  it('valida un env completo y lo expone tipado', () => {
-    process.env['SESSION_COOKIE_SECRET'] = VALID_SECRET;
-    process.env['ALLOWED_ORIGINS'] = VALID_ORIGINS;
-    process.env['REPOSITORY_DRIVER'] = 'firebase';
-    (process.env as Record<string, string | undefined>)['NODE_ENV'] = 'production';
-    __resetEnv();
-
-    const e: Env = env.SESSION_COOKIE_SECRET ? (env as unknown as Env) : ({} as Env);
-    expect(e.SESSION_COOKIE_SECRET).toBe(VALID_SECRET);
-    expect(e.ALLOWED_ORIGINS).toBe(VALID_ORIGINS);
-    expect(e.REPOSITORY_DRIVER).toBe('firebase');
-    expect(e.NODE_ENV).toBe('production');
-  });
-
-  it('retorna defaults seguros si SESSION_COOKIE_SECRET falta', () => {
     Reflect.deleteProperty(process.env, 'SESSION_COOKIE_SECRET');
     Reflect.deleteProperty(process.env, 'ALLOWED_ORIGINS');
-    __resetEnv();
-
-    expect(env.SESSION_COOKIE_SECRET).toBe('');
-    expect(env.ALLOWED_ORIGINS).toBe('*');
+    Reflect.deleteProperty(process.env, 'REPOSITORY_DRIVER');
+    Reflect.deleteProperty(process.env, 'NODE_ENV');
   });
 
-  it('acepta REPOSITORY_DRIVER = "memory" (emuladores)', () => {
+  it('expone SESSION_COOKIE_SECRET desde process.env', () => {
+    process.env['SESSION_COOKIE_SECRET'] = VALID_SECRET;
+    process.env['ALLOWED_ORIGINS'] = VALID_ORIGINS;
+    // Import dinamico para que el mock se aplique
+    return import('./env.js').then(({ env }) => {
+      expect(env.SESSION_COOKIE_SECRET).toBe(VALID_SECRET);
+      expect(env.ALLOWED_ORIGINS).toBe(VALID_ORIGINS);
+      expect(env.REPOSITORY_DRIVER).toBe('firebase'); // default
+    });
+  });
+
+  it('acepta REPOSITORY_DRIVER = "memory"', async () => {
     process.env['SESSION_COOKIE_SECRET'] = VALID_SECRET;
     process.env['ALLOWED_ORIGINS'] = VALID_ORIGINS;
     process.env['REPOSITORY_DRIVER'] = 'memory';
-    __resetEnv();
+    const { env } = await import('./env.js');
     expect(env.REPOSITORY_DRIVER).toBe('memory');
   });
 
-  it('__resetEnv invalida la cache', () => {
+  it('assertRuntimeEnv throw si SESSION_COOKIE_SECRET falta', async () => {
+    process.env['ALLOWED_ORIGINS'] = VALID_ORIGINS;
+    Reflect.deleteProperty(process.env, 'SESSION_COOKIE_SECRET');
+    const { assertRuntimeEnv } = await import('./env.js');
+    expect(() => assertRuntimeEnv()).toThrow(/SESSION_COOKIE_SECRET/);
+  });
+
+  it('assertRuntimeEnv throw si ALLOWED_ORIGINS falta', async () => {
+    process.env['SESSION_COOKIE_SECRET'] = VALID_SECRET;
+    Reflect.deleteProperty(process.env, 'ALLOWED_ORIGINS');
+    const { assertRuntimeEnv } = await import('./env.js');
+    expect(() => assertRuntimeEnv()).toThrow(/ALLOWED_ORIGINS/);
+  });
+
+  it('assertRuntimeEnv OK con secrets validos', async () => {
     process.env['SESSION_COOKIE_SECRET'] = VALID_SECRET;
     process.env['ALLOWED_ORIGINS'] = VALID_ORIGINS;
-    __resetEnv();
-    expect(env.SESSION_COOKIE_SECRET).toBe(VALID_SECRET);
-
-    process.env['SESSION_COOKIE_SECRET'] = 'another-valid-32-char-secret-here-for-testing';
-    __resetEnv();
-    expect(env.SESSION_COOKIE_SECRET).toBe('another-valid-32-char-secret-here-for-testing');
+    const { assertRuntimeEnv } = await import('./env.js');
+    expect(() => assertRuntimeEnv()).not.toThrow();
   });
 });

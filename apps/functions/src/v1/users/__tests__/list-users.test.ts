@@ -43,6 +43,9 @@ vi.mock('firebase-functions/params', () => ({
   defineSecret: (name: string) => ({
     value: () => process.env[name],
   }),
+  defineString: (name: string) => ({
+    value: () => process.env[name] ?? '',
+  }),
 }));
 
 vi.mock('firebase-admin/firestore', async () => {

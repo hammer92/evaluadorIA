@@ -1,35 +1,38 @@
+import { defineSecret, defineString } from 'firebase-functions/params';
+
 // =============================================================================
-// env — Acceso centralizado a variables de entorno para Cloud Functions.
+// env — Variables de entorno para Cloud Functions v2.
 // =============================================================================
-// Misma API publica que apps/web/env.ts:
-// - Lazy read (cache interna, re-read solo en tests via __resetEnv)
-// - Proxy getter (env.X se evalúa en cada access)
+// Usa `defineSecret()` + `defineString()` (firebase-functions/params) que
+// la Firebase Functions runtime inyecta automáticamente como env vars en
+// el service config del CF. Los secrets se crean con:
 //
-// FUENTE DE DATOS: process.env.
+//   firebase functions:secrets:set SESSION_COOKIE_SECRET
+//   firebase functions:secrets:set OPENAI_API_KEY
 //
-// En CFv2, `functions.config()` LANZA ERROR (la API ya no está disponible —
-// ver firebase-functions@5/lib/v1/config.js: `if (process.env.K_CONFIGURATION)
-// throw new Error(...)`). Por eso leemos directamente de process.env.
+// Y los strings (no-secret) con variables de entorno normales via
+// `firebase functions:config:set` (legacy, gated por experimento) o via
+// gcloud run services update. Para simplificar, todo va por Secret Manager
+// (incluyendo los non-secret via `defineString` que se setean con
+// `firebase functions:secrets:set` también — Firebase los trata igual).
 //
-// Los env vars se setean en el Cloud Run service via
-// `gcloud functions deploy --update-env-vars` en el workflow
-// `.github/workflows/main_deploy.yml` (paso POST-DEPLOY).
-//
-// En deploy-time analysis (firebase-tools spawna las CFs para descubrir
-// triggers) NO hay env vars reales en process.env — por eso el env.ts
-// retorna defaults seguros sin fallar. La validación real ocurre en
-// runtime cuando las CFs se invocan (assertRuntimeEnv()).
-//
-// API expuesta:
-//   env.SESSION_COOKIE_SECRET  (string, default '')
-//   env.ALLOWED_ORIGINS        (string CSV, default '*' para que el cors
-//                               del onCall no rompa en deploy-time analysis;
-//                               en runtime se setea via gcloud update-env-vars)
-//   env.REPOSITORY_DRIVER      ('memory' | 'firebase', default 'firebase')
-//   env.FIREBASE_ADMIN_PROJECT_ID  (string | undefined)
-//   env.OPENAI_API_KEY         (string | undefined)
-//   env.NODE_ENV               (default 'production')
+// API expuesta (lazy read via .value()):
+//   env.SESSION_COOKIE_SECRET  .value()   (string, secret)
+//   env.ALLOWED_ORIGINS        .value()   (string CSV, string param)
+//   env.REPOSITORY_DRIVER      .value()   ('memory' | 'firebase', default 'firebase')
+//   env.FIREBASE_ADMIN_PROJECT_ID  .value() (string, secret)
+//   env.OPENAI_API_KEY         .value()   (string, secret, optional)
+//   env.NODE_ENV               (auto-set por CF runtime)
 // =============================================================================
+
+export const SESSION_COOKIE_SECRET: ReturnType<typeof defineSecret> =
+  defineSecret('SESSION_COOKIE_SECRET');
+export const ALLOWED_ORIGINS: ReturnType<typeof defineString> = defineString('ALLOWED_ORIGINS');
+export const REPOSITORY_DRIVER: ReturnType<typeof defineString> = defineString('REPOSITORY_DRIVER');
+export const FIREBASE_ADMIN_PROJECT_ID: ReturnType<typeof defineSecret> = defineSecret(
+  'FIREBASE_ADMIN_PROJECT_ID',
+);
+export const OPENAI_API_KEY: ReturnType<typeof defineSecret> = defineSecret('OPENAI_API_KEY');
 
 export interface Env {
   SESSION_COOKIE_SECRET: string;
@@ -40,44 +43,38 @@ export interface Env {
   NODE_ENV: 'development' | 'production' | 'test';
 }
 
-let _cached: Env | undefined;
-
 function read(): Env {
-  if (_cached) return _cached;
-  const driver = process.env['REPOSITORY_DRIVER'];
+  const driver = REPOSITORY_DRIVER.value();
   const nodeEnv = process.env['NODE_ENV'];
-  _cached = {
-    SESSION_COOKIE_SECRET: process.env['SESSION_COOKIE_SECRET'] ?? '',
-    // Default '*' permite que las CFs carguen en deploy-time analysis sin
-    // env vars. En runtime se sobreescribe via gcloud update-env-vars.
-    ALLOWED_ORIGINS: process.env['ALLOWED_ORIGINS'] ?? '*',
+  return {
+    SESSION_COOKIE_SECRET: SESSION_COOKIE_SECRET.value(),
+    ALLOWED_ORIGINS: ALLOWED_ORIGINS.value(),
     REPOSITORY_DRIVER: driver === 'memory' ? 'memory' : 'firebase',
-    FIREBASE_ADMIN_PROJECT_ID: process.env['FIREBASE_ADMIN_PROJECT_ID'],
-    OPENAI_API_KEY: process.env['OPENAI_API_KEY'],
+    FIREBASE_ADMIN_PROJECT_ID: FIREBASE_ADMIN_PROJECT_ID.value() || undefined,
+    OPENAI_API_KEY: OPENAI_API_KEY.value() || undefined,
     NODE_ENV: nodeEnv === 'development' || nodeEnv === 'test' ? nodeEnv : 'production',
   };
-  return _cached;
 }
 
-// Proxy getter — se evalúa en cada access pero la cache interna evita re-leer.
 export const env = new Proxy({} as Env, {
   get: (_t, prop: string) => (read() as unknown as Record<string, unknown>)[prop],
 });
 
-// Test helper — limpia la cache entre tests si es necesario.
 export function __resetEnv(): void {
-  _cached = undefined;
+  // params son reactivos (re-leen en cada call a .value()), no requieren cache reset
 }
 
-// Validador runtime — para que las CFs fallen rápido en producción si
-// les falta SESSION_COOKIE_SECRET. Llamar desde el handler de cada CF
-// antes de operaciones que lo requieran.
+// Validador runtime — fail-fast en producción si falta secret crítico.
 export function assertRuntimeEnv(): void {
   const e = read();
   if (!e.SESSION_COOKIE_SECRET || e.SESSION_COOKIE_SECRET.length < 32) {
-    throw new Error('SESSION_COOKIE_SECRET no configurado o < 32 chars');
+    throw new Error(
+      'SESSION_COOKIE_SECRET no configurado o < 32 chars (firebase functions:secrets:set SESSION_COOKIE_SECRET)',
+    );
   }
-  if (!e.ALLOWED_ORIGINS || e.ALLOWED_ORIGINS === '*') {
-    throw new Error('ALLOWED_ORIGINS no configurado (aún en default "*")');
+  if (!e.ALLOWED_ORIGINS) {
+    throw new Error(
+      'ALLOWED_ORIGINS no configurado (firebase functions:secrets:set ALLOWED_ORIGINS)',
+    );
   }
 }

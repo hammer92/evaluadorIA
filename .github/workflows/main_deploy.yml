@@ -1,13 +1,26 @@
-name: Deploy Full Firebase Stack
+name: Deploy Full Firebase Stack (MANUAL ONLY)
+
+# Workflow DESACTIVADO - deploy manual desde este equipo.
+# Para deployar, ejecutar localmente:
+#   pnpm build
+#   firebase deploy --only functions --force --project agente-entrevistador-ia
+#   firebase deploy --only hosting --project agente-entrevistador-ia
+#   firebase deploy --only firestore,storage --project agente-entrevistador-ia
+#   gcloud run services update <FN> --region us-central1 \
+#     --env-vars-file /tmp/cf_envvars.yaml --project agente-entrevistador-ia
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DEPLOY to confirm manual deploy'
+        required: true
+        default: ''
 
 jobs:
   deploy:
-    name: Deploy to Firebase
+    if: github.event.inputs.confirm == 'DEPLOY'
+    name: Deploy to Firebase (manual)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -27,29 +40,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # --- BLOQUE FRONTEND (WEB) ---
-      # Next.js con output: 'export' genera apps/web/out/ estatico (sin SSR).
-      # Los NEXT_PUBLIC_* se bakean al bundle en BUILD TIME (no son runtime).
-      # Todos son required segun apps/web/env.ts Zod schema.
-      - name: Debug env vars (NEXT_PUBLIC_FIREBASE_*)
-        run: |
-          echo "NEXT_PUBLIC_APP_ENV=${NEXT_PUBLIC_APP_ENV:-UNSET}"
-          echo "NEXT_PUBLIC_FIREBASE_API_KEY length=${#NEXT_PUBLIC_FIREBASE_API_KEY}"
-          echo "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-UNSET}"
-          echo "NEXT_PUBLIC_FIREBASE_PROJECT_ID=${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-UNSET}"
-          echo "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:-UNSET}"
-          echo "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:-UNSET}"
-          echo "NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID:-UNSET}"
-        env:
-          NEXT_PUBLIC_APP_ENV: prod
-          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
-          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
-          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
-          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
-          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
-          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
-          NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID }}
-
       - name: Install & Build Web
         run: pnpm build
         env:
@@ -62,22 +52,12 @@ jobs:
           NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
           NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID }}
 
-      # --- BLOQUE DESPLIEGUE FINAL ---
-      # Arquitectura estática (sin SSR):
-      #   - Frontend estatico → Firebase Hosting (apps/web/out/)
-      #   - Backend → Cloud Functions v2 (usando firebase-functions@5)
-      #
-      # firebase-tools v15+ ya no soporta `--set-env-vars` ni `--update-env-vars`
-      # en `deploy --only functions`. Tampoco `functions.config()` en CFv2
-      # (lanza error si K_CONFIGURATION está seteado).
-      #
-      # Solución:
-      #   1. `firebase deploy --only functions` (sube el código a Cloud Run)
-      #   2. `gcloud functions deploy FN --update-env-vars` POST-DEPLOY
-      #      (setea env vars en el service config del CF runtime, donde
-      #      process.env los lee). El CF env.ts lee de process.env con
-      #      defaults seguros para deploy-time analysis.
-      - name: Deploy functions (code via firebase deploy)
+      - name: Auth to GCP for firebase + gcloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Deploy functions (code)
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only functions --non-interactive --force
@@ -85,20 +65,11 @@ jobs:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PROJECT_ID: agente-entrevistador-ia
 
-      - name: Auth to GCP for gcloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-
       - name: Setup gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Set env vars on CF runtime via gcloud run services update
         run: |
-          # gcloud functions deploy re-compila la function (pnpm install falla
-          # en Cloud Build). Usamos gcloud run services update directamente
-          # (CFv2 functions = Cloud Run services detras de escena), que NO
-          # re-compila — solo actualiza el service config.
           cat > /tmp/cf_envvars.yaml <<EOF
           SESSION_COOKIE_SECRET: "$SESSION_COOKIE_SECRET"
           ALLOWED_ORIGINS: "$ALLOWED_ORIGINS"
@@ -106,12 +77,6 @@ jobs:
           FIREBASE_ADMIN_PROJECT_ID: "$FIREBASE_ADMIN_PROJECT_ID"
           OPENAI_API_KEY: "$OPENAI_API_KEY"
           EOF
-
-          REGION="us-central1"
-          PROJECT="agente-entrevistador-ia"
-
-          # Sincroniza env vars en TODAS las CFs (gcfv2). El runtime service
-          # config es donde process.env los lee cuando la CF se ejecuta.
           for FN in \
             v1-users-create \
             v1-users-delete \
@@ -120,12 +85,12 @@ jobs:
             v1-users-set-role \
             v1-auth-sign-up \
             v1-reports-generate; do
-            echo "→ Updating $FN env vars..."
+            echo "→ Updating $FN..."
             gcloud run services update "$FN" \
-              --project="$PROJECT" \
-              --region="$REGION" \
+              --project=agente-entrevistador-ia \
+              --region=us-central1 \
               --env-vars-file=/tmp/cf_envvars.yaml \
-              --quiet || echo "::warning::Failed to update $FN (skipping)"
+              --quiet || echo "::warning::Failed $FN"
           done
         env:
           SESSION_COOKIE_SECRET: ${{ secrets.SESSION_COOKIE_SECRET }}
@@ -148,15 +113,3 @@ jobs:
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PROJECT_ID: agente-entrevistador-ia
-
-      - name: Post-deploy smoke test (Hosting URL reachable)
-        if: success()
-        run: |
-          URL="https://agente-entrevistador-ia.web.app"
-          echo "Smoke-testing $URL ..."
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 30 "$URL")
-          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 400 ]; then
-            echo "::error::Smoke test failed for $URL (HTTP $HTTP_STATUS)"
-            exit 1
-          fi
-          echo "Smoke test OK ($URL → HTTP $HTTP_STATUS)"
