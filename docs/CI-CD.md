@@ -249,10 +249,26 @@ jobs:
           NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
 
       # --- BLOQUE DESPLIEGUE FINAL ---
-      - name: Deploy to Firebase
+      # firebase-tools v15+ removio `--set-env-vars` del top-level `deploy`.
+      # Workaround: split en 2 invocations — el `--only functions` SI acepta
+      # la flag, el resto (hosting/firestore/storage) no la necesita.
+      - name: Deploy static + rules (Hosting + Firestore + Storage)
         uses: w9jds/firebase-action@master
         with:
-          args: deploy
+          args: deploy --only hosting,firestore,storage --non-interactive
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          PROJECT_ID: agente-entrevistador-ia
+
+      - name: Deploy functions with env vars
+        uses: w9jds/firebase-action@master
+        with:
+          args: >-
+            deploy
+            --only functions
+            --non-interactive
+            --set-env-vars
+            "SESSION_COOKIE_SECRET=${{ secrets.SESSION_COOKIE_SECRET }},ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }},REPOSITORY_DRIVER=firebase,FIREBASE_ADMIN_PROJECT_ID=${{ secrets.FIREBASE_ADMIN_PROJECT_ID }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PROJECT_ID: agente-entrevistador-ia
@@ -279,23 +295,25 @@ Ver el archivo real en
 push a main
     │
     ▼
-┌─────────────────────────────────────┐
-│ 1. Checkout                         │
+┌──────────────────────────────────────┐
+│ 1. Checkout                          │
 │ 2. Setup pnpm 9 + Node 22            │
-│ 3. pnpm install --frozen-lockfile   │
-│ 4. pnpm build                       │
-│    env: NEXT_PUBLIC_FIREBASE_*      │
-│    (mapeadas desde secrets)         │
-│ 5. Deploy to Firebase               │
-│    uses: w9jds/firebase-action      │
-│    args: deploy                     │
-│    env:                             │
-│      GCP_SA_KEY = FIREBASE_         │
-│                    SERVICE_ACCOUNT  │
-│      PROJECT_ID = agente-           │
-│                    entrevistador-ia │
-│ 6. Smoke test: curl a hosting URL   │
-└─────────────────────────────────────┘
+│ 3. pnpm install --frozen-lockfile    │
+│ 4. pnpm build                        │
+│    env: NEXT_PUBLIC_FIREBASE_*       │
+│ 5a. Deploy static + rules            │
+│    w9jds/firebase-action             │
+│    args: deploy                      │
+│          --only hosting,firestore,   │
+│          storage --non-interactive   │
+│ 5b. Deploy functions + env vars     │
+│    w9jds/firebase-action             │
+│    args: deploy                      │
+│          --only functions            │
+│          --non-interactive           │
+│          --set-env-vars "..."        │
+│ 6. Smoke test: curl a hosting URL    │
+└──────────────────────────────────────┘
     │
     ▼
 Deploy completo (~5-10 min)
@@ -318,6 +336,10 @@ hosting`, `firestore:rules:get`).
     `firebase`.
   - Reduce el código del workflow (~30% menos líneas que el approach
     manual).
+- **Limitación v15+**: `firebase-tools` v15+ removió `--set-env-vars` del
+  top-level `deploy`. Por eso el workflow hace **2 invocaciones separadas**:
+  una para hosting/firestore/storage y otra para functions (donde la flag
+  sigue siendo válida).
 
 ---
 
