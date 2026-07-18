@@ -60,7 +60,7 @@ jobs:
         id: fb
         run: |
           if [ "${{ inputs.environment || 'staging' }}" = "prod" ]; then
-            echo "project=admin-platform-prod" >> "$GITHUB_OUTPUT"
+            echo "project=agente-entrevistador-ia" >> "$GITHUB_OUTPUT"
           else
             echo "project=admin-platform-staging" >> "$GITHUB_OUTPUT"
           fi
@@ -69,7 +69,7 @@ jobs:
       - name: Authenticate to Google Cloud (Service Account)
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          credentials_json: ${{ secrets[format('FIREBASE_SERVICE_ACCOUNT_{0}', upper(inputs.environment || 'staging'))] }}
           project_id: ${{ steps.fb.outputs.project }}
 
       - name: Deploy full Firebase stack (Hosting + Functions + Firestore + Storage)
@@ -84,7 +84,7 @@ jobs:
         if: success()
         run: |
           if [ "${{ steps.fb.outputs.env }}" = "prod" ]; then
-            URL="https://admin-platform-prod.web.app"
+            URL="https://agente-entrevistador-ia.web.app"
           else
             URL="https://admin-platform-staging.web.app"
           fi

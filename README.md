@@ -83,7 +83,7 @@ deploy sube **todo el stack** (Hosting + Functions + Firestore + Storage) en
 un solo comando `firebase deploy`.
 
 - **Staging** (`admin-platform-staging`): automático en cada push a `main`
-- **Prod** (`admin-platform-prod`): manual dispatch con
+- **Prod** (`agente-entrevistador-ia`): manual dispatch con
   `environment=prod` (requiere aprobación del GitHub Environment `production`)
 
 Ambos vía `.github/workflows/main_deploy.yml` (un único workflow con

@@ -41,7 +41,7 @@ parciales concurrentes contra el mismo environment.
 ### 1. Habilitación de Infraestructura (Google Cloud)
 
 Antes de configurar el deploy, las siguientes APIs deben estar activas en cada
-proyecto GCP (`admin-platform-staging` y `admin-platform-prod`):
+proyecto GCP (`admin-platform-staging` y `agente-entrevistador-ia`):
 
 | API                                                                    | Por qué                                    |
 | ---------------------------------------------------------------------- | ------------------------------------------ |
@@ -60,7 +60,7 @@ Adicionalmente, las APIs que Firebase + Next.js SSR requieren en runtime:
 - Cloud Storage API (`storage-api.googleapis.com`) — para `firebase.storage`
 - Identity Toolkit API (`identitytoolkit.googleapis.com`) — para Auth
 
-Habilitar via gcloud (idempotente, reemplaza `<project>` por `admin-platform-staging` o `admin-platform-prod`):
+Habilitar via gcloud (idempotente, reemplaza `<project>` por `admin-platform-staging` o `agente-entrevistador-ia`):
 
 ```bash
 gcloud services enable \
@@ -84,7 +84,7 @@ Crear una cuenta dedicada para GitHub Actions aplicando **principio de mínimo
 privilegio**. Una SA por proyecto (staging y prod):
 
 ```bash
-PROJECT="admin-platform-staging"   # o "admin-platform-prod"
+PROJECT="admin-platform-staging"   # o "agente-entrevistador-ia"
 SA_NAME="github-deploy-agent"
 SA_EMAIL="$SA_NAME@$PROJECT.iam.gserviceaccount.com"
 
@@ -130,7 +130,7 @@ Desde la consola GCP (IAM & Admin → Service Accounts → `github-deploy-agent`
 → Keys → Add Key → Create new key → JSON) o via gcloud:
 
 ```bash
-PROJECT="admin-platform-staging"   # o "admin-platform-prod"
+PROJECT="admin-platform-staging"   # o "agente-entrevistador-ia"
 SA_NAME="github-deploy-agent"
 SA_EMAIL="$SA_NAME@$PROJECT.iam.gserviceaccount.com"
 
@@ -380,7 +380,7 @@ El job `deploy` ejecuta estos steps:
    desde GitHub Secrets
 5. **Install Firebase CLI 13** vía `npm install -g firebase-tools@13`
 6. **Resolve project ID** (staging → `admin-platform-staging`,
-   prod → `admin-platform-prod`)
+   prod → `agente-entrevistador-ia`)
 7. **Authenticate GCP** via `google-github-actions/auth@v2` usando
    `FIREBASE_SERVICE_ACCOUNT_<env>` como `credentials_json`
 8. **Deploy** único:

@@ -364,7 +364,7 @@ gcloud iam service-accounts keys create ./sa-key.json \
 Y se pegan (contenido íntegro) en los secrets:
 
 - `FIREBASE_SERVICE_ACCOUNT_STAGING` — JSON key para `admin-platform-staging`
-- `FIREBASE_SERVICE_ACCOUNT_PROD` — JSON key para `admin-platform-prod`
+- `FIREBASE_SERVICE_ACCOUNT_PROD` — JSON key para `agente-entrevistador-ia`
 
 > **Ventaja sobre tokens de larga duración**: las keys son rotables (90 días
 > recomendado) y revocables desde GCP Console sin tocar GitHub Secrets. Si
