@@ -109,7 +109,7 @@ export const v1AuthCreateSession = onRequest(
     res.setHeader(
       'Set-Cookie',
       `${COOKIE_NAME}=${sessionJwt}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${MAX_AGE_SECONDS}` +
-        (process.env['NODE_ENV'] === 'production' ? '; Secure' : ''),
+        (process.env.NODE_ENV === 'production' ? '; Secure' : ''),
     );
     res.status(200).json({
       success: true,
