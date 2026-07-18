@@ -61,8 +61,6 @@ const ENV_KEYS = [
   'FIREBASE_AUTH_EMULATOR_HOST',
   'GCLOUD_PROJECT',
   'FIREBASE_ADMIN_PROJECT_ID',
-  'FIREBASE_ADMIN_CLIENT_EMAIL',
-  'FIREBASE_ADMIN_PRIVATE_KEY',
 ];
 
 describe('firebase-admin singleton', () => {
@@ -100,62 +98,27 @@ describe('firebase-admin singleton', () => {
     expect(initializeAppMock).toHaveBeenCalledTimes(1);
   });
 
-  it('reuses an existing app returned by getApps() and skips initializeApp', async () => {
-    const existing = { name: 'existing-app' };
-    getAppsMock.mockReturnValue([existing]);
-    const { getAdminApp } = await import('./firebase-admin.js');
-
-    const app = getAdminApp();
-    const again = getAdminApp();
-
-    expect(app).toBe(existing);
-    expect(again).toBe(existing);
-    expect(initializeAppMock).not.toHaveBeenCalled();
-    expect(certMock).not.toHaveBeenCalled();
-  });
-
-  it('initializes with explicit credentials when no emulators are detected', async () => {
+  it('initializes with projectId only (uses runtime SA via applicationDefault) when no emulators', async () => {
     process.env['FIREBASE_ADMIN_PROJECT_ID'] = 'my-project';
-    process.env['FIREBASE_ADMIN_CLIENT_EMAIL'] = 'svc@my-project.iam.gserviceaccount.com';
-    process.env['FIREBASE_ADMIN_PRIVATE_KEY'] =
-      '-----BEGIN PRIVATE KEY-----\\nMIIE...\\n-----END PRIVATE KEY-----\\n';
-
     getAppsMock.mockReturnValue([]);
     const { getAdminApp } = await import('./firebase-admin.js');
 
     const app = getAdminApp();
 
     expect(app).toBe(fakeApp);
-    expect(certMock).toHaveBeenCalledTimes(1);
-    expect(certMock).toHaveBeenCalledWith({
-      projectId: 'my-project',
-      clientEmail: 'svc@my-project.iam.gserviceaccount.com',
-      privateKey: '-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n',
-    });
-    expect(initializeAppMock).toHaveBeenCalledWith({
-      credential: expect.objectContaining({ _kind: 'cert' }),
-    });
-  });
-
-  it('throws when FIREBASE_ADMIN credentials are missing in non-emulator mode', async () => {
-    getAppsMock.mockReturnValue([]);
-    const { getAdminApp } = await import('./firebase-admin.js');
-
-    expect(() => getAdminApp()).toThrowError(
-      /FIREBASE_ADMIN_PROJECT_ID.*FIREBASE_ADMIN_CLIENT_EMAIL.*FIREBASE_ADMIN_PRIVATE_KEY/,
-    );
-    expect(initializeAppMock).not.toHaveBeenCalled();
-  });
-
-  it('throws when only some FIREBASE_ADMIN credentials are present in non-emulator mode', async () => {
-    process.env['FIREBASE_ADMIN_PROJECT_ID'] = 'only-project';
-    process.env['FIREBASE_ADMIN_CLIENT_EMAIL'] = 'svc@x.iam.gserviceaccount.com';
-    getAppsMock.mockReturnValue([]);
-    const { getAdminApp } = await import('./firebase-admin.js');
-
-    expect(() => getAdminApp()).toThrowError(/FIREBASE_ADMIN_PRIVATE_KEY/);
     expect(certMock).not.toHaveBeenCalled();
-    expect(initializeAppMock).not.toHaveBeenCalled();
+    expect(initializeAppMock).toHaveBeenCalledWith({ projectId: 'my-project' });
+  });
+
+  it('uses GCLOUD_PROJECT as fallback when FIREBASE_ADMIN_PROJECT_ID is absent', async () => {
+    process.env['GCLOUD_PROJECT'] = 'demo-from-gcloud';
+    getAppsMock.mockReturnValue([]);
+    const { getAdminApp } = await import('./firebase-admin.js');
+
+    const app = getAdminApp();
+
+    expect(app).toBe(fakeApp);
+    expect(initializeAppMock).toHaveBeenCalledWith({ projectId: 'demo-from-gcloud' });
   });
 
   it('initializes lightweight with GCLOUD_PROJECT when FIRESTORE_EMULATOR_HOST is set', async () => {
@@ -172,41 +135,49 @@ describe('firebase-admin singleton', () => {
   });
 
   it('falls back to FIREBASE_ADMIN_PROJECT_ID when GCLOUD_PROJECT is absent in emulator mode', async () => {
-    process.env['FIREBASE_AUTH_EMULATOR_HOST'] = '127.0.0.1:9099';
-    process.env['FIREBASE_ADMIN_PROJECT_ID'] = 'emulator-project';
+    process.env['FIRESTORE_EMULATOR_HOST'] = '127.0.0.1:8080';
+    process.env['FIREBASE_ADMIN_PROJECT_ID'] = 'demo-from-admin';
     getAppsMock.mockReturnValue([]);
     const { getAdminApp } = await import('./firebase-admin.js');
 
-    getAdminApp();
+    const app = getAdminApp();
 
-    expect(certMock).not.toHaveBeenCalled();
-    expect(initializeAppMock).toHaveBeenCalledWith({ projectId: 'emulator-project' });
+    expect(app).toBe(fakeApp);
+    expect(initializeAppMock).toHaveBeenCalledWith({ projectId: 'demo-from-admin' });
   });
 
-  it('falls back to admin-platform-dev when no project id is available in emulator mode', async () => {
+  it('uses EMULATOR_PROJECT_ID_FALLBACK when no projectId envs are set in emulator mode', async () => {
     process.env['FIRESTORE_EMULATOR_HOST'] = '127.0.0.1:8080';
     getAppsMock.mockReturnValue([]);
     const { getAdminApp } = await import('./firebase-admin.js');
 
-    getAdminApp();
+    const app = getAdminApp();
 
-    expect(certMock).not.toHaveBeenCalled();
+    expect(app).toBe(fakeApp);
     expect(initializeAppMock).toHaveBeenCalledWith({ projectId: 'admin-platform-dev' });
   });
 
-  it('getAdminAuth/getAdminDb/getAdminStorage bind services to the cached app', async () => {
-    process.env['FIRESTORE_EMULATOR_HOST'] = '127.0.0.1:8080';
-    getAppsMock.mockReturnValue([]);
-    const { getAdminApp, getAdminAuth, getAdminDb, getAdminStorage } =
-      await import('./firebase-admin.js');
+  it('returns existing app from getApps() if available', async () => {
+    const existing = { name: 'existing-app' };
+    getAppsMock.mockReturnValue([existing]);
+    const { getAdminApp } = await import('./firebase-admin.js');
 
     const app = getAdminApp();
+
+    expect(app).toBe(existing);
+    expect(initializeAppMock).not.toHaveBeenCalled();
+  });
+
+  it('getAdminAuth/getAdminDb/getAdminStorage return correctly typed services', async () => {
+    process.env['FIRESTORE_EMULATOR_HOST'] = '127.0.0.1:8080';
+    getAppsMock.mockReturnValue([]);
+    const { getAdminAuth, getAdminDb, getAdminStorage } = await import('./firebase-admin.js');
 
     expect(getAdminAuth()).toBe(fakeAuth);
     expect(getAdminDb()).toBe(fakeDb);
     expect(getAdminStorage()).toBe(fakeStorage);
-    expect(getAuthMock).toHaveBeenCalledWith(app);
-    expect(getFirestoreMock).toHaveBeenCalledWith(app);
-    expect(getStorageMock).toHaveBeenCalledWith(app);
+    expect(getAuthMock).toHaveBeenCalledWith(fakeApp);
+    expect(getFirestoreMock).toHaveBeenCalledWith(fakeApp);
+    expect(getStorageMock).toHaveBeenCalledWith(fakeApp);
   });
 });
