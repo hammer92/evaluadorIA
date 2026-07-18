@@ -328,20 +328,27 @@ git fetch -p                            # borrar referencias remotas
 
 ## Deploy
 
-El deploy a **staging** es **automático** via GitHub Actions cuando se mergea
-a `main` (dispara `.github/workflows/main_deploy.yml`). El deploy a **prod**
-es **manual** vía `workflow_dispatch` en el mismo workflow con
-`environment=prod` y requiere aprobación del GitHub Environment `production`.
+El deploy es **automático** via GitHub Actions cuando se mergea a `main`
+(dispara `.github/workflows/main_deploy.yml`). El workflow sube todo el
+stack Firebase (Hosting + Functions + Firestore + Storage) en un solo
+comando `firebase deploy` contra el proyecto
+`agente-entrevistador-ia`.
 
 ### Stack desplegado
 
-Cada deploy sube **todo el stack Firebase** en un solo comando:
+El deploy usa la acción [`w9jds/firebase-action@master`](https://github.com/w9jds/firebase-action)
+que internamente ejecuta `firebase deploy` contra el proyecto
+`agente-entrevistador-ia`, subiendo todo el stack Firebase (Hosting +
+Functions + Firestore + Storage) en una sola corrida.
 
-```bash
-firebase deploy \
-  --only hosting,functions,firestore,storage \
-  --project admin-platform-<staging|prod> \
-  --non-interactive
+```yaml
+- name: Deploy to Firebase
+  uses: w9jds/firebase-action@master
+  with:
+    args: deploy
+  env:
+    GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+    PROJECT_ID: agente-entrevistador-ia
 ```
 
 - **Hosting**: assets estáticos (`apps/web/.next/static/`) + rewrites a CF `ssr`
@@ -351,20 +358,18 @@ firebase deploy \
 
 ### Autenticación: Service Account (Service Account JSON Key)
 
-El workflow usa [`google-github-actions/auth@v2`](https://github.com/google-github-actions/auth)
-con el **JSON key de la Service Account** (no `firebase login:ci` token).
-Las claves se generan via:
+El workflow usa [`w9jds/firebase-action@master`](https://github.com/w9jds/firebase-action)
+que internamente autentica con la **Service Account via `GCP_SA_KEY` env**.
+La clave se genera via:
 
 ```bash
 gcloud iam service-accounts keys create ./sa-key.json \
-  --iam-account=github-deploy-agent@<project>.iam.gserviceaccount.com \
-  --project=<project>
+  --iam-account=github-deploy-agent@agente-entrevistador-ia.iam.gserviceaccount.com \
+  --project=agente-entrevistador-ia
 ```
 
-Y se pegan (contenido íntegro) en los secrets:
-
-- `FIREBASE_SERVICE_ACCOUNT_STAGING` — JSON key para `admin-platform-staging`
-- `FIREBASE_SERVICE_ACCOUNT_PROD` — JSON key para `admin-platform-prod`
+Y se pega (contenido íntegro) en el secret `FIREBASE_SERVICE_ACCOUNT` (sin
+sufijo de env — el protocolo usa un único proyecto).
 
 > **Ventaja sobre tokens de larga duración**: las keys son rotables (90 días
 > recomendado) y revocables desde GCP Console sin tocar GitHub Secrets. Si
@@ -373,7 +378,7 @@ Y se pegan (contenido íntegro) en los secrets:
 ### Service Account IAM roles (REQUERIDO)
 
 La SA `github-deploy-agent` debe tener estos **5 roles obligatorios** en el
-proyecto GCP correspondiente:
+proyecto `agente-entrevistador-ia`:
 
 | Rol                              | Cubre                                   |
 | -------------------------------- | --------------------------------------- |
@@ -390,7 +395,7 @@ proyecto GCP correspondiente:
 
 ### APIs a habilitar (GCP)
 
-Antes del primer deploy, en cada proyecto (`staging` y `prod`):
+Antes del primer deploy, en el proyecto `agente-entrevistador-ia`:
 
 ```bash
 gcloud services enable \
@@ -398,33 +403,26 @@ gcloud services enable \
   cloudbuild.googleapis.com \
   artifactregistry.googleapis.com \
   cloudresourcemanager.googleapis.com \
-  cloudfunctions.googleapis.com \
-  run.googleapis.com \
-  firebasehosting.googleapis.com \
-  firestore.googleapis.com \
-  firebase.googleapis.com \
-  storage-api.googleapis.com \
-  identitytoolkit.googleapis.com \
-  --project <project>
+  --project agente-entrevistador-ia
 ```
 
-### Secrets requeridos en GitHub
+Estas son las **4 APIs obligatorias** del protocolo. Adicionalmente, las
+APIs de runtime (Cloud Functions, Cloud Run, Firebase Hosting, Firestore,
+Firebase Admin, Cloud Storage, Identity Toolkit) deben estar habilitadas —
+Firebase las activa al inicializar el proyecto, pero verificá con
+`gcloud services list --enabled`.
 
-| Secret                                      | Para                                      |
-| ------------------------------------------- | ----------------------------------------- |
-| `FIREBASE_SERVICE_ACCOUNT_STAGING`          | JSON key de la SA para `staging`          |
-| `FIREBASE_SERVICE_ACCOUNT_PROD`             | JSON key de la SA para `prod`             |
-| `NEXT_PUBLIC_FIREBASE_API_KEY`              | Firebase Web SDK — auth cliente           |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`          | Firebase Auth                             |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID`           | Firebase Project ID                       |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`       | Firebase Storage                          |
-| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`  | Firebase Cloud Messaging                  |
-| `NEXT_PUBLIC_FIREBASE_APP_ID`               | Firebase App ID                           |
-| `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` (opt) | Firebase Analytics                        |
-| `NEXT_PUBLIC_API_BASE_URL` (opt)            | URL del API                               |
-| `ALLOWED_ORIGINS`                           | Dominio del frontend para CORS de las CFs |
-| `CODECOV_TOKEN` (opcional)                  | Upload coverage a Codecov                 |
-| `SLACK_WEBHOOK_URL` (opcional)              | Notificaciones post-deploy a Slack        |
+### Secrets requeridos en GitHub (5 secrets totales)
+
+| Secret                         | Para                                                                                    |
+| ------------------------------ | --------------------------------------------------------------------------------------- |
+| `FIREBASE_SERVICE_ACCOUNT`     | JSON key de la SA `github-deploy-agent@…iam...` (consumido por `w9jds/firebase-action`) |
+| `FIREBASE_API_KEY`             | Firebase Web SDK — auth cliente (mapeada a `NEXT_PUBLIC_FIREBASE_API_KEY` en build)     |
+| `FIREBASE_AUTH_DOMAIN`         | Firebase Auth (mapeada a `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`)                            |
+| `FIREBASE_APP_ID`              | Firebase App ID (mapeada a `NEXT_PUBLIC_FIREBASE_APP_ID`)                               |
+| `OPENAI_API_KEY`               | API key de OpenAI (si las CFs la consumen; opcional)                                    |
+| `CODECOV_TOKEN` (opcional)     | Upload coverage a Codecov en `ci.yml`                                                   |
+| `SLACK_WEBHOOK_URL` (opcional) | Notificaciones post-deploy a Slack                                                      |
 
 > `SESSION_COOKIE_SECRET` (secret HS256) se setea como **Firebase Secret**
 > (no GitHub Secret) via `firebase functions:secrets:set` — más seguro y
@@ -433,11 +431,11 @@ gcloud services enable \
 ### Workflows
 
 - `ci.yml` — lint + typecheck + test + build + integration + coverage (PR + main)
-- **`main_deploy.yml`** — push a main → deploy full stack a staging; manual
-  dispatch con `environment=staging|prod` → deploy full stack al env target
+- **`main_deploy.yml`** — push a main → deploy full stack a `agente-entrevistador-ia`
 - `release-please.yml` — auto-release PRs con changelog semántico
 
-Detalles completos: [`docs/CI-CD.md`](./docs/CI-CD.md).
+Detalles completos: [`docs/CI-CD.md`](./docs/CI-CD.md) — sigue el protocolo
+Firebase Full-Stack + GitHub Actions paso a paso.
 
 ---
 

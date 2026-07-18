@@ -32,8 +32,7 @@
     "emulators:test": "pnpm --filter @platform/functions build && firebase emulators:exec --project dev --only firestore,auth,functions 'pnpm test:integration'",
     "emulators:rules": "pnpm --filter @platform/functions build && firebase emulators:exec --project dev --only firestore,auth,storage 'pnpm verify:rules'",
     "emulators:auth": "pnpm --filter @platform/functions build && firebase emulators:exec --project dev --only firestore,auth,functions 'pnpm verify:auth'",
-    "deploy:staging": "echo 'deploy por SDD-08' && exit 1",
-    "deploy:prod": "echo 'deploy por SDD-08' && exit 1",
+    "deploy": "echo 'Deploy via .github/workflows/main_deploy.yml (push a main)' && exit 0",
     "prepare": "husky"
   },
   "devDependencies": {

@@ -160,7 +160,7 @@ flowchart TB
 │       └── 02-sdds/                    # SDD-01 a SDD-09
 ├── aidlc-docs/                         # AI-DLC state + audit + reports
 ├── .github/
-│   ├── workflows/                      # ci + deploy-staging + deploy-prod
+│   ├── workflows/                      # ci + main_deploy
 │   ├── release-please-config.json
 │   └── dependabot.yml
 ├── firebase.json                       # Emuladores + deploy targets
@@ -286,11 +286,10 @@ sequenceDiagram
 
 ## 7. Configuración por entorno
 
-| Entorno | Firebase project alias | Hosts permitidos                   | Cómo se deploya               |
-| ------- | ---------------------- | ---------------------------------- | ----------------------------- |
-| dev     | `<project>-dev`        | `localhost:3000`, `127.0.0.1:3000` | Emuladores (`pnpm emulators`) |
-| staging | `<project>-staging`    | `staging.<dominio>`                | Auto en push a `main`         |
-| prod    | `<project>-prod`       | `<dominio>`, `www.<dominio>`       | Manual con aprobación         |
+| Entorno | Firebase project alias    | Hosts permitidos                   | Cómo se deploya               |
+| ------- | ------------------------- | ---------------------------------- | ----------------------------- |
+| dev     | (emulador local, no GCP)  | `localhost:3000`, `127.0.0.1:3000` | Emuladores (`pnpm emulators`) |
+| prod    | `agente-entrevistador-ia` | `agente-entrevistador-ia.web.app`  | Auto en push a `main`         |
 
 Las variables se validan con Zod al arranque (`apps/web/env.ts` +
 `apps/functions/src/env.ts`). Una variable requerida faltante o inválida
@@ -323,7 +322,7 @@ Detalles + política de reporte: [`SECURITY.md`](./SECURITY.md).
 - LCP < 2.5s en `/admin` y `/admin/users`.
 - Bundle inicial landing < 200 KB gzip (actual: 171 kB First Load JS).
 - TTFB < 600ms para rutas estáticas.
-- Firebase cold start < 2s (mín. instances = 1 en staging/prod para endpoints críticos).
+- Firebase cold start < 2s (mín. instances = 1 en prod para endpoints críticos).
 
 ---
 
@@ -361,7 +360,7 @@ Detalle paso a paso: [`README.md`](./README.md) §Setup local + [`CONTRIBUTING.m
 
 - [`README.md`](./README.md) — onboarding 5 min.
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — branching, commits, PRs.
-- [`DEPLOY.md`](./DEPLOY.md) — staging/prod + rollback + troubleshooting.
+- [`DEPLOY.md`](./DEPLOY.md) — prod deploy + rollback + troubleshooting.
 - [`SECURITY.md`](./SECURITY.md) — reporte de vulnerabilidades + hardenings.
 - [`docs/CI-CD.md`](./docs/CI-CD.md) — workflows de GitHub Actions + secrets.
 - [`doc/sdd-package/01-architecture/ARCHITECTURE.md`](./doc/sdd-package/01-architecture/ARCHITECTURE.md) — versión detallada con ADRs completas.

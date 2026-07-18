@@ -1,11 +1,12 @@
 # Deploy & Rollback
 
-Guía operativa para desplegar a **staging** y **producción**, hacer
+Guía operativa para desplegar a **`agente-entrevistador-ia`**, hacer
 **rollback**, y resolver problemas frecuentes.
 
 > **CI/CD workflows**: [`docs/CI-CD.md`](./docs/CI-CD.md) (workflows de
-> GitHub Actions + secrets + environments).
-> **Arquitectura**: [`ARCHITECTURE.md`](./ARCHITECTURE.md) §7 (entornos).
+> GitHub Actions + secrets + environments, sigue el Protocolo Firebase
+> Full-Stack + GitHub Actions).
+> **Arquitectura**: [`ARCHITECTURE.md`](./ARCHITECTURE.md) §7.
 > **Seguridad / secrets**: [`SECURITY.md`](./SECURITY.md).
 
 ---
@@ -14,7 +15,6 @@ Guía operativa para desplegar a **staging** y **producción**, hacer
 
 - [Entornos](#entornos)
 - [Pre-flight checklist](#pre-flight-checklist)
-- [Deploy a staging](#deploy-a-staging)
 - [Deploy a producción](#deploy-a-producción)
 - [Smoke test post-deploy](#smoke-test-post-deploy)
 - [Rollback](#rollback)
@@ -25,16 +25,15 @@ Guía operativa para desplegar a **staging** y **producción**, hacer
 
 ## Entornos
 
-| Entorno | Firebase project    | Branch / trigger                    | Quién aprueba | Cuándo deploya            |
-| ------- | ------------------- | ----------------------------------- | ------------- | ------------------------- |
-| dev     | `<project>-dev`     | local (no CI)                       | —             | manual (`pnpm emulators`) |
-| staging | `<project>-staging` | `main` (auto) o `workflow_dispatch` | nadie (auto)  | cada merge a `main`       |
-| prod    | `<project>-prod`    | `workflow_dispatch` manual          | 2 owners      | bajo demanda              |
+| Entorno | Firebase project          | Branch / trigger | Quién aprueba | Cuándo deploya      |
+| ------- | ------------------------- | ---------------- | ------------- | ------------------- |
+| dev     | (emulator local, no GCP)  | local (no CI)    | —             | `pnpm emulators`    |
+| prod    | `agente-entrevistador-ia` | `main` (push)    | nadie (auto)  | cada merge a `main` |
 
-> **SDD-08 NO incluye Firebase Hosting config** (decisión Q1=A scope
-> recortado). El frontend se sirve hoy vía `next start` detrás de Cloud
-> Run manual o Vercel. Para hosting automático vía Firebase Hosting + Cloud
-> Run SSR, ver [Troubleshooting §Firebase Hosting](#firebase-hosting).
+> **Single-environment deploy**: el protocolo del proyecto apunta a
+> deploy continuo a un solo proyecto (`agente-entrevistador-ia`). No hay
+> ambiente staging intermedio. Para multi-environment (staging/prod
+> separados), ver [Troubleshooting §Multi-environment](#multi-environment).
 
 ---
 
@@ -72,82 +71,59 @@ Checklist adicional para deploy a **producción**:
 - [ ] No hay PRs abiertos con cambios conflictivos.
 - [ ] Stakeholders notificados (canal `#deploys` en Slack).
 - [ ] Ventana de mantenimiento definida (prod) — idealmente low-traffic.
-- [ ] 2 reviewers aprobaron el environment `production`.
-
----
-
-## Deploy a staging
-
-Staging deploya automáticamente en cada merge a `main` vía
-[`.github/workflows/deploy-staging.yml`](./.github/workflows/deploy-staging.yml).
-
-### Deploy automático (recomendado)
-
-```bash
-# Mergea tu PR a main → staging deploya solo
-gh pr merge <PR-number> --squash --delete-branch
-# Esperar ~3-5 min a que termine el workflow
-gh run watch
-```
-
-### Deploy manual (sin PR)
-
-```bash
-gh workflow run deploy-staging.yml \
-  --ref main
-gh run watch  # seguir logs
-```
-
-### Qué se deploya
-
-| Componente               | Comando                                                      | Destino                        |
-| ------------------------ | ------------------------------------------------------------ | ------------------------------ |
-| Cloud Functions (v1\_\*) | `firebase deploy --only functions --project staging`         | `<project>-staging`            |
-| Firestore rules          | `firebase deploy --only firestore:rules --project staging`   | `<project>-staging`            |
-| Storage rules            | `firebase deploy --only storage --project staging`           | `<project>-staging`            |
-| Firestore indexes        | `firebase deploy --only firestore:indexes --project staging` | `<project>-staging`            |
-| Frontend (sin hosting)   | manual: `next build` + `next start` o Vercel                 | Vercel preview / server manual |
-
-> **Nota SDD-08 §4.5**: hosting automático diferido. El bundle se construye en
-> CI pero **no** se deploya a Firebase Hosting. Se sirve por Vercel / server
-> manual.
+- [ ] Secrets de GitHub configurados (5 obligatorios + 2 opcionales —
+      ver [docs/CI-CD.md §3](./docs/CI-CD.md#3-configuración-de-secretos-en-github)).
 
 ---
 
 ## Deploy a producción
 
-Prod es **siempre manual** con aprobación.
+Prod deploya **automáticamente** en cada merge a `main` vía
+[`.github/workflows/main_deploy.yml`](./.github/workflows/main_deploy.yml).
+No hay paso manual — el protocolo es deploy continuo a un único proyecto.
 
-### Procedimiento
+### Deploy automático (recomendado)
 
-1. **Verificar staging sano** (no hay alertas rojas en las últimas 2h).
-2. **Notificar** en `#deploys` (Slack): "Deploy prod a las HH:MM".
-3. **Disparar workflow**:
+```bash
+# Mergea tu PR a main → prod deploya solo
+gh pr merge <PR-number> --squash --delete-branch
+# Esperar ~3-5 min a que termine el workflow
+gh run watch
+```
 
-   ```bash
-   gh workflow run deploy-prod.yml \
-     --ref main \
-     -f confirm=deploy-prod \
-     -f reason="changelog: https://github.com/<org>/<repo>/releases/tag/vX.Y.Z"
-   ```
+### Re-deploy sin PR (rollback / hotfix)
 
-4. **Esperar aprobación** del environment `production` (2 reviewers
-   requeridos). Si nadie aprueba en 30 min, cancelar el run.
-5. **Monitorear** logs durante el deploy (~5-10 min):
+Si necesitás re-deployar el estado actual de `main` (por ejemplo, después de
+un rollback manual del código):
 
-   ```bash
-   gh run watch
-   ```
+```bash
+# Disparar el workflow via push vacío (no-op commit)
+git commit --allow-empty -m "ci: trigger deploy" && git push origin main
+gh run watch
+```
+
+### Qué se deploya
+
+| Componente                | Comando                                                              | Destino                      |
+| ------------------------- | -------------------------------------------------------------------- | ---------------------------- |
+| Cloud Functions (todas)   | `firebase deploy --only functions --project agente-entrevistador-ia` | `agente-entrevistador-ia`    |
+| Firestore rules + indexes | `firebase deploy --only firestore --project agente-entrevistador-ia` | `agente-entrevistador-ia`    |
+| Storage rules             | `firebase deploy --only storage --project agente-entrevistador-ia`   | `agente-entrevistador-ia`    |
+| Hosting (Next.js + CF)    | `firebase deploy --only hosting --project agente-entrevistador-ia`   | `agente-entrevistador-ia`    |
+| **Workflow consolidado**  | `w9jds/firebase-action@master` con `args: deploy`                    | todos los servicios en 1 run |
+
+> **Comando consolidado**: el workflow usa la acción
+> [`w9jds/firebase-action@master`](https://github.com/w9jds/firebase-action)
+> con `args: deploy`, que internamente ejecuta `firebase deploy` subiendo
+> todos los servicios configurados en `firebase.json` (Hosting + Functions
+>
+> - Firestore + Storage) en una sola corrida.
 
 6. **Smoke test** post-deploy (ver abajo).
 
-### Cuándo NO deployar a prod
-
-- ❌ Hay un incidente abierto en prod o staging.
-- ❌ Hay PRs críticos sin mergear que tocan el mismo componente.
-- ❌ El equipo está en cambio de guardia (on-call ausente).
-- ❌ Es viernes después de las 14:00 ART.
-- ❌ Hay features con flag pero la mitad del rollout incompleto.
+> El protocolo del proyecto es **deploy continuo a un solo proyecto**: no
+> hay paso manual de aprobación ni ventana de mantenimiento. El `pre-flight
+checklist` de arriba se valida localmente antes de mergear el PR.
 
 ---
 
@@ -158,34 +134,37 @@ Inmediatamente después de que el workflow termine, ejecutar en orden:
 ### 1. Health checks de Cloud Functions
 
 ```bash
-# Reemplazar <project>-prod con el real
-firebase functions:list --project <project>-prod
+firebase functions:list --project agente-entrevistador-ia
 
 # Cada función debe aparecer con su estado OK
 # Esperado:
-#   v1AuthSignUp         ✓
-#   v1AuthCreateSession  ✓
-#   v1AuthClearSession   ✓
-#   v1UsersCreate        ✓
-#   v1UsersList          ✓
-#   v1UsersUpdate        ✓
-#   v1UsersDelete        ✓
-#   v1ReportsGenerate    ✓
+#   ssr                 ✓  (Next.js SSR handler)
+#   v1AuthSignUp        ✓
+#   v1AuthCreateSession ✓
+#   v1AuthClearSession  ✓
+#   v1UsersCreate       ✓
+#   v1UsersList         ✓
+#   v1UsersUpdate       ✓
+#   v1UsersDelete       ✓
+#   v1ReportsGenerate   ✓
 ```
 
 ### 2. Verificación de reglas deployadas
 
 ```bash
-firebase firestore:rules:get --project <project>-prod > /tmp/rules-prod.txt
+firebase firestore:rules:get --project agente-entrevistador-ia > /tmp/rules-prod.txt
 diff /tmp/rules-prod.txt firestore.rules     # debe ser idéntico
+
+firebase storage:rules:get --project agente-entrevistador-ia > /tmp/storage-prod.txt
+diff /tmp/storage-prod.txt storage.rules     # debe ser idéntico
 ```
 
-### 3. Frontend (si deployaste UI)
+### 3. Frontend (Hosting + SSR)
 
 ```bash
-curl -fI https://<dominio-prod>/              # 200 OK
-curl -fI https://<dominio-prod>/login         # 200 OK
-curl -fI https://<dominio-prod>/admin         # 307 redirect a /login (sin cookie)
+curl -fI https://agente-entrevistador-ia.web.app/      # 200 OK
+curl -fI https://agente-entrevistador-ia.web.app/login # 200 OK
+curl -fI https://agente-entrevistador-ia.web.app/admin # 307 redirect a /login (sin cookie)
 ```
 
 ### 4. Login + flujo crítico
@@ -203,7 +182,7 @@ Hacer login manual con una cuenta de test en prod y verificar:
 
 ```bash
 # Cloud Functions
-gcloud functions logs read --project <project>-prod --region us-central1 --limit 50
+gcloud functions logs read --project agente-entrevistador-ia --region us-central1 --limit 50
 
 # Firestore (admin SDK writes)
 # Ver Cloud Logging URLs más abajo
@@ -225,12 +204,12 @@ gcloud functions logs read --project <project>-prod --region us-central1 --limit
 ```bash
 # Opción A: redeployar la versión anterior (más rápido)
 git checkout vX.Y.Z
-pnpm --filter functions build
-firebase deploy --only functions --project <project>-prod
+pnpm --filter @platform/functions build
+firebase deploy --only functions --project agente-entrevistador-ia
 git checkout main
 
 # Opción B: usar Firebase CLI para revertir a la última versión "good known"
-firebase functions:rollback --project <project>-prod
+firebase functions:rollback --project agente-entrevistador-ia
 # (requiere Firebase CLI 13.4+; revierte al último deploy)
 ```
 
@@ -239,7 +218,7 @@ firebase functions:rollback --project <project>-prod
 ```bash
 # Revertir a la versión del último tag
 git checkout vX.Y.Z -- firestore.rules
-firebase deploy --only firestore:rules --project <project>-prod
+firebase deploy --only firestore:rules --project agente-entrevistador-ia
 git checkout main -- firestore.rules
 ```
 
@@ -247,20 +226,29 @@ git checkout main -- firestore.rules
 > rollback (la versión vieja es peor). En su lugar, corregir y deployar
 > inmediatamente (hotfix).
 
-### Rollback de frontend (Vercel)
+### Rollback de frontend (Firebase Hosting + SSR CF)
 
-1. Vercel Dashboard → Deployments.
-2. Buscar el último deploy bueno.
-3. Click → "Promote to Production".
+Para revertir el frontend al estado del último tag bueno:
+
+```bash
+# Opción A: redeployar la versión anterior
+git checkout vX.Y.Z
+pnpm build
+firebase deploy --only hosting,functions --project agente-entrevistador-ia
+git checkout main
+
+# Opción B: clonar el canal de hosting a production
+# (Firebase Hosting channels, requiere Firebase CLI 13.4+)
+```
 
 ### Rollback de indexes
 
 ```bash
 # Borrar el index problemático (no se puede "rollback")
-firebase firestore:indexes:delete <index-id> --project <project>-prod
+firebase firestore:indexes:delete <index-id> --project agente-entrevistador-ia
 # Re-deployar el archivo firestore.indexes.json anterior
 git checkout vX.Y.Z -- firestore.indexes.json
-firebase deploy --only firestore:indexes --project <project>-prod
+firebase deploy --only firestore:indexes --project agente-entrevistador-ia
 ```
 
 ---
@@ -269,8 +257,24 @@ firebase deploy --only firestore:indexes --project <project>-prod
 
 ### Deploy falla con `Permission denied` en Functions
 
-- Verificar que el `FIREBASE_TOKEN_<env>` tenga rol **Cloud Functions Admin**.
-- Firebase Console → IAM → buscar la service account → verificar roles.
+- Verificar que el JSON key en `FIREBASE_SERVICE_ACCOUNT` corresponda a la
+  SA con rol `roles/cloudfunctions.admin`. GCP Console → IAM → buscar
+  `github-deploy-agent@agente-entrevistador-ia.iam.gserviceaccount.com` →
+  verificar roles.
+
+### Deploy falla con `Permission denied` en Artifact Registry
+
+Agregar rol `roles/artifactregistry.admin` a la SA (ver
+[docs/CI-CD.md §Notas de Mantenimiento](./docs/CI-CD.md#notas-de-mantenimiento)).
+
+### Deploy falla con `invalid credentials` o `Could not load credentials`
+
+El JSON key en `FIREBASE_SERVICE_ACCOUNT` está malformado o expiró:
+
+1. Regenerar el JSON key desde GCP Console
+2. Pegarlo completo (sin espacios extra, sin comillas envolventes, todo en
+   una sola línea) en el GitHub Secret
+3. Re-correr el workflow
 
 ### Deploy falla con `Quota exceeded`
 
@@ -299,10 +303,13 @@ pnpm verify:auth
 
 Verificar:
 
-1. `ALLOWED_ORIGINS` en el env del CF incluye `https://<dominio-prod>`.
+1. `ALLOWED_ORIGINS` (runtime env de la CF) incluye
+   `https://agente-entrevistador-ia.web.app`.
 2. El cliente hace `fetch(..., { credentials: 'include' })`.
 3. HTTPS está activo (cookies `Secure` solo se setean sobre HTTPS).
 4. `SameSite` es `Lax` (no `None`) para same-origin.
+5. `SESSION_COOKIE_SECRET` está configurado como Firebase Secret
+   (`firebase functions:secrets:get SESSION_COOKIE_SECRET`).
 
 ### Bundle > 200 KB en landing
 
@@ -328,42 +335,30 @@ npx lighthouse http://localhost:3000/admin/users --output=json --output-path=./l
 #   - CLS > 0.1 → layout shift (skeletons mal medidos).
 ```
 
-### Firebase Hosting
+### Multi-environment
 
-> **Status**: NO configurado (decisión Q1=A scope recortado SDD-08 §4.5).
-
-Si en el futuro se necesita, agregar a `firebase.json`:
-
-```json
-{
-  "hosting": {
-    "public": "apps/web/.next/static",
-    "rewrites": [{ "source": "**", "function": "ssr" }],
-    "headers": [
-      {
-        "source": "/_next/static/**",
-        "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
-      }
-    ]
-  }
-}
-```
-
-Y agregar una Cloud Function 2nd gen `ssr` con `onRequest` que haga el
-SSR de Next.js. Esto queda fuera del MVP actual.
+> **Out of scope del protocolo actual**: el deploy va directo a
+> `agente-entrevistador-ia` (un solo proyecto). Si en el futuro se necesita
+> staging separado, crear:
+>
+> - Un segundo Firebase project (ej: `agente-entrevistador-ia-staging`)
+> - Una segunda SA con los mismos 5 roles
+> - Un segundo workflow (`.github/workflows/main_deploy_staging.yml`) con
+>   `--project <staging-project>` y secret `FIREBASE_SERVICE_ACCOUNT_STAGING`
+>
+> El protocolo actual no contempla multi-environment.
 
 ---
 
 ## Cloud Logging URLs
 
-Links directos a los logs por entorno:
+Links directos a los logs del proyecto `agente-entrevistador-ia`:
 
-| Entorno | Functions                                                                                                                                                                 | Firestore                                                                      |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| staging | `https://console.cloud.google.com/logs/query;query=resource.type%3D%22cloud_function%22%20resource.labels.function_name%3D%22*%22;duration=P1D?project=<project>-staging` | `https://console.firebase.google.com/project/<project>-staging/firestore/logs` |
-| prod    | `https://console.cloud.google.com/logs/query;query=resource.type%3D%22cloud_function%22%20resource.labels.function_name%3D%22*%22;duration=P1D?project=<project>-prod`    | `https://console.firebase.google.com/project/<project>-prod/firestore/logs`    |
-
-> Reemplazar `<project>` con el ID real del proyecto Firebase.
+| Recurso   | URL                                                                                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Functions | `https://console.cloud.google.com/logs/query;query=resource.type%3D%22cloud_function%22%20resource.labels.function_name%3D%22*%22;duration=P1D?project=agente-entrevistador-ia` |
+| Firestore | `https://console.firebase.google.com/project/agente-entrevistador-ia/firestore/logs`                                                                                            |
+| Hosting   | `https://console.firebase.google.com/project/agente-entrevistador-ia/hosting/logs`                                                                                              |
 
 ### Queries útiles en Cloud Logging
 
@@ -380,14 +375,14 @@ jsonPayload.executionTimeMs>1000
 
 ---
 
-## Out of scope (no incluido en SDD-08)
+## Out of scope (no incluido en el protocolo actual)
 
+- **Multi-environment** (staging + prod separados): el protocolo actual es
+  single-project deploy continuo.
 - Canary releases (Cloud Run traffic split).
 - Mobile CI/CD.
 - Playwright E2E en CI.
 - Auto-rollback si falla smoke test.
-- Preview deployments por PR (workflow `preview-pr.yml` no incluido —
-  decisión v2 cost/benefit; ver [`docs/CI-CD.md`](./docs/CI-CD.md)).
-- Firebase Hosting + Cloud Run SSR.
+- Preview deployments por PR (Firebase Hosting channels).
 
 Si alguna de estas se necesita, crear SDD-10+.
