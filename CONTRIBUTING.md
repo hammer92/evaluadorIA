@@ -326,6 +326,72 @@ git fetch -p                            # borrar referencias remotas
 
 ---
 
+## Deploy
+
+El deploy a staging/prod es **automático** via GitHub Actions cuando se mergea
+a `main` (staging) o se dispara el workflow `Deploy Prod` con `confirm="deploy-prod"`.
+
+### Stack desplegado
+
+Cada deploy sube **todo el stack Firebase** en un solo comando:
+
+```bash
+firebase deploy --only hosting,functions,firestore,storage
+```
+
+- **Hosting**: assets estáticos (`apps/web/.next/static/`) + rewrites a CF `ssr`
+- **Functions**: `apps/functions/lib/` con la CF `ssr` + endpoints de auth/users/reports
+- **Firestore**: `firestore.rules` + `firestore.indexes.json`
+- **Storage**: `storage.rules`
+
+### Service Account IAM roles (REQUERIDO)
+
+El token de CI representa una Google Cloud Service Account. Para que el
+`firebase deploy` funcione, la SA debe tener estos 6 roles en el proyecto
+GCP correspondiente (`staging` o `prod`):
+
+| Rol                              | Cubre                                          |
+| -------------------------------- | ---------------------------------------------- |
+| `roles/firebase.admin`           | Hosting + reglas de Firestore + Storage        |
+| `roles/datastore.admin`          | Índices de Firestore                           |
+| `roles/cloudfunctions.admin`     | Deploy de Cloud Functions                      |
+| `roles/iam.serviceAccountUser`   | Runtime SA de las CFs                          |
+| `roles/cloudbuild.builds.editor` | Cloud Build (CF 2nd gen)                       |
+| `roles/artifactregistry.admin`   | Artifact Registry (CF 2nd gen)                 |
+| `roles/run.invoker`              | Para que la CF `ssr` reciba tráfico de Hosting |
+
+Además, **habilitar la API de Cloud Resource Manager** (`cloudresourcemanager.googleapis.com`)
+— sin esto el deploy falla con `Permission denied` al validar permisos.
+
+Setup completo paso a paso: ver [`docs/CI-CD.md` §Service Account IAM Roles](./docs/CI-CD.md#service-account-iam-roles-crítico-para-deploy).
+
+> **Troubleshooting**: si el deploy falla con
+> `Permission denied to deploy rules / indexes`, agregar temporalmente
+> `roles/editor` (Project Editor) a la SA para descartar bloqueos de API.
+> Si con Editor funciona, refinar a los 6 roles específicos.
+
+### Secrets requeridos en GitHub
+
+| Secret                         | Para                               |
+| ------------------------------ | ---------------------------------- |
+| `FIREBASE_TOKEN_STAGING`       | Token de la SA para `staging`      |
+| `FIREBASE_TOKEN_PROD`          | Token de la SA para `prod`         |
+| `CODECOV_TOKEN` (opcional)     | Upload coverage a Codecov          |
+| `SLACK_WEBHOOK_URL` (opcional) | Notificaciones post-deploy a Slack |
+
+Setup: `firebase login:ci --project <staging|prod>` → pegar el token en el secret.
+
+### Workflows
+
+- `ci.yml` — lint + typecheck + test + build + integration + coverage (PR + main)
+- `deploy-staging.yml` — push a main → deploy full stack a staging
+- `deploy-prod.yml` — manual dispatch con `confirm="deploy-prod"` → deploy full stack a prod
+- `release-please.yml` — auto-release PRs con changelog semántico
+
+Detalles completos: [`docs/CI-CD.md`](./docs/CI-CD.md).
+
+---
+
 ## Scope / SDD workflow
 
 El proyecto se planifica en **SDDs** (Software Design Documents). Cada SDD:

@@ -74,5 +74,34 @@ Para detalles ver [.agents/AGENTS.md](.agents/AGENTS.md).
 | `pnpm test:coverage` | Con coverage                                                              |
 | `pnpm lint`          | ESLint sobre todo el repo                                                 |
 | `pnpm typecheck`     | TS en todos los paquetes                                                  |
-| `pnpm format`        | Prettier write                                                            |
-| `pnpm emulators`     | Levanta los emuladores de Firebase                                        |
+
+## Deploy
+
+El deploy a staging/prod se hace via GitHub Actions contra Firebase. Cada
+deploy sube **todo el stack** (Hosting + Functions + Firestore + Storage) en
+un solo comando `firebase deploy`.
+
+- **Staging**: automático en cada push a `main` (`deploy-staging.yml`)
+- **Prod**: manual dispatch con `confirm="deploy-prod"` (`deploy-prod.yml`)
+
+### Service Account IAM roles (REQUERIDO para que el deploy funcione)
+
+El token de CI representa una Google Cloud Service Account. Para que
+`firebase deploy` pueda subir Hosting, Functions, reglas de Firestore, índices
+y Storage, la SA necesita estos roles en el proyecto GCP:
+
+- `roles/firebase.admin` — Hosting + reglas de Firestore + Storage
+- `roles/datastore.admin` — Índices de Firestore
+- `roles/cloudfunctions.admin` — Deploy de Cloud Functions
+- `roles/iam.serviceAccountUser` — Runtime SA de las CFs
+- `roles/cloudbuild.builds.editor` — Cloud Build (CF 2nd gen)
+- `roles/artifactregistry.admin` — Artifact Registry (CF 2nd gen)
+- `roles/run.invoker` — Para que la CF `ssr` reciba tráfico de Hosting
+
+**Habilitar la API de Cloud Resource Manager** (`cloudresourcemanager.googleapis.com`)
+— sin esto el deploy falla al validar permisos.
+
+Setup completo paso a paso (gcloud + firebase login:ci + troubleshooting):
+[`docs/CI-CD.md` §Service Account IAM Roles](./docs/CI-CD.md#service-account-iam-roles-crítico-para-deploy).
+| `pnpm format` | Prettier write |
+| `pnpm emulators` | Levanta los emuladores de Firebase |

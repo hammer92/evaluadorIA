@@ -47,6 +47,115 @@ variables → Actions**:
 > pipeline (recomendado agregar en SDD futuro). Si un secret se filtra,
 > rotarlo inmediatamente desde Firebase Console + regenerar el GitHub Secret.
 
+## Service Account IAM Roles (CRÍTICO para deploy)
+
+El token generado por `firebase login:ci` representa una **Google Cloud Service
+Account**. Para que `firebase deploy` pueda subir Hosting, Functions, reglas
+de Firestore + Storage, e índices de Firestore, la service account debe tener
+estos roles en el **proyecto GCP** correspondiente (`staging` o `prod`):
+
+| Rol                                                                  | Cubre                                                                    |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **Firebase Admin** (`roles/firebase.admin`)                          | Hosting, reglas de Firestore, Cloud Storage                              |
+| **Cloud Datastore Admin** (`roles/datastore.admin`)                  | Índices de Firestore (Firestore se compila sobre Datastore internamente) |
+| **Cloud Functions Admin** (`roles/cloudfunctions.admin`)             | Deploy de Cloud Functions (build + upload source)                        |
+| **Service Account User** (`roles/iam.serviceAccountUser`)            | Para que la CF pueda actuar como runtime service account                 |
+| **Cloud Build Editor** (`roles/cloudbuild.builds.editor`)            | Cloud Functions 2nd gen usa Cloud Build para compilar TS/JS              |
+| **Artifact Registry Administrator** (`roles/artifactregistry.admin`) | Functions 2nd gen suben imágenes a Artifact Registry                     |
+
+> **Plus** el rol **Cloud Run Invoker** (`roles/run.invoker`) si la CF `ssr`
+> recibe tráfico desde Firebase Hosting (caso típico de SSR).
+
+### APIs a habilitar (GCP Console)
+
+Además de los roles, hay que **habilitar las APIs** en cada proyecto (`staging` y `prod`):
+
+- Cloud Functions API (`cloudfunctions.googleapis.com`)
+- Cloud Build API (`cloudbuild.googleapis.com`)
+- Cloud Run API (`run.googleapis.com`) — para CF 2nd gen
+- Artifact Registry API (`artifactregistry.googleapis.com`)
+- Cloud Resource Manager API (`cloudresourcemanager.googleapis.com`) — **necesaria para validar permisos durante el deploy**
+- Firebase Hosting API (`firebasehosting.googleapis.com`)
+- Cloud Firestore API (`firestore.googleapis.com`)
+- Firebase Admin API (`firebase.googleapis.com`)
+- Identity Toolkit API (`identitytoolkit.googleapis.com`) — para Auth emulator + Auth en runtime
+
+Habilitar via gcloud (idempotente):
+
+```bash
+gcloud services enable \
+  cloudfunctions.googleapis.com \
+  cloudbuild.googleapis.com \
+  run.googleapis.com \
+  artifactregistry.googleapis.com \
+  cloudresourcemanager.googleapis.com \
+  firebasehosting.googleapis.com \
+  firestore.googleapis.com \
+  firebase.googleapis.com \
+  --project <staging|prod>
+```
+
+### Setup de la Service Account (idempotente via gcloud)
+
+```bash
+SA_NAME="github-deploy-sa"
+SA_EMAIL="$SA_NAME@<project-id>.iam.gserviceaccount.com"
+
+# 1. Crear la service account (si no existe)
+gcloud iam service-accounts create $SA_NAME \
+  --display-name "GitHub Actions deploy" \
+  --project <staging|prod>
+
+# 2. Asignar los 6 roles
+for ROLE in \
+  roles/firebase.admin \
+  roles/datastore.admin \
+  roles/cloudfunctions.admin \
+  roles/iam.serviceAccountUser \
+  roles/cloudbuild.builds.editor \
+  roles/artifactregistry.admin \
+  roles/run.invoker
+do
+  gcloud projects add-iam-policy-binding <project-id> \
+    --member="serviceAccount:$SA_EMAIL" \
+    --role="$ROLE" \
+    --condition=None
+done
+
+# 3. Generar el token (este es el que va en GitHub Secret)
+firebase login:ci --project <staging|prod>
+#   -> abre browser, login con la cuenta de la SA
+#   -> genera token, copiarlo en GitHub Secret FIREBASE_TOKEN_<env>
+
+# 4. (Opcional) Generar JSON key para usar en lugar del token
+gcloud iam service-accounts keys create ./sa-key.json \
+  --iam-account=$SA_EMAIL
+#   -> subir el JSON como FIREBASE_SERVICE_ACCOUNT_<env> secret
+```
+
+> **Tip de troubleshooting**: si el deploy falla con
+> `Permission denied to deploy rules / indexes`, agregar temporalmente
+> `roles/editor` (Project Editor) a la SA para descartar bloqueos de API. Si
+> con Editor funciona, el problema es granularidad de roles. Luego refinar a
+> los 6 roles de arriba.
+
+### Alternativa moderna: `FirebaseExtended/action-hosting-deploy`
+
+En vez de generar un token CI con `firebase login:ci`, podés usar
+`FirebaseExtended/action-hosting-deploy@v0` con un JSON key de la SA:
+
+```yaml
+- uses: FirebaseExtended/action-hosting-deploy@v0
+  with:
+    repoToken: '${{ secrets.GITHUB_TOKEN }}'
+    firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}'
+    projectId: admin-platform-staging
+    channelId: live
+```
+
+Ventajas: las keys son rotables y revocables desde GCP Console sin tocar
+GitHub Secrets. La SA sigue necesitando los mismos 6 roles IAM.
+
 ## GitHub Environments
 
 Los workflows `deploy-staging.yml` y `deploy-prod.yml` referencian
