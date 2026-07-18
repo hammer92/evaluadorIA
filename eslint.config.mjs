@@ -9,6 +9,11 @@ const nonProjectFiles = [
   '**/*.config.{ts,tsx,js,mjs,cjs}',
   '**/vitest.setup.ts',
   'scripts/**/*.{ts,mts}',
+  // scripts/ fuera de src/ no estan en ningun tsconfig de proyecto
+  // (los scripts se ejecutan con tsx, no tsc). Los exluimos del
+  // projectService de typescript-eslint para evitar 'not found by
+  // the project service'.
+  'apps/functions/scripts/**/*.{ts,mts}',
 ];
 
 const testOverrides = {
