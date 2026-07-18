@@ -77,22 +77,16 @@ Para detalles ver [.agents/AGENTS.md](.agents/AGENTS.md).
 
 ## Deploy
 
-El deploy a staging/prod se hace via **GitHub Actions** contra Firebase,
-usando **Service Account JSON keys** (no `firebase login:ci` tokens). Cada
-deploy sube **todo el stack** (Hosting + Functions + Firestore + Storage) en
-un solo comando `firebase deploy`.
-
-- **Staging** (`admin-platform-staging`): automático en cada push a `main`
-- **Prod** (`admin-platform-prod`): manual dispatch con
-  `environment=prod` (requiere aprobación del GitHub Environment `production`)
-
-Ambos vía `.github/workflows/main_deploy.yml` (un único workflow con
-`workflow_dispatch` para elegir env).
+El deploy es **automático** via **GitHub Actions** en cada push a `main`
+(vía `.github/workflows/main_deploy.yml`). El workflow usa
+**Service Account JSON key** (no `firebase login:ci` token) y sube todo el
+stack Firebase (Hosting + Functions + Firestore + Storage) en un solo
+comando contra el proyecto `agente-entrevistador-ia`.
 
 ### Service Account IAM roles (REQUERIDO)
 
-La SA `github-deploy-agent` necesita estos **5 roles** en cada proyecto
-GCP:
+La SA `github-deploy-agent` necesita estos **5 roles** en
+`agente-entrevistador-ia`:
 
 - `roles/firebase.admin` — Hosting + reglas de Firestore + Storage
 - `roles/cloudfunctions.admin` — Deploy de Cloud Functions
@@ -100,21 +94,27 @@ GCP:
 - `roles/cloudbuild.builds.editor` — Cloud Build (CF 2nd gen)
 - `roles/datastore.owner` — Índices y reglas de Firestore
 
-**APIs mínimas** (habilitar en cada proyecto antes del primer deploy):
+### APIs mínimas (habilitar antes del primer deploy)
 
 ```bash
 gcloud services enable \
   iam.googleapis.com cloudbuild.googleapis.com \
   artifactregistry.googleapis.com cloudresourcemanager.googleapis.com \
-  cloudfunctions.googleapis.com run.googleapis.com \
-  firebasehosting.googleapis.com firestore.googleapis.com \
-  firebase.googleapis.com storage-api.googleapis.com \
-  identitytoolkit.googleapis.com \
-  --project <project>
+  --project agente-entrevistador-ia
 ```
+
+### Secrets en GitHub (5 obligatorios + 2 opcionales)
+
+- `FIREBASE_SERVICE_ACCOUNT` — JSON key de la SA
+- `FIREBASE_API_KEY` — Firebase Web SDK
+- `FIREBASE_AUTH_DOMAIN` — Firebase Auth
+- `FIREBASE_APP_ID` — Firebase App ID
+- `OPENAI_API_KEY` — solo si las CFs la consumen
+- (opcional) `CODECOV_TOKEN`, `SLACK_WEBHOOK_URL`
 
 Setup completo paso a paso (creación de SA, JSON key, GitHub Secrets,
 troubleshooting, mantenimiento de 90 días):
-[`docs/CI-CD.md` §Protocolo de despliegue paso a paso](./docs/CI-CD.md#protocolo-de-despliegue-paso-a-paso).
+[`docs/CI-CD.md`](./docs/CI-CD.md) — Protocolo de despliegue Firebase
+Full-Stack + GitHub Actions.
 | `pnpm format` | Prettier write |
 | `pnpm emulators` | Levanta los emuladores de Firebase |
