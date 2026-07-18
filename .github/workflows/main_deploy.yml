@@ -43,7 +43,7 @@ jobs:
           args: >-
             deploy
             --set-env-vars
-            "SESSION_COOKIE_SECRET=${{ secrets.SESSION_COOKIE_SECRET }},ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }},REPOSITORY_DRIVER=firebase,FIREBASE_ADMIN_PROJECT_ID=agente-entrevistador-ia,OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
+            "SESSION_COOKIE_SECRET=${{ secrets.SESSION_COOKIE_SECRET }},ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }},REPOSITORY_DRIVER=firebase,FIREBASE_ADMIN_PROJECT_ID=${{ secrets.FIREBASE_ADMIN_PROJECT_ID }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PROJECT_ID: agente-entrevistador-ia

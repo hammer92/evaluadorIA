@@ -414,17 +414,18 @@ Firebase las activa al inicializar el proyecto, pero verificá con
 
 ### Secrets requeridos en GitHub (5 secrets totales)
 
-| Secret                         | Para                                                                                    |
-| ------------------------------ | --------------------------------------------------------------------------------------- |
-| `FIREBASE_SERVICE_ACCOUNT`     | JSON key de la SA `github-deploy-agent@…iam...` (consumido por `w9jds/firebase-action`) |
-| `FIREBASE_API_KEY`             | Firebase Web SDK — auth cliente (mapeada a `NEXT_PUBLIC_FIREBASE_API_KEY` en build)     |
-| `FIREBASE_AUTH_DOMAIN`         | Firebase Auth (mapeada a `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`)                            |
-| `FIREBASE_APP_ID`              | Firebase App ID (mapeada a `NEXT_PUBLIC_FIREBASE_APP_ID`)                               |
-| `SESSION_COOKIE_SECRET`        | HS256 secret para cookie `__session` (inyectado via `--set-env-vars` al deploy)         |
-| `ALLOWED_ORIGINS`              | CSV de dominios CORS permitidos para las CFs onRequest                                  |
-| `OPENAI_API_KEY`               | API key de OpenAI (si las CFs la consumen; opcional)                                    |
-| `CODECOV_TOKEN` (opcional)     | Upload coverage a Codecov en `ci.yml`                                                   |
-| `SLACK_WEBHOOK_URL` (opcional) | Notificaciones post-deploy a Slack                                                      |
+| Secret                         | Para                                                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `FIREBASE_SERVICE_ACCOUNT`     | JSON key de la SA `github-deploy-agent@…iam...` (consumido por `w9jds/firebase-action`)                                   |
+| `FIREBASE_API_KEY`             | Firebase Web SDK — auth cliente (mapeada a `NEXT_PUBLIC_FIREBASE_API_KEY` en build)                                       |
+| `FIREBASE_AUTH_DOMAIN`         | Firebase Auth (mapeada a `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`)                                                              |
+| `FIREBASE_APP_ID`              | Firebase App ID (mapeada a `NEXT_PUBLIC_FIREBASE_APP_ID`)                                                                 |
+| `SESSION_COOKIE_SECRET`        | HS256 secret para cookie `__session` (inyectado via `--set-env-vars` al deploy)                                           |
+| `ALLOWED_ORIGINS`              | CSV de dominios CORS permitidos para las CFs onRequest                                                                    |
+| `FIREBASE_ADMIN_PROJECT_ID`    | Project ID de Firebase Admin SDK (default `agente-entrevistador-ia`; puede sobreescribirse via Secret para multi-project) |
+| `OPENAI_API_KEY`               | API key de OpenAI (si las CFs la consumen; opcional)                                                                      |
+| `CODECOV_TOKEN` (opcional)     | Upload coverage a Codecov en `ci.yml`                                                                                     |
+| `SLACK_WEBHOOK_URL` (opcional) | Notificaciones post-deploy a Slack                                                                                        |
 
 > `SESSION_COOKIE_SECRET` (secret HS256) se setea como **GitHub Secret**
 > y se inyecta en el deploy via `--set-env-vars` (NO via Firebase Secret

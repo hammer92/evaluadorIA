@@ -146,20 +146,20 @@ Estos secrets se inyectan en el runtime de las CFs via `--set-env-vars` en
 el step de deploy (NO via Firebase Secret Manager — más simple, evita
 dependencia con `secretmanager.googleapis.com`).
 
-| Secreto                 | Para                                                                                                                                                                         | Requerido |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| `SESSION_COOKIE_SECRET` | HS256 secret para firmar/verificar la cookie `__session` (CFs `v1_auth_create_session` y `shared/verify-session-cookie`). Generar con `openssl rand -base64 48` (≥32 chars). | Sí        |
-| `ALLOWED_ORIGINS`       | Dominios CORS permitidos para las CFs onRequest (CSV: `https://agente-entrevistador-ia.web.app,https://agente-entrevistador-ia.firebaseapp.com`)                             | Sí        |
-| `OPENAI_API_KEY`        | API key de OpenAI (si las CFs la consumen)                                                                                                                                   | No        |
+| Secreto                     | Para                                                                                                                                                                         | Requerido |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `SESSION_COOKIE_SECRET`     | HS256 secret para firmar/verificar la cookie `__session` (CFs `v1_auth_create_session` y `shared/verify-session-cookie`). Generar con `openssl rand -base64 48` (≥32 chars). | Sí        |
+| `ALLOWED_ORIGINS`           | Dominios CORS permitidos para las CFs onRequest (CSV: `https://agente-entrevistador-ia.web.app,https://agente-entrevistador-ia.firebaseapp.com`)                             | Sí        |
+| `FIREBASE_ADMIN_PROJECT_ID` | Project ID de Firebase Admin SDK. Default `agente-entrevistador-ia`; puede sobreescribirse via GitHub Secret para multi-project.                                             | No        |
+| `OPENAI_API_KEY`            | API key de OpenAI (si las CFs la consumen)                                                                                                                                   | No        |
 
-> **Variables de runtime adicionales (no son secrets, se hardcodean en
-> el workflow):**
+> **Variable de runtime adicional (no es secret, se hardcodea en el
+> workflow):**
 >
 > - `REPOSITORY_DRIVER=firebase` — fija el driver del repositorio de users/orgs
-> - `FIREBASE_ADMIN_PROJECT_ID=agente-entrevistador-ia` — project ID para Firebase Admin SDK
 >
-> Estas se setean en `.github/workflows/main_deploy.yml` directamente,
-> sin pasar por GitHub Secrets, porque son valores no-sensibles.
+> Esta se setea en `.github/workflows/main_deploy.yml` directamente,
+> sin pasar por GitHub Secrets, porque es un valor no-sensible.
 
 > **Generar `SESSION_COOKIE_SECRET`** (una sola vez, mismo valor en
 > local dev y prod):
