@@ -77,31 +77,44 @@ Para detalles ver [.agents/AGENTS.md](.agents/AGENTS.md).
 
 ## Deploy
 
-El deploy a staging/prod se hace via GitHub Actions contra Firebase. Cada
+El deploy a staging/prod se hace via **GitHub Actions** contra Firebase,
+usando **Service Account JSON keys** (no `firebase login:ci` tokens). Cada
 deploy sube **todo el stack** (Hosting + Functions + Firestore + Storage) en
 un solo comando `firebase deploy`.
 
-- **Staging**: automático en cada push a `main` (`deploy-staging.yml`)
-- **Prod**: manual dispatch con `confirm="deploy-prod"` (`deploy-prod.yml`)
+- **Staging** (`admin-platform-staging`): automático en cada push a `main`
+- **Prod** (`admin-platform-prod`): manual dispatch con
+  `environment=prod` (requiere aprobación del GitHub Environment `production`)
 
-### Service Account IAM roles (REQUERIDO para que el deploy funcione)
+Ambos vía `.github/workflows/main_deploy.yml` (un único workflow con
+`workflow_dispatch` para elegir env).
 
-El token de CI representa una Google Cloud Service Account. Para que
-`firebase deploy` pueda subir Hosting, Functions, reglas de Firestore, índices
-y Storage, la SA necesita estos roles en el proyecto GCP:
+### Service Account IAM roles (REQUERIDO)
+
+La SA `github-deploy-agent` necesita estos **5 roles** en cada proyecto
+GCP:
 
 - `roles/firebase.admin` — Hosting + reglas de Firestore + Storage
-- `roles/datastore.admin` — Índices de Firestore
 - `roles/cloudfunctions.admin` — Deploy de Cloud Functions
 - `roles/iam.serviceAccountUser` — Runtime SA de las CFs
 - `roles/cloudbuild.builds.editor` — Cloud Build (CF 2nd gen)
-- `roles/artifactregistry.admin` — Artifact Registry (CF 2nd gen)
-- `roles/run.invoker` — Para que la CF `ssr` reciba tráfico de Hosting
+- `roles/datastore.owner` — Índices y reglas de Firestore
 
-**Habilitar la API de Cloud Resource Manager** (`cloudresourcemanager.googleapis.com`)
-— sin esto el deploy falla al validar permisos.
+**APIs mínimas** (habilitar en cada proyecto antes del primer deploy):
 
-Setup completo paso a paso (gcloud + firebase login:ci + troubleshooting):
-[`docs/CI-CD.md` §Service Account IAM Roles](./docs/CI-CD.md#service-account-iam-roles-crítico-para-deploy).
+```bash
+gcloud services enable \
+  iam.googleapis.com cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com cloudresourcemanager.googleapis.com \
+  cloudfunctions.googleapis.com run.googleapis.com \
+  firebasehosting.googleapis.com firestore.googleapis.com \
+  firebase.googleapis.com storage-api.googleapis.com \
+  identitytoolkit.googleapis.com \
+  --project <project>
+```
+
+Setup completo paso a paso (creación de SA, JSON key, GitHub Secrets,
+troubleshooting, mantenimiento de 90 días):
+[`docs/CI-CD.md` §Protocolo de despliegue paso a paso](./docs/CI-CD.md#protocolo-de-despliegue-paso-a-paso).
 | `pnpm format` | Prettier write |
 | `pnpm emulators` | Levanta los emuladores de Firebase |
