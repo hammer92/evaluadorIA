@@ -31,6 +31,16 @@ jobs:
       # Next.js con output: 'export' genera apps/web/out/ estatico (sin SSR).
       # Los NEXT_PUBLIC_* se bakean al bundle en BUILD TIME (no son runtime).
       # Todos son required segun apps/web/env.ts Zod schema.
+      - name: Debug env vars (NEXT_PUBLIC_FIREBASE_*)
+        run: |
+          echo "NEXT_PUBLIC_APP_ENV=${NEXT_PUBLIC_APP_ENV:-UNSET}"
+          echo "NEXT_PUBLIC_FIREBASE_API_KEY length=${#NEXT_PUBLIC_FIREBASE_API_KEY}"
+          echo "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-UNSET}"
+          echo "NEXT_PUBLIC_FIREBASE_PROJECT_ID=${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-UNSET}"
+          echo "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:-UNSET}"
+          echo "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:-UNSET}"
+          echo "NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID:-UNSET}"
+
       - name: Install & Build Web
         run: pnpm build
         env:
