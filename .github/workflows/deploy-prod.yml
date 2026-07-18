@@ -46,19 +46,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
-      - name: Deploy Cloud Functions
-        working-directory: apps/functions
-        run: pnpm exec firebase deploy --only functions --project prod
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_PROD }}
-
-      - name: Deploy Firestore + Storage rules
-        run: pnpm exec firebase deploy --only firestore:rules,storage --project prod
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_PROD }}
-
-      - name: Deploy Firebase Hosting (Next.js SSR)
-        run: pnpm exec firebase deploy --only hosting --project prod
+      - name: Deploy full Firebase stack (Hosting + Functions + Firestore + Storage)
+        run: pnpm exec firebase deploy --only hosting,functions,firestore,storage --project prod
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_PROD }}
 
