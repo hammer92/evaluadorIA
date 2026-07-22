@@ -7,7 +7,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { NAV_ITEMS } from '@/config/constants';
+import { NAV_ITEMS, type NavItem } from '@/config/constants';
+import { useReviewQueue } from '@/features/review/hooks/use-review-hooks';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui-store';
 
@@ -17,6 +18,26 @@ function isItemActive(itemHref: string, pathname: string | null): boolean {
     return pathname === '/admin';
   }
   return pathname === itemHref || pathname.startsWith(`${itemHref}/`);
+}
+
+// Hook para badge counts. Se expone como componente separado para mantener el
+// sidebar component-level clean (no rompe SSR por query que requiere auth).
+function NavItemBadge({ item }: { item: NavItem }) {
+  // Solo admins ven reviewCount badge (ya filtrado por requiredRoles).
+  const { data } = useReviewQueue({ page: 1, pageSize: 1 });
+  if (item.badge === 'reviewCount') {
+    const count = data?.total ?? 0;
+    if (count === 0) return null;
+    return (
+      <span
+        aria-label={`${count} templates esperando revisión`}
+        className="ml-auto rounded-full bg-status-warning px-2 py-0.5 text-label-sm font-bold text-white"
+      >
+        {count}
+      </span>
+    );
+  }
+  return null;
 }
 
 export function Sidebar({ role }: { role: Role }) {
@@ -82,7 +103,12 @@ export function Sidebar({ role }: { role: Role }) {
                   active ? 'text-navy' : 'text-on-surface-variant group-hover:text-navy',
                 )}
               />
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && (
+                <>
+                  <span>{item.label}</span>
+                  <NavItemBadge item={item} />
+                </>
+              )}
             </Link>
           );
         })}
