@@ -20,7 +20,7 @@
     "test:rules": "pnpm --filter @platform/functions test:rules:emulator",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
-    "emulators": "firebase emulators:start --project dev --import ./emulator-data --export-on-exit ./emulator-data",
+    "emulators": "firebase emulators:start --project admin-platform-dev --import ./emulator-data --export-on-exit ./emulator-data",
     "emulators:detach": "bash scripts/emulators.sh start-detached",
     "emulators:stop": "bash scripts/emulators.sh stop",
     "emulators:status": "bash scripts/emulators.sh status",

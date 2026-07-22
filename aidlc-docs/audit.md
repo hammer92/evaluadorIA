@@ -1323,3 +1323,40 @@ Pre-commit checks: pnpm typecheck PASS, pnpm test 217/217 PASS, pnpm lint FAIL e
 - ✅ PR #B MERGED (8 integration tests + schema fix)
 - ✅ PR #C MERGED (firestore.rules.spec.ts full matrix 37 tests)
 - ⏳ Pendiente: PR #D (CI integration: ci.yml + scripts)
+
+## CORS local dev fix — project ID mismatch
+
+**Timestamp**: 2026-07-22T12:30:00Z
+**User Input**: "hay problema de cors en local" (pasteo error CORS preflight failing)
+**AI Response**: Diagnosed y fixed project ID mismatch entre emulators (`dev`) y client (`admin-platform-dev`).
+**Context**: OPERATIONS - dev environment fix.
+
+**Root cause**:
+
+- `.env` committed tenía `NEXT_PUBLIC_FIREBASE_PROJECT_ID=admin-platform-dev` (default canónico)
+- `pnpm emulators` script en package.json tenía `--project dev` (INCONSISTENTE)
+- `scripts/emulators.sh` default también era `dev` (INCONSISTENTE)
+- `pnpm emulators:test` ya usaba `admin-platform-dev` (CORRECTO)
+
+Cliente llamaba `http://127.0.0.1:5001/admin-platform-dev/us-central1/v1AuthSignUp` → emulator con project `dev` no tenía la function registrada → 404 → CORS preflight sin headers.
+
+**Fix**:
+
+- `package.json` `pnpm emulators`: `--project dev` → `--project admin-platform-dev`
+- `scripts/emulators.sh` PROJECT default: `dev` → `admin-platform-dev`
+
+**Verification**:
+
+- Preflight `OPTIONS http://127.0.0.1:5001/admin-platform-dev/us-central1/v1AuthSignUp` con `Origin: http://localhost:3000` → 204 con `access-control-allow-origin: http://localhost:3000` ✅
+- POST con payload signup → 200 OK con `{uid, role: "admin", isFirstUser: true}` ✅
+- Emulators restarted con project ID correcto, firestore data importada de `./emulator-data`
+
+**Skill activated**: `debugging-and-error-recovery` — root cause analysis (3 hypotheses: stale emulator, missing cors config, project ID mismatch — confirmed #3).
+
+**Lesson learned (consolidated)**:
+
+1. Cuando firebase CFs devuelven 404 para OPTIONS, NO es CORS — es que la función no está registrada bajo ese project ID. Revisar project ID match entre emulators y NEXT_PUBLIC_FIREBASE_PROJECT_ID primero.
+2. El `cors: [...]` option de `onCall` solo aplica si la función ESTÁ registrada; un 404 no llega al handler de CORS.
+3. `pnpm emulators` vs `pnpm emulators:test` deben usar el mismo project ID que el cliente (`admin-platform-dev`) para evitar surprises.
+
+---

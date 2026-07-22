@@ -10,7 +10,7 @@
 set -euo pipefail
 
 LOG_FILE="${FIREBASE_EMULATORS_LOG:-/tmp/opencode/firebase-emulators.log}"
-PROJECT="${FIREBASE_PROJECT:-dev}"
+PROJECT="${FIREBASE_PROJECT:-admin-platform-dev}"
 
 cmd_start_detached() {
   mkdir -p "$(dirname "$LOG_FILE")"
