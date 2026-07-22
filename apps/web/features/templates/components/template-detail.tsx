@@ -13,6 +13,8 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRole } from '@/features/auth/components/role-provider';
+import { ReviewDecisionPanel } from '@/features/review/components/review-decision-panel';
+import { SubmitForReviewButton } from '@/features/review/components/submit-for-review-button';
 import { ReviewHistoryList } from '@/features/templates/components/review-history-list';
 import { TemplateActionBar } from '@/features/templates/components/template-action-bar';
 import { TemplateFormModal } from '@/features/templates/components/template-form-modal';
@@ -73,6 +75,11 @@ export function TemplateDetail({ templateId }: { templateId: string }) {
       (role === 'recruiter' &&
         (template.status === 'draft' || template.status === 'changes_requested')));
   const canDelete = !isDeleted && role === 'admin';
+  const canSubmitForReview =
+    !isDeleted &&
+    role === 'recruiter' &&
+    (template.status === 'draft' || template.status === 'changes_requested');
+  const canReview = !isDeleted && role === 'admin' && template.status === 'in_review';
 
   return (
     <div className="space-y-stack-lg">
@@ -103,14 +110,26 @@ export function TemplateDetail({ templateId }: { templateId: string }) {
               <span>Versión {template.createdAt && formatDate(template.createdAt)}</span>
             </div>
           </div>
-          <TemplateActionBar
-            template={template}
-            canEdit={canEdit}
-            canDelete={canDelete}
-            onEdit={() => setEditing(true)}
-          />
+          <div className="flex flex-wrap items-center gap-stack-sm">
+            <TemplateActionBar
+              template={template}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              onEdit={() => setEditing(true)}
+            />
+            {canSubmitForReview && <SubmitForReviewButton templateId={template.templateId} />}
+          </div>
         </div>
       </div>
+
+      {canReview && (
+        <ReviewDecisionPanel
+          templateId={template.templateId}
+          onEditAndApprove={() => {
+            /* Wired up in Slice 5 (ExpertEditModal integration). */
+          }}
+        />
+      )}
 
       <Tabs defaultValue="overview">
         <TabsList>
