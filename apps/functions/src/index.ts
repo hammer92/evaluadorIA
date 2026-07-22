@@ -2,10 +2,11 @@
 // Firebase Cloud Functions (v2) — entrypoint (SDD-06).
 // =============================================================================
 // Estructura:
-//   v1/auth/    — endpoints de autenticación (sign-up público)
-//   v1/users/   — endpoints de usuarios (admin)
-//   v1/reports/ — endpoints de generación de reportes
-//   shared/     — wrappers reutilizables (onCallAuth, validateInput, etc.)
+//   v1/auth/       — endpoints de autenticación (sign-up público)
+//   v1/users/      — endpoints de usuarios (admin)
+//   v1/reports/    — endpoints de generación de reportes
+//   v1/templates/  — endpoints de templates de exámenes (SDD-10)
+//   shared/        — wrappers reutilizables (onCallAuth, validateInput, etc.)
 //
 // Naming convention: <v1DomainAction> (camelCase) — el nombre del export
 // es el nombre de la función desplegada.
@@ -27,6 +28,16 @@ export { v1UsersDelete } from './v1/users/delete-user.js';
 
 // v1/reports
 export { v1ReportsGenerate } from './v1/reports/generate-report.js';
+
+// v1/templates (SDD-10)
+export { v1TemplatesCreate } from './v1/templates/create-template.js';
+export { v1TemplatesGet } from './v1/templates/get-template.js';
+export { v1TemplatesList } from './v1/templates/list-templates.js';
+export { v1TemplatesUpdate } from './v1/templates/update-template.js';
+export { v1TemplatesDelete } from './v1/templates/delete-template.js';
+export { v1TemplatesTransition } from './v1/templates/transition-template.js';
+export { v1TemplatesExpertEdit } from './v1/templates/expert-edit-template.js';
+export { v1TemplatesGetReviewHistory } from './v1/templates/get-review-history.js';
 
 // Utility (no se deploya como endpoint — uso interno desde otras CFs)
 export { setUserRole } from './v1/users/set-role.js';

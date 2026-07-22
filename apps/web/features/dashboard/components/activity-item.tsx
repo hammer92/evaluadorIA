@@ -16,6 +16,16 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   'auth.phone_login': 'inició sesión por teléfono',
   'auth.phone_otp_requested': 'solicitó código OTP por teléfono',
   'auth.phone_otp_failed': 'falló al verificar código OTP',
+  'template.created': 'creó el template',
+  'template.submitted': 'envió el template a revisión',
+  'template.approved': 'aprobó el template',
+  'template.rejected': 'rechazó el template',
+  'template.changes_requested': 'solicitó cambios en el template',
+  'template.resubmitted': 'reenvió el template a revisión',
+  'template.reopened': 'reabrió el template como borrador',
+  'template.deleted': 'archivó el template',
+  'template.edited': 'editó el template',
+  'template.expert_edited': 'ajustó parámetros técnicos del template',
 };
 
 const ACTION_TONE: Record<AuditAction, 'info' | 'success' | 'warning' | 'error' | 'neutral'> = {
@@ -32,6 +42,16 @@ const ACTION_TONE: Record<AuditAction, 'info' | 'success' | 'warning' | 'error' 
   'auth.phone_login': 'neutral',
   'auth.phone_otp_requested': 'info',
   'auth.phone_otp_failed': 'error',
+  'template.created': 'success',
+  'template.submitted': 'info',
+  'template.approved': 'success',
+  'template.rejected': 'error',
+  'template.changes_requested': 'warning',
+  'template.resubmitted': 'info',
+  'template.reopened': 'info',
+  'template.deleted': 'error',
+  'template.edited': 'info',
+  'template.expert_edited': 'info',
 };
 
 const TONE_DOT: Record<'info' | 'success' | 'warning' | 'error' | 'neutral', string> = {
