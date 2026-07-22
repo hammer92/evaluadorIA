@@ -1030,3 +1030,45 @@ Trunk-based workflow validado end-to-end: feature branch -> PR con template -> C
 
 Pre-commit checks: pnpm typecheck PASS, pnpm test 217/217 PASS, pnpm lint FAIL en apps/functions/src/deploy-config.ts (pre-existente, no relacionado con skills — confirmado via git blame commit 0bb7934). Build omitido por cambios solo en .md/.json sin impacto en bundle."
 **Context**: TOOLING - Skills registry + AI-DLC orchestrator update
+
+---
+
+## CI Fix Sprint — PR #19 MERGED
+
+**Timestamp**: 2026-07-22T01:09:00Z
+**User Input**: (PRIORITY 1 — fix CI regression ejecutado)
+**AI Response**: "PR #19 mergeado en main como commit 15a5f82. Eliminé 'REPOSITORY_DRIVER: memory' de los 2 jobs de ci.yml (line 24 + line 121). Diagnóstico: el env a nivel job estaba contaminando apps/functions con el default memory, rompiendo env.test.ts:38 que esperaba 'firebase'. apps/web vitest.config.ts:20 ya tiene su propio env block, así que el workflow-level era redundante. PR #19 CI: lint-typecheck-test-build PASS en 1m30s. Push CI sobre main: lint-typecheck-test-build + coverage PASS, integration-emulator FAIL con 'auth/user-not-found' en verify:rules (pre-existente, mismo error que b38820d). 1 de 2 regresiones cerradas."
+**Context**: OPERATIONS - CI fix PR merged; integration-emulator falla pre-existente pendiente decisión
+
+**Estado del sprint SDD-10**:
+
+- ✅ Workspace Detection
+- ✅ Requirements Analysis (2 desviaciones del SDD §18: OQ-2, OQ-6)
+- ✅ Workflow Planning (6 unidades)
+- ✅ PRIORITY 1 (CI fix) — PARCIALMENTE verde (2/3 jobs)
+- ⏳ Pendiente: decisión sobre integración vs proceed con SDD-10
+
+---
+
+## CI Fix Sprint — PR #20 MERGED (CI 100% verde)
+
+**Timestamp**: 2026-07-22T01:35:00Z
+**User Input**: (PRIORITY 1 segunda parte — fix integration-emulator ejecutado)
+**AI Response**: "PR #20 mergeado en main como commit 177892b. Dos fixes: (1) cambiar --project dev a --project admin-platform-dev en los 4 comandos emulators:\* (root + apps/functions/test:emulator) — root cause del auth/user-not-found en verify:rules; singleProjectMode no coerca project IDs en runtime, el auth emulator usa el configurado. (2) remover step 'pnpm emulators:auth' de ci.yml — script/verify-auth.ts importa modulos eliminados en commit 1a363e6 (jose-utils, v1AuthCreateSession, verifySessionCookie) cuando el refactor static-export removio la arquitectura session-cookie+middleware. Script queda en disco para historial, cleanup deferido.
+
+**Resultado CI post-merge run #29883295319 sobre 177892b**:
+
+- integration-emulator: ✅ success (verify:rules 25/25 + emulators:test 18/18)
+- lint-typecheck-test-build: ✅ success
+- coverage: ✅ success
+
+**Main verde 100% antes de arrancar SDD-10** ✅"
+**Context**: OPERATIONS - CI 100% verde, listo para iniciar SDD-10
+
+**Estado del sprint SDD-10**:
+
+- ✅ Workspace Detection
+- ✅ Requirements Analysis (2 desviaciones del SDD §18: OQ-2, OQ-6)
+- ✅ Workflow Planning (6 unidades)
+- ✅ PRIORITY 1 — CI fix CI: PR #19 + PR #20 mergeados, main verde
+- ⏳ Pendiente: arrancar CONSTRUCTION phase — feat/sdd-10-templates-admin
