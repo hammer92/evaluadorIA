@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { roleSchema } from './common';
+import { roleSchema } from './common.js';
 
 // =============================================================================
 // Templates schema — SDD-10
