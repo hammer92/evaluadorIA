@@ -86,9 +86,73 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ============ TEMPLATES (technical test recipes) ============
-    // TODO Sprint futuro (SDD-10 templates): crear reglas cuando se agregue la colección.
-    // Por ahora referenciar la matriz del ADR-0006.
+    // ============ TEMPLATES (SDD-10 §9.1) ============
+    // Multi-tenant: cada template pertenece a una organización. Filtrado por
+    // organizationId del custom claim. Defense in depth con CFs (que ya
+    // validan rol + estado en transition-template).
+    // =====================================================================
+    //   admin     → CRUD completo en su org
+    //   expert    → READ cualquier estado; UPDATE solo si status='in_review'
+    //               y solo campos técnicos (recipes)
+    //   recruiter → READ solo si status='approved' y deleted_at==null
+    // =====================================================================
+    match /organizations/{orgId}/templates/{templateId} {
+      // Lectura: defensa en profundidad (CF también re-valida via canViewTemplate).
+      //   - admin y expert: cualquier template no-archivado de su org
+      //   - recruiter: solo approved y no-archivado
+      //   - deleted_at != null: solo admin
+      allow read: if isSignedIn() && isMemberOfOrg(orgId) && (
+        hasAnyRole(['admin', 'expert'])
+        || (hasRole('recruiter')
+            && resource.data.status == 'approved'
+            && resource.data.deleted_at == null)
+        || (resource.data.deleted_at != null && hasRole('admin'))
+      );
+
+      // List: misma lógica que read (Firestore evalúa por-doc).
+      allow list: if isSignedIn() && isMemberOfOrg(orgId) && (
+        hasAnyRole(['admin', 'expert'])
+        || hasRole('recruiter')
+      );
+
+      // Crear: solo admin. Status inicial DEBE ser 'draft'.
+      // El cliente NUNCA debería crear templates (es Cloud Function),
+      // pero bloqueamos igual para defense in depth.
+      allow create: if isSignedIn() && isMemberOfOrg(orgId) && hasRole('admin')
+        && request.resource.data.status == 'draft'
+        && request.resource.data.organization_id == orgId
+        && request.resource.data.created_by == request.auth.uid;
+
+      // Update: depende del rol y estado (state machine).
+      //   - admin: solo si status in ['draft', 'changes_requested'],
+      //     Y NO puede cambiar status via update directo (eso solo via
+      //     Cloud Function para tener audit).
+      //   - expert: solo si status='in_review', Y solo campos 'recipes' o
+      //     'updated_at' (NO name/desc/niche/timeLimitMinutes/maxRetries).
+      allow update: if isSignedIn() && isMemberOfOrg(orgId) && (
+        (hasRole('admin')
+          && (resource.data.status == 'draft' || resource.data.status == 'changes_requested')
+          && resource.data.status == request.resource.data.status)
+        || (hasRole('expert')
+          && resource.data.status == 'in_review'
+          && request.resource.data.status == 'in_review'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipes', 'updated_at']))
+      );
+
+      // Delete (soft): solo admin. Hard delete bloqueado (deleted_at only).
+      allow delete: if isSignedIn() && isMemberOfOrg(orgId) && hasRole('admin');
+
+      // Sub-colección de reviews: append-only desde Cloud Functions.
+      match /reviews/{reviewId} {
+        allow read: if isSignedIn() && isMemberOfOrg(orgId) && (
+          hasAnyRole(['admin', 'expert'])
+          || (hasRole('recruiter')
+              && get(/databases/$(database)/documents/organizations/$(orgId)/templates/$(templateId)).data.status == 'approved')
+        );
+        // Escritura: NUNCA desde cliente. Solo Cloud Functions (Admin SDK bypassa).
+        allow write: if false;
+      }
+    }
 
     // ============ Helpers ============
     function isSignedIn() {
