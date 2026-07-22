@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRole } from '@/features/auth/components/role-provider';
+import { ExpertEditModal } from '@/features/review/components/expert-edit-modal';
 import { ReviewDecisionPanel } from '@/features/review/components/review-decision-panel';
 import { SubmitForReviewButton } from '@/features/review/components/submit-for-review-button';
 import { ReviewHistoryList } from '@/features/templates/components/review-history-list';
@@ -35,6 +36,7 @@ export function TemplateDetail({ templateId }: { templateId: string }) {
   const { data: template, isLoading, isError, error } = useTemplate(templateId);
   const { data: history } = useReviewHistory(templateId);
   const [editing, setEditing] = useState(false);
+  const [expertEditing, setExpertEditing] = useState(false);
   const role = useRole();
 
   if (isLoading) {
@@ -125,9 +127,7 @@ export function TemplateDetail({ templateId }: { templateId: string }) {
       {canReview && (
         <ReviewDecisionPanel
           templateId={template.templateId}
-          onEditAndApprove={() => {
-            /* Wired up in Slice 5 (ExpertEditModal integration). */
-          }}
+          onEditAndApprove={() => setExpertEditing(true)}
         />
       )}
 
@@ -247,6 +247,13 @@ export function TemplateDetail({ templateId }: { templateId: string }) {
         mode="edit"
         template={template}
       />
+      {canReview && (
+        <ExpertEditModal
+          template={template}
+          open={expertEditing}
+          onOpenChange={(o) => !o && setExpertEditing(false)}
+        />
+      )}
     </div>
   );
 }
