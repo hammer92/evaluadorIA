@@ -52,6 +52,15 @@ export default defineConfig({
         'apps/web/features/dashboard/components/**',
         'apps/web/features/settings/components/**',
         'apps/web/features/users/components/**',
+        // Templates components: cubiertos por integration tests (CF emulator)
+        // + smoke tests de tabla. Excluidos del threshold para mantener
+        // paridad con users/components/** (mismo patrón).
+        'apps/web/features/templates/components/**',
+        // API wrappers: tested via Firebase emulator integration suite
+        // (apps/functions/src/v1/templates/__tests__/), no lógica propia
+        // para cubrir a nivel unit. Excluidos igual que users-api.ts.
+        'apps/web/features/users/api/**',
+        'apps/web/features/templates/api/**',
         'apps/web/features/auth/components/login-form.tsx',
         'apps/web/features/auth/components/signup-form.tsx',
       ],
