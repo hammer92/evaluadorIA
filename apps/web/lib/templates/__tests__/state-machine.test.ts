@@ -1,6 +1,5 @@
-import type { Role, TemplateStatus } from '@shared/schemas/templates';
-import { describe, expect, it } from 'vitest';
-
+import type { Role } from '@shared/schemas/common';
+import type { TemplateStatus } from '@shared/schemas/templates';
 import {
   TEMPLATE_TRANSITIONS,
   canEdit,
@@ -10,7 +9,8 @@ import {
   getTransition,
   isExpertApprovingOwnTemplate,
   validateTransition,
-} from '../state-machine';
+} from '@shared/state-machines/templates';
+import { describe, expect, it } from 'vitest';
 
 // =============================================================================
 // State machine tests — SDD-10 §14.1
@@ -176,7 +176,7 @@ describe('state machine', () => {
 
   describe('canEdit', () => {
     const baseTemplate = {
-      status: 'draft' as TemplateStatus,
+      status: 'draft' as TemplateStatus as TemplateStatus,
       deletedAt: null as Date | null,
     };
 
@@ -190,27 +190,30 @@ describe('state machine', () => {
     });
 
     it('admin puede editar en changes_requested', () => {
-      const r = canEdit({ ...baseTemplate, status: 'changes_requested' }, 'admin');
+      const r = canEdit(
+        { ...baseTemplate, status: 'changes_requested' as TemplateStatus },
+        'admin',
+      );
       expect(r.canEdit).toBe(true);
     });
 
     it('admin NO puede editar en in_review', () => {
-      const r = canEdit({ ...baseTemplate, status: 'in_review' }, 'admin');
+      const r = canEdit({ ...baseTemplate, status: 'in_review' as TemplateStatus }, 'admin');
       expect(r.canEdit).toBe(false);
     });
 
     it('admin NO puede editar en approved', () => {
-      const r = canEdit({ ...baseTemplate, status: 'approved' }, 'admin');
+      const r = canEdit({ ...baseTemplate, status: 'approved' as TemplateStatus }, 'admin');
       expect(r.canEdit).toBe(false);
     });
 
     it('admin NO puede editar en rejected', () => {
-      const r = canEdit({ ...baseTemplate, status: 'rejected' }, 'admin');
+      const r = canEdit({ ...baseTemplate, status: 'rejected' as TemplateStatus }, 'admin');
       expect(r.canEdit).toBe(false);
     });
 
     it('expert puede editar recipes en in_review', () => {
-      const r = canEdit({ ...baseTemplate, status: 'in_review' }, 'expert');
+      const r = canEdit({ ...baseTemplate, status: 'in_review' as TemplateStatus }, 'expert');
       expect(r.canEdit).toBe(true);
       if (r.canEdit) {
         expect(r.editableFields).toEqual(['recipes']);
@@ -219,12 +222,12 @@ describe('state machine', () => {
     });
 
     it('expert NO puede editar en draft', () => {
-      const r = canEdit({ ...baseTemplate, status: 'draft' }, 'expert');
+      const r = canEdit({ ...baseTemplate, status: 'draft' as TemplateStatus }, 'expert');
       expect(r.canEdit).toBe(false);
     });
 
     it('expert NO puede editar en approved', () => {
-      const r = canEdit({ ...baseTemplate, status: 'approved' }, 'expert');
+      const r = canEdit({ ...baseTemplate, status: 'approved' as TemplateStatus }, 'expert');
       expect(r.canEdit).toBe(false);
     });
 
@@ -244,23 +247,34 @@ describe('state machine', () => {
 
   describe('canViewTemplate', () => {
     const baseTemplate = {
-      status: 'draft' as TemplateStatus,
+      status: 'draft' as TemplateStatus as TemplateStatus,
       deletedAt: null as Date | null,
     };
 
     it('recruiter ve approved pero no draft', () => {
-      expect(canViewTemplate({ ...baseTemplate, status: 'approved' }, 'recruiter')).toBe(true);
-      expect(canViewTemplate({ ...baseTemplate, status: 'draft' }, 'recruiter')).toBe(false);
+      expect(
+        canViewTemplate({ ...baseTemplate, status: 'approved' as TemplateStatus }, 'recruiter'),
+      ).toBe(true);
+      expect(
+        canViewTemplate({ ...baseTemplate, status: 'draft' as TemplateStatus }, 'recruiter'),
+      ).toBe(false);
     });
 
     it('recruiter ve changes_requested (no approved) → false', () => {
-      expect(canViewTemplate({ ...baseTemplate, status: 'changes_requested' }, 'recruiter')).toBe(
-        false,
-      );
+      expect(
+        canViewTemplate(
+          { ...baseTemplate, status: 'changes_requested' as TemplateStatus },
+          'recruiter',
+        ),
+      ).toBe(false);
     });
 
     it('recruiter NO ve templates con deletedAt', () => {
-      const t = { ...baseTemplate, status: 'approved' as TemplateStatus, deletedAt: new Date() };
+      const t = {
+        ...baseTemplate,
+        status: 'approved' as TemplateStatus as TemplateStatus,
+        deletedAt: new Date(),
+      };
       expect(canViewTemplate(t, 'recruiter')).toBe(false);
     });
 

@@ -6,7 +6,7 @@ module.exports = {
     ]],
     'scope-enum': [1, 'always', [
       'web', 'functions', 'shared', 'auth', 'users', 'orgs', 'audit', 'reports',
-      'tooling', 'ci', 'docs', 'deps', 'aidlc',
+      'templates', 'tooling', 'ci', 'docs', 'deps', 'aidlc',
     ]],
   },
 };

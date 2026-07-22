@@ -1,12 +1,17 @@
-import { type Role, type TemplateStatus, type ReviewAction } from '@shared/schemas/templates';
+import type { Role } from '../schemas/common.js';
+import { type TemplateStatus, type ReviewAction } from '../schemas/templates.js';
 
 // =============================================================================
 // Template state machine — SDD-10 §5
 // =============================================================================
-// Lógica pura, sin dependencias de Next/Firebase. Consumida por:
-// - apps/functions/src/v1/templates/transition-template.ts (server-side)
+// Lógica pura, sin dependencias de Next/Firebase. Compartida entre:
+// - apps/functions/src/v1/templates/transition-template.ts (server-side validation)
 // - apps/web/features/templates/components/* (UI gating)
 // - apps/web/features/templates/hooks/use-* (UX optimistics)
+//
+// Vive en @platform/shared para evitar duplicación entre apps/web y
+// apps/functions, y para que ambos workspaces la compilen desde el mismo
+// archivo (rootDir de apps/functions no permite importar apps/web).
 // =============================================================================
 
 export interface Transition {

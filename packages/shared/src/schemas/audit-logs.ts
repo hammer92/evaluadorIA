@@ -21,6 +21,16 @@ export const auditActionSchema = z.enum([
   'auth.phone_login',
   'auth.phone_otp_requested',
   'auth.phone_otp_failed',
+  'template.created',
+  'template.submitted',
+  'template.approved',
+  'template.rejected',
+  'template.changes_requested',
+  'template.resubmitted',
+  'template.reopened',
+  'template.deleted',
+  'template.edited',
+  'template.expert_edited',
 ]);
 export type AuditAction = z.infer<typeof auditActionSchema>;
 

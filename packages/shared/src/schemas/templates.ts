@@ -1,10 +1,6 @@
 import { z } from 'zod';
 
-import { roleSchema, type Role } from './common';
-
-// Re-export Role para conveniencia de los consumidores de templates.ts.
-// La fuente canonical sigue siendo `common.ts`.
-export type { Role };
+import { roleSchema } from './common';
 
 // =============================================================================
 // Templates schema — SDD-10
