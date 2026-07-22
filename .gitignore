@@ -76,15 +76,3 @@ yarn-error.log*
 .obsidian/
 sdd-package.zip
 .husky/_/
-
-# AI agent tooling (per-agent config, no value to commit)
-# MCP servers — Chrome DevTools, Playwright, etc.
-# Config vive en `.mcp.json` (gitignored). Plantilla de referencia: ninguno.
-.mcp.json
-.opencode/
-.cursor/
-.claude/
-.ai/
-
-# Sourced https://github.com/github/gitignore/blob/main/Global/AI.gitignore
-# (sin entries de secrets — ya cubiertos arriba con `.secret.local`)
