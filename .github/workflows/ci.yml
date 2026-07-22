@@ -96,6 +96,9 @@ jobs:
         run: npm install -g firebase-tools@13
 
       - name: Integration tests (Cloud Functions vs emulators)
+        # Combina integration tests (CFs vs emuladores) + firestore rules spec
+        # (templates full matrix via @firebase/rules-unit-testing). Ambos corren
+        # contra el mismo firestore emulator que arranca emulators:exec.
         run: pnpm emulators:test
 
       - name: Rules verification (firestore + storage vs emulators)
