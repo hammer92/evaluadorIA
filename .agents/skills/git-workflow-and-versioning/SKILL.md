@@ -168,6 +168,17 @@ Every AI-DLC workflow (each SDD or sprint) MUST end with a git commit. The commi
 | Mid-sprint housekeeping (refactor only)         | Optional, but encouraged                             |
 | Pure documentation update inside `aidlc-docs/`  | Optional                                             |
 
+### Skill activation discipline (mandatory pre-condition)
+
+Before staging any change in this repository, the agent MUST have activated the MANDATORY skills listed in the AI-DLC matrix at `.agents/skills/ai-dlc/SKILL.md` §3 for the phase and unit being committed. Specifically:
+
+- `code-review-and-quality` — every commit passes the 5-axis review before staging. Loading the skill once at workflow start and never re-reading it is not compliance; each change must be reviewed against its rules.
+- `git-workflow-and-versioning` — this skill, loaded for every commit by definition.
+- `security-and-hardening` — required when the change touches auth, input, data storage, webhooks, third-party APIs, or LLM features.
+- `debugging-and-error-recovery` — required when `pnpm test`/`pnpm typecheck`/`pnpm build` fail, even if the agent already knows the fix. The skill's reproduce→localize→fix→guard discipline prevents regressions that ad-hoc fixes introduce.
+
+The activation protocol — discovery, activation, log, re-discovery on scope shift, explicit opt-out — is the same one the orchestrator uses. See `.agents/skills/using-agent-skills/SKILL.md` for the canonical reference. A commit whose activation log is empty or incomplete is a process violation even if the diff itself is correct.
+
 ### Commit message format (Conventional Commits enforced by commitlint)
 
 ```text

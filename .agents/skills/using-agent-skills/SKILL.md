@@ -139,6 +139,18 @@ These are the subtle errors that look like productivity but create problems:
 
 4. **When in doubt, start with a spec.** If the task is non-trivial and there's no spec, begin with `spec-driven-development`.
 
+## Mandatory Activation Protocol
+
+The AI-DLC orchestrator (`.agents/skills/ai-dlc/SKILL.md`) calls this skill at workflow start and at every phase boundary. The protocol that the orchestrator follows is:
+
+1. **Discover** — Run the discovery tree above. Identify which skill(s) apply to the current intent, phase, and unit.
+2. **Activate** — Issue `skill: <name>` for each applicable skill. Activation = loading the skill's `SKILL.md` and following its process end-to-end (steps, checklists, decision trees). Loading without applying is not activation.
+3. **Log** — Record the activation in `aidlc-docs/audit.md` with timestamp, skill name, and the reason it applies. Skipping the log is a process violation.
+4. **Re-discover** — Re-run the discovery tree whenever the scope shifts (new phase, new unit, new feature area). The skill that applied five minutes ago may not apply now.
+5. **Opt-out explicitly** — If a skill listed in the AI-DLC matrix as MANDATORY does not apply, log it as "loaded but not applied: <reason>". Implicit opt-out (silently skipping) is a violation.
+
+A common failure mode: the agent loads `SKILL.md` to "justify" a decision it has already made, then proceeds without following the skill's process. That is post-hoc rationalization, not activation. The skill must shape the work, not just decorate it.
+
 ## Lifecycle Sequence
 
 For a complete feature, the typical skill sequence is:
