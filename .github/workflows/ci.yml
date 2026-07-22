@@ -21,7 +21,6 @@ jobs:
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci.appspot.com
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '0'
       NEXT_PUBLIC_FIREBASE_APP_ID: '1:0:web:0'
-      REPOSITORY_DRIVER: memory
       SESSION_COOKIE_SECRET: ci-secret-must-be-at-least-32-characters-long-for-hs256
     steps:
       - uses: actions/checkout@v4
@@ -118,7 +117,6 @@ jobs:
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci.appspot.com
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '0'
       NEXT_PUBLIC_FIREBASE_APP_ID: '1:0:web:0'
-      REPOSITORY_DRIVER: memory
       SESSION_COOKIE_SECRET: ci-secret-must-be-at-least-32-characters-long-for-hs256
     steps:
       - uses: actions/checkout@v4
