@@ -56,11 +56,14 @@ export default defineConfig({
         // + smoke tests de tabla. Excluidos del threshold para mantener
         // paridad con users/components/** (mismo patrón).
         'apps/web/features/templates/components/**',
+        // Review components: mismos criterios que templates/components.
+        'apps/web/features/review/components/**',
         // API wrappers: tested via Firebase emulator integration suite
         // (apps/functions/src/v1/templates/__tests__/), no lógica propia
         // para cubrir a nivel unit. Excluidos igual que users-api.ts.
         'apps/web/features/users/api/**',
         'apps/web/features/templates/api/**',
+        'apps/web/features/review/api/**',
         'apps/web/features/auth/components/login-form.tsx',
         'apps/web/features/auth/components/signup-form.tsx',
       ],
