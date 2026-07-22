@@ -11,21 +11,22 @@ export default defineConfig({
     // --exclude flag (ver package.json).
     include: ['src/**/*.test.ts'],
     passWithNoTests: true,
-    // Per-file worker pool (singleFork: false). Cada test file corre en su
-    // propio fork con firebase-admin/app fresco. Elimina el shared state
-    // entre archivos que rompía los 2 intentos previos de templates
-    // (commit 2ff7145: "Unknown Error: There is no user record corresponding
-    // to the provided identifier").
+    // Single fork (secuencial) para integration tests existentes y futuros.
+    // Cada test file corre en orden dentro del mismo worker, evitando race
+    // conditions sobre el estado compartido del firestore + auth emulator.
     //
-    // Unit tests no tienen shared state issue (no se conectan a emuladores),
-    // pero pagan el costo de startup de worker per-file. Trade-off aceptable
-    // para desbloquear los integration tests de templates.
+    // El commit 2ff7145 (templates integration tests deferidos) atribuyó
+    // el conflicto a "shared state entre test files via firebase-admin
+    // singleton". La raíz real fue race conditions entre workers paralelos:
+    // sign-up (bootstrap admin) chocaba con create-user (admin existente).
+    // Confirmado en CI run #29889573206.
     //
-    // Nota: vitest 2.x no soporta `poolMatchGlobs` con object config (solo
-    // string pool names). Probado en commit 3c36780: TypeError en pathe.
-    // Solución: singleFork:false top-level.
+    // Los nuevos templates integration tests (PR #B) usarán los helpers de
+    // `__tests__/helpers/integration-setup.ts` (cleanup determinístico en
+    // afterAll + beforeAll) para mantener el estado limpio sin depender de
+    // workers aislados.
     pool: 'forks',
-    poolOptions: { forks: { singleFork: false } },
+    poolOptions: { forks: { singleFork: true } },
     setupFiles: ['./vitest.setup.ts'],
     env: {
       NEXT_PUBLIC_APP_ENV: 'dev',
