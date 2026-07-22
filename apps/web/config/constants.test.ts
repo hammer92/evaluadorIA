@@ -3,9 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { NAV_ITEMS, ROLES } from './constants';
 
 describe('NAV_ITEMS', () => {
-  it('expone 3 entradas (Dashboard, Usuarios, Settings)', () => {
-    expect(NAV_ITEMS).toHaveLength(3);
-    expect(NAV_ITEMS.map((i) => i.label)).toEqual(['Dashboard', 'Usuarios', 'Settings']);
+  it('expone 5 entradas (Dashboard, Templates, Revisión, Usuarios, Settings)', () => {
+    expect(NAV_ITEMS).toHaveLength(5);
+    expect(NAV_ITEMS.map((i) => i.label)).toEqual([
+      'Dashboard',
+      'Templates',
+      'Revisión',
+      'Usuarios',
+      'Settings',
+    ]);
   });
 
   it('cada item tiene href, label e icon', () => {
@@ -21,6 +27,19 @@ describe('NAV_ITEMS', () => {
     const dashboard = NAV_ITEMS.find((i) => i.label === 'Dashboard');
     expect(dashboard?.href).toBe('/admin');
     expect(dashboard?.requiredRoles).toBeUndefined();
+  });
+
+  it('Templates requiere admin o recruiter', () => {
+    const templates = NAV_ITEMS.find((i) => i.label === 'Templates');
+    expect(templates?.href).toBe('/admin/templates');
+    expect(templates?.requiredRoles).toEqual(['admin', 'recruiter']);
+  });
+
+  it('Revisión requiere admin y tiene badge reviewCount', () => {
+    const review = NAV_ITEMS.find((i) => i.label === 'Revisión');
+    expect(review?.href).toBe('/admin/review');
+    expect(review?.requiredRoles).toEqual(['admin']);
+    expect(review?.badge).toBe('reviewCount');
   });
 
   it('Usuarios requiere admin o recruiter', () => {

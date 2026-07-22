@@ -64,6 +64,9 @@ export default defineConfig({
         'apps/web/features/users/api/**',
         'apps/web/features/templates/api/**',
         'apps/web/features/review/api/**',
+        // Dev-only UserSwitcher: gated por NODE_ENV, no se incluye en prod.
+        // Excluido del threshold (mismo patrón que login-form.tsx/signup-form.tsx).
+        'apps/web/features/dev/components/**',
         'apps/web/features/auth/components/login-form.tsx',
         'apps/web/features/auth/components/signup-form.tsx',
       ],
