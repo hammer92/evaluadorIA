@@ -9,7 +9,7 @@ export default defineConfig({
     // Los integration tests se incluyen vía filtro posicional
     // (e.g. `vitest run integration`). El script `test` los excluye via
     // --exclude flag (ver package.json).
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
     passWithNoTests: true,
     // Single fork (secuencial) para integration tests existentes y futuros.
     // Cada test file corre en orden dentro del mismo worker, evitando race
@@ -25,6 +25,10 @@ export default defineConfig({
     // `__tests__/helpers/integration-setup.ts` (cleanup determinístico en
     // afterAll + beforeAll) para mantener el estado limpio sin depender de
     // workers aislados.
+    //
+    // NOTA: firestore.rules.spec.ts (PR #C) levanta su propio TestEnvironment
+    // via @firebase/rules-unit-testing. La exclusion se hace por nombre de
+    // archivo (no por extension) para que `pnpm test` no levante el emulador.
     pool: 'forks',
     poolOptions: { forks: { singleFork: true } },
     setupFiles: ['./vitest.setup.ts'],
