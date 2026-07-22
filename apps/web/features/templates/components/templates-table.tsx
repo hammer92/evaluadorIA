@@ -72,7 +72,7 @@ export function TemplatesTable({
       ),
       cell: ({ row }) => (
         <Link
-          href={`/admin/templates/${row.original.templateId}`}
+          href={`/admin/templates/detail?templateId=${row.original.templateId}`}
           className="font-medium text-navy hover:underline"
         >
           {row.original.name}
@@ -146,7 +146,7 @@ export function TemplatesTable({
               <DropdownMenuLabel>Acciones</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href={`/admin/templates/${template.templateId}`}>
+                <Link href={`/admin/templates/detail?templateId=${template.templateId}`}>
                   <Eye className="mr-2 h-4 w-4" />
                   Ver detalle
                 </Link>

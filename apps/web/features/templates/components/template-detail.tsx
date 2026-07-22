@@ -80,7 +80,7 @@ export function TemplateDetail({ templateId }: { templateId: string }) {
         <Button asChild variant="ghost" size="sm" className="mb-2 -ml-2">
           <Link href="/admin/templates">
             <ArrowLeft className="mr-1 h-4 w-4" />
-            Templates
+            Volver al listado
           </Link>
         </Button>
         <div className="flex flex-wrap items-start justify-between gap-stack-md">
