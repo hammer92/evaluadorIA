@@ -1019,3 +1019,14 @@ Resultado final CI on main (run 29620485646, 3m10s):
 
 Trunk-based workflow validado end-to-end: feature branch -> PR con template -> CI checks passing -> squash merge -> branch auto-delete -> CI en main verde."
 **Context**: OPERATIONS - CI stabilization complete
+
+---
+
+## Skills Update — Configuration
+
+**Timestamp**: 2026-07-22T00:46:13Z
+**User Input**: "realiza commit de la actualizacion de skills"
+**AI Response**: "Integrados 14 skills de ingenieria bajo .agents/skills/ mas el orquestador ai-dlc y el meta-skill using-agent-skills. Cambios: (1) ai-dlc/SKILL.md orquesta los skills por fase AI-DLC (Inception/Construction/Operations/Cross-cutting); (2) AGENTS.md reducido a 31 lineas con la politica git eliminada (movida al skill git-workflow-and-versioning como fuente unica de verdad); (3) git-workflow-and-versioning/SKILL.md ahora contiene tanto la mecanica git generica como la AI-DLC Project Git Policy (mandatory) con tipos/scopes/footer SDD/secuencia de cierre/hooks/ops prohibidas/recovery; (4) todos los demas skills nuevos sin modificacion.
+
+Pre-commit checks: pnpm typecheck PASS, pnpm test 217/217 PASS, pnpm lint FAIL en apps/functions/src/deploy-config.ts (pre-existente, no relacionado con skills — confirmado via git blame commit 0bb7934). Build omitido por cambios solo en .md/.json sin impacto en bundle."
+**Context**: TOOLING - Skills registry + AI-DLC orchestrator update

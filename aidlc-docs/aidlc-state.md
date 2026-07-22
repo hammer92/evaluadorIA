@@ -337,3 +337,5 @@ Cada SDD o sprint cierra con un commit Conventional Commits. Pre-commit + commit
   - Final CI run on main (29620485646, 3m10s): lint-typecheck-test-build:success + integration-emulator:success + coverage:success
 
 - **Trunk-based workflow end-to-end VALIDATED**: feature branch (`fix/*`) -> PR con template -> CI checks passing -> squash merge via --admin (self-approve workaround) -> branch auto-delete -> CI en main verde.
+
+- **2026-07-22T00:46Z — Skills Registry Update TOOLING**: 15 skills integrados bajo `.agents/skills/` (14 skills de ingenieria + meta `using-agent-skills`), orquestados por `ai-dlc` mapeados a fases Inception/Construction/Operations. AGENTS.md reducido a 31 lineas (politica git movida al skill como fuente unica). Pre-commit: typecheck PASS, test 217/217 PASS; lint falla en `apps/functions/src/deploy-config.ts` (pre-existente, fuera de scope de este workflow).
