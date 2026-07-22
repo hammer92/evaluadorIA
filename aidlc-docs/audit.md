@@ -1123,3 +1123,36 @@ Pre-commit checks: pnpm typecheck PASS, pnpm test 217/217 PASS, pnpm lint FAIL e
 
 - Integration tests contra emuladores para templates (deferido — conflictos de setup con tests existentes; ver commit 2ff7145)
 - Firestore rules tests específicos para templates (extender scripts/verify-rules.ts)
+
+## SDD-10 Backend Gaps Remediation Sprint — INCEPTION
+
+**Timestamp**: 2026-07-22T02:00:00Z
+**User Input**: "usando AI-dlc continua con la siguiente fase de implementacion"
+**AI Response**: "AI-DLC workflow reabierto. Workspace Detection: main `f927107`, PR #21 (1a91d9e) + retro-review (bd195cc) mergeados, CI 100% verde. Requirements Analysis dirigido a los 2 gaps deferidos del sprint anterior: (1) integration tests emulators para templates (commit 2ff7145 removió 2 archivos por shared state conflict), (2) firestore rules unit tests para templates (verify-rules.ts no cubre templates). 4 OQ decisions tomadas con usuario:"
+**Context**: INCEPTION - SDD-10 Backend Gaps Remediation
+
+**OQ decisions**:
+
+- OQ-1 (Integration isolation): A) Per-file worker pool via `poolMatchGlobs` en vitest.config.ts
+- OQ-2 (Rules test pattern): A) `@firebase/rules-unit-testing` oficial
+- OQ-3 (CF coverage scope): 8 CFs (uno por archivo)
+- OQ-4 (Rules coverage scope): Full matrix (~30 escenarios: 3 roles × 5 acciones × 5 estados + review_comments)
+
+**Skills activated** (per AI-DLC Step 3 protocol):
+
+- `using-agent-skills` (meta, workflow start)
+- `security-and-hardening` (MANDATORY INCEPTION, auth/data/storage surface in templates)
+- `debugging-and-error-recovery` (MANDATORY CONSTRUCTION — root-cause the 2ff7145 conflict)
+- `frontend-ui-engineering` (NOT applicable to this sprint — no UI; logged as "loaded but not applied: sprint scope is backend gaps")
+
+**Artifacts created**:
+
+- `aidlc-docs/inception/requirements/requirements-sdd10-gaps.md` (135 líneas, 5 FRs + 5 NFRs + 4 OQ + 4 risks + 11 acceptance criteria)
+- `aidlc-docs/inception/plans/execution-plan-sdd10-gaps.md` (180 líneas, 4 PRs strategy + unit breakdown + verification gates + skills matrix)
+
+**Workflow state**:
+
+- INCEPTION — Workspace Detection: ✅ Complete (lightweight, context from prior sprint)
+- INCEPTION — Requirements Analysis: ✅ Complete (4 OQ approved)
+- INCEPTION — Workflow Planning: ✅ Complete (4 PR plan)
+- ⏳ Approval pending: user confirms plan before CONSTRUCTION starts

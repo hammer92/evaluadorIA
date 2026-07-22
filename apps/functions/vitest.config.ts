@@ -11,12 +11,21 @@ export default defineConfig({
     // --exclude flag (ver package.json).
     include: ['src/**/*.test.ts'],
     passWithNoTests: true,
-    // Integration tests contra emuladores Firebase: correr secuencialmente
-    // (single fork) para evitar race conditions sobre el estado compartido
-    // del firestore + auth emulator. Cada archivo limpia sus users en
-    // beforeAll pero sin singleFork los runs paralelos contaminan el estado.
+    // Unit tests: single fork para velocidad (268 tests, ~3s).
     pool: 'forks',
     poolOptions: { forks: { singleFork: true } },
+    // Integration tests contra emuladores Firebase: per-file worker pool.
+    // Cada `*.integration.test.ts` corre en su propio fork con firebase-admin/app
+    // fresco. Elimina el shared state entre archivos que rompía los 2 intentos
+    // previos de templates (commit 2ff7145: "Unknown Error: There is no user
+    // record corresponding to the provided identifier"). Unit tests siguen en
+    // singleFork para mantener el startup time bajo.
+    poolMatchGlobs: [
+      [
+        '**/*.integration.test.ts',
+        { pool: 'forks', poolOptions: { forks: { singleFork: false } } },
+      ],
+    ],
     setupFiles: ['./vitest.setup.ts'],
     env: {
       NEXT_PUBLIC_APP_ENV: 'dev',
