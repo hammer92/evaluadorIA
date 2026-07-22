@@ -29,9 +29,9 @@
     "verify:auth": "tsx scripts/verify-auth.ts",
     "verify:rules": "tsx scripts/verify-rules.ts",
     "verify:lighthouse": "tsx scripts/verify-lighthouse.mts",
-    "emulators:test": "pnpm --filter @platform/functions build && firebase emulators:exec --project dev --only firestore,auth,functions 'pnpm test:integration'",
-    "emulators:rules": "pnpm --filter @platform/functions build && firebase emulators:exec --project dev --only firestore,auth,storage 'pnpm verify:rules'",
-    "emulators:auth": "pnpm --filter @platform/functions build && firebase emulators:exec --project dev --only firestore,auth,functions 'pnpm verify:auth'",
+    "emulators:test": "pnpm --filter @platform/functions build && firebase emulators:exec --project admin-platform-dev --only firestore,auth,functions 'pnpm test:integration'",
+    "emulators:rules": "pnpm --filter @platform/functions build && firebase emulators:exec --project admin-platform-dev --only firestore,auth,storage 'pnpm verify:rules'",
+    "emulators:auth": "pnpm --filter @platform/functions build && firebase emulators:exec --project admin-platform-dev --only firestore,auth,functions 'pnpm verify:auth'",
     "deploy": "echo 'Deploy via .github/workflows/main_deploy.yml (push a main)' && exit 0",
     "prepare": "husky"
   },

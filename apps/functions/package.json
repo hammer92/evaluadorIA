@@ -12,7 +12,7 @@
     "test": "vitest run --exclude '**/*.integration.test.ts'",
     "test:watch": "vitest",
     "test:integration": "vitest run integration",
-    "test:emulator": "firebase emulators:exec --only firestore,auth 'vitest run integration'",
+    "test:emulator": "firebase emulators:exec --project admin-platform-dev --only firestore,auth 'vitest run integration'",
     "serve": "pnpm build && firebase emulators:start --only functions",
     "shell": "pnpm build && firebase functions:shell",
     "deploy": "firebase deploy --only functions",

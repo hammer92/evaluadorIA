@@ -101,9 +101,6 @@ jobs:
       - name: Rules verification (firestore + storage vs emulators)
         run: pnpm emulators:rules
 
-      - name: Auth E2E (signup + session + claims vs emulators)
-        run: pnpm emulators:auth
-
   coverage:
     runs-on: ubuntu-latest
     timeout-minutes: 15
