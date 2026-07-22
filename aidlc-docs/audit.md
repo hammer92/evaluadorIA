@@ -1214,3 +1214,65 @@ Pre-commit checks: pnpm typecheck PASS, pnpm test 217/217 PASS, pnpm lint FAIL e
 - ⏳ Pendiente: PR #B (8 integration tests para templates)
 - ⏳ Pendiente: PR #C (firestore.rules.spec.ts full matrix)
 - ⏳ Pendiente: PR #D (CI integration)
+
+## SDD-10 Backend Gaps Remediation Sprint — PR #B MERGED
+
+**Timestamp**: 2026-07-22T04:30:00Z
+**User Input**: "A) Arrancar PR #B (Recommended)"
+**AI Response**: "PR #B mergeado en main como commit 719bb8d (squash de 8280b2c). 8 integration tests nuevos (~1900 LOC tests) para las Cloud Functions de templates: create, get, list, update, delete, transition, expert-edit, get-review-history. 70 tests nuevos, total 90/90 integration tests pasan contra emuladores reales. CI 100% verde."
+**Context**: CONSTRUCTION - PR #B complete
+
+**Estrategia incremental aplicada** (8 slices, 1 commit por slice):
+
+- Slice 1: create-template (7 tests) + schema fix
+- Slice 2: get-template (9 tests)
+- Slice 3: list-templates (10 tests)
+- Slice 4: update-template (10 tests)
+- Slice 5: delete-template (6 tests)
+- Slice 6: transition-template (10 tests, state machine)
+- Slice 7: expert-edit-template (10 tests, role-specific)
+- Slice 8: get-review-history (10 tests, audit log)
+- Squash final en 1 commit limpio
+
+**Bug pre-existente de PR #21 expuesto y fixeado**:
+
+- packages/shared/src/schemas/templates.ts: createTemplateInputSchema
+  requeria organizationId pero v1TemplatesCreate lo lee de
+  ctx.organizationId (NO usa input.organizationId).
+- FIXED: .omit({ organizationId: true }).
+
+**Resultado CI run #29891234576 sobre 719bb8d**:
+
+- lint-typecheck-test-build: success
+- integration-emulator: success (90 tests)
+- coverage: success
+- **Main verde 100%** ✅
+
+**Skills activated per AI-DLC Step 3** (por iteracion):
+
+- code-review-and-quality (8 retro-reviews, 1 per slice)
+- debugging-and-error-recovery (5 iteraciones: schema bug, test ordering,
+  error code mapping, vitest vi.mock limitations)
+- incremental-implementation (slice discipline)
+- security-and-hardening (auth/role checks per CF)
+- frontend-ui-engineering: loaded but not applied (backend-only)
+- git-workflow-and-versioning (per commit)
+
+**Estado del sprint SDD-10 Backend Gaps Remediation**:
+
+- ✅ INCEPTION (Requirements + Plan + OQ decisions)
+- ✅ PR #A MERGED (infrastructure + 2 CI hotfixes)
+- ✅ PR #B MERGED (8 integration tests + schema fix)
+- ⏳ Pendiente: PR #C (firestore.rules.spec.ts full matrix)
+- ⏳ Pendiente: PR #D (CI integration)
+
+**Lecciones aprendidas (PR #B)**:
+
+1. Integration tests son la primera red de seguridad contra bugs de schema
+   design. 3 bugs pre-existentes de PR #21 fueron expuestos.
+2. Tests que mutan shared state necesitan templates fresh o ordering
+   cuidadoso. Slice 6 (transition) reorganizado por esta razon.
+3. Error code mapping: RepositoryError VALIDATION -> HttpsError
+   'invalid-argument'. NO 'permission-denied' como asumi inicialmente.
+4. vitest vi.mock es per-file. Helper module provee builders + utilities
+   pero el boilerplate de mock queda en cada test file.
