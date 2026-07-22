@@ -1156,3 +1156,61 @@ Pre-commit checks: pnpm typecheck PASS, pnpm test 217/217 PASS, pnpm lint FAIL e
 - INCEPTION — Requirements Analysis: ✅ Complete (4 OQ approved)
 - INCEPTION — Workflow Planning: ✅ Complete (4 PR plan)
 - ⏳ Approval pending: user confirms plan before CONSTRUCTION starts
+
+## SDD-10 Backend Gaps Remediation Sprint — PR #A MERGED (CI hotfix iterations)
+
+**Timestamp**: 2026-07-22T03:00:00Z (PR #A merge), 2026-07-22T03:35:00Z (CI hotfix 1), 2026-07-22T03:57:00Z (CI hotfix 2)
+**User Input**: "A) Aprobar plan y arrancar PR #A"
+**AI Response**: "PR #A mergeado en main como commit 55f405d (squash de 3c36780). 7 archivos modificados (audit.md, package.json, vitest.config.ts, pnpm-lock.yaml, integration-setup.ts + 2 nuevos docs AI-DLC). Helper module + poolMatchGlobs + @firebase/rules-unit-testing@^3.0.4 instalados. **2 CI hotfix commits required** antes de llegar a verde:"
+**Context**: CONSTRUCTION - PR #A merged, 2 CI hotfixes aplicados
+
+**Issues encontrados y resueltos**:
+
+**Issue 1 (commit 0e62b28)**:
+
+- CI run #29889234936 fallo integration-emulator con TypeError en pathe.
+- Root cause: vitest 2.x NO soporta `poolMatchGlobs` con object config (solo string pool names). Pasar `{ pool: 'forks', poolOptions: ... }` hace que vitest lo trate como path a custom pool module → pathe.normalizeWindowsPath llama `.replace()` sobre el objeto.
+- Fix 1a: Cambiar a `singleFork: false` top-level (sin poolMatchGlobs).
+
+**Issue 2 (mismo commit 0e62b28)**:
+
+- Pre-existing regression de PR #21: `packages/shared/src/schemas/templates.ts:3` importaba `from './common'` sin extension `.js`. Otros archivos del repo usan `./common.js` correctamente.
+- Causa: cuando el Functions emulator carga el codigo compilado via Node ESM nativo, `./common` no se resuelve sin `.js`. Vitest usa Vite (resuelve auto), por eso unit tests pasaban pero el Functions emulator real nunca se cargo en CI.
+- Audit log "emulators:test 18/18" era enganoso: vitest tests pasaban contra un emulator que no habia logrado cargar el codigo.
+- Fix 1b: Cambiar `import { roleSchema } from './common'` a `import { roleSchema } from './common.js'`.
+- Verificacion: `node --input-type=module import('./packages/shared/dist/schemas/templates.js')` → OK (antes FAIL).
+
+**Issue 3 (commit b4808d0)**:
+
+- CI run #29889573206 fallo integration-emulator: sign-up.integration.test.ts fallo "El registro publico esta cerrado" porque create-user.integration.test.ts corria en paralelo en otro worker.
+- Root cause: `singleFork: false` + shared emulator state = race conditions entre workers paralelos.
+- El commit 2ff7145 original (templates deferidos) atribuia a "firebase-admin singleton"; el issue real era el mismo: race conditions entre workers paralelos, no entre tests secuenciales.
+- Fix: Revertir a `singleFork: true`. Los templates integration tests del PR #B estaran aislados via los helpers de cleanup (afterAll deterministico).
+
+**Resultado CI run #29889788974 sobre b4808d0**:
+
+- lint-typecheck-test-build: success
+- integration-emulator: success (verify:rules 25/25 + emulators:test 18/18)
+- coverage: success
+- **Main verde 100%** ✅
+
+**Skills activated por iteracion** (per AI-DLC Step 3):
+
+- debugging-and-error-recovery (3 iteraciones de root cause analysis)
+- security-and-hardening (auth/firestore rules surface)
+- code-review-and-quality (retro-review PR #A)
+- git-workflow-and-versioning (commit format + audit log)
+
+**Lecciones aprendidas**:
+
+1. vitest 2.x `poolMatchGlobs` solo acepta string pool names, no object config.
+2. SIEMPRE verificar imports ESM en archivos compartidos: extensiones `.js` son obligatorias para Node ESM nativo.
+3. Shared emulator state + parallel workers = race conditions inevitables. Sequential con cleanup deterministico es la estrategia correcta para integration tests con state compartido.
+
+**Estado del sprint SDD-10 Backend Gaps Remediation**:
+
+- ✅ INCEPTION (Requirements + Plan + OQ decisions)
+- ✅ PR #A MERGED (infrastructure + 2 hotfixes)
+- ⏳ Pendiente: PR #B (8 integration tests para templates)
+- ⏳ Pendiente: PR #C (firestore.rules.spec.ts full matrix)
+- ⏳ Pendiente: PR #D (CI integration)

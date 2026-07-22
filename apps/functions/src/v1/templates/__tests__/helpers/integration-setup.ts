@@ -2,9 +2,9 @@
  * Shared helpers para integration tests de las Cloud Functions de templates.
  *
  * Patrón: `apps/functions/src/v1/users/__tests__/create-user.integration.test.ts`
- * es la referencia original. Este módulo consolida el setup común para que
- * cada `*.integration.test.ts` de templates solo necesite importar las
- * helpers y escribir sus tests.
+ * es la referencia original. Este módulo consolida SOLO los builders, los
+ * cleanup helpers, y la retrieval de onCall handlers. El `vi.mock` debe
+ * declararse en cada test file (vi.mock es per-file en vitest).
  *
  * SDD-10 Backend Gaps Remediation (sprint `sdd-10-backend-gaps`, 2026-07-22).
  *
@@ -14,20 +14,54 @@
  * Run:
  *   pnpm --filter @platform/functions test:integration
  *   pnpm --filter @platform/functions test:emulator
+ *
+ * Uso en cada test file:
+ *
+ * ```ts
+ * import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+ *
+ * const templatesOnCallRegistry = vi.hoisted(
+ *   (): ((req: unknown) => Promise<unknown>)[] => [],
+ * );
+ *
+ * vi.mock('firebase-functions/v2/https', async () => {
+ *   const actual = await vi.importActual<typeof import('firebase-functions/v2/https')>(
+ *     'firebase-functions/v2/https',
+ *   );
+ *   return {
+ *     ...actual,
+ *     onCall: ((optsOrHandler: unknown, maybeHandler?: unknown) => {
+ *       const handler =
+ *         typeof optsOrHandler === 'function'
+ *           ? (optsOrHandler as (req: unknown) => Promise<unknown>)
+ *           : (maybeHandler as (req: unknown) => Promise<unknown>);
+ *       templatesOnCallRegistry.push(handler);
+ *       return ((req: unknown) =>
+ *         handler(req)) as unknown as ReturnType<typeof actual.onCall>;
+ *     }) as typeof actual.onCall,
+ *   };
+ * });
+ *
+ * import { v1TemplatesCreate } from '../create-template.js';
+ * import {
+ *   assertEmulatorsUp,
+ *   buildAdminReq,
+ *   // ... etc
+ *   getLatestOnCallHandler as _getLatestOnCallHandler,
+ * } from './helpers/integration-setup.js';
+ *
+ * function getLatestOnCallHandler() {
+ *   return _getLatestOnCallHandler(templatesOnCallRegistry);
+ * }
+ * ```
  */
 
 import type { Role } from '@platform/shared';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
-import { vi } from 'vitest';
 
-// =============================================================================
-// vi.hoisted: setea env vars ANTES de que vitest hoiste los vi.mock y los
-// static imports. El SDK firebase-admin lee FIRESTORE_EMULATOR_HOST al
-// import time, y nuestras CFs leen SESSION_COOKIE_SECRET en with-auth.
-// =============================================================================
-export const setupTemplatesIntegrationEnv = vi.hoisted((): void => {
+vi.hoisted((): void => {
   process.env['FIRESTORE_EMULATOR_HOST'] = '127.0.0.1:8080';
   process.env['FIREBASE_AUTH_EMULATOR_HOST'] = '127.0.0.1:9099';
   process.env['GCLOUD_PROJECT'] = 'admin-platform-dev';
@@ -35,36 +69,6 @@ export const setupTemplatesIntegrationEnv = vi.hoisted((): void => {
   process.env['ALLOWED_ORIGINS'] = 'http://localhost:3000';
 });
 
-// =============================================================================
-// onCall capture: handler registrado cuando `onCall` se ejecuta en el
-// import-time de los módulos de las Cloud Functions. Cada test puede obtener
-// el handler más reciente via `getLatestOnCallHandler()` o por nombre via
-// `getOnCallHandlerByExport()`.
-// =============================================================================
-export const templatesOnCallRegistry = vi.hoisted((): ((req: unknown) => Promise<unknown>)[] => []);
-
-export const mockOnCallHttps = vi.hoisted((): void => {
-  vi.mock('firebase-functions/v2/https', async () => {
-    const actual = await vi.importActual<typeof import('firebase-functions/v2/https')>(
-      'firebase-functions/v2/https',
-    );
-    return {
-      ...actual,
-      onCall: ((optsOrHandler: unknown, maybeHandler?: unknown) => {
-        const handler =
-          typeof optsOrHandler === 'function'
-            ? (optsOrHandler as (req: unknown) => Promise<unknown>)
-            : (maybeHandler as (req: unknown) => Promise<unknown>);
-        templatesOnCallRegistry.push(handler);
-        return ((req: unknown) => handler(req)) as unknown as ReturnType<typeof actual.onCall>;
-      }) as typeof actual.onCall,
-    };
-  });
-});
-
-// =============================================================================
-// firebase-admin init (lazy, después de vi.hoisted)
-// =============================================================================
 if (getApps().length === 0) {
   initializeApp({ projectId: 'admin-platform-dev' });
 }
@@ -147,15 +151,17 @@ export function buildUnauthReq<T>(data: T): CallableReq<T> {
 }
 
 // =============================================================================
-// onCall handler retrieval
+// onCall handler retrieval (usa registry pasado por el caller)
 // =============================================================================
 
 /**
- * Devuelve el último handler registrado (más reciente `onCall` import).
- * Útil cuando cada test file solo importa una CF (la única registrada).
+ * Devuelve el último handler registrado del registry provisto.
+ * El registry debe ser creado via vi.hoisted en el test file.
  */
-export function getLatestOnCallHandler(): (req: unknown) => Promise<unknown> {
-  const handler = templatesOnCallRegistry[templatesOnCallRegistry.length - 1];
+export function getLatestOnCallHandler(
+  registry: ((req: unknown) => Promise<unknown>)[],
+): (req: unknown) => Promise<unknown> {
+  const handler = registry[registry.length - 1];
   if (!handler) {
     throw new Error(
       'No onCall handler captured. ¿Importaste el módulo de la Cloud Function ANTES de llamar a getLatestOnCallHandler()?',
@@ -165,16 +171,16 @@ export function getLatestOnCallHandler(): (req: unknown) => Promise<unknown> {
 }
 
 /**
- * Devuelve el N-ésimo handler (0-indexed desde el más antiguo).
- * Útil cuando el test importa múltiples CFs.
+ * Devuelve el N-ésimo handler (0-indexed desde el más antiguo) del registry.
  */
-export function getOnCallHandler(indexFromEnd: number): (req: unknown) => Promise<unknown> {
-  const idx = templatesOnCallRegistry.length - 1 - indexFromEnd;
-  const handler = templatesOnCallRegistry[idx];
+export function getOnCallHandler(
+  registry: ((req: unknown) => Promise<unknown>)[],
+  indexFromEnd: number,
+): (req: unknown) => Promise<unknown> {
+  const idx = registry.length - 1 - indexFromEnd;
+  const handler = registry[idx];
   if (!handler) {
-    throw new Error(
-      `No onCall handler at index ${idx} (registry length=${templatesOnCallRegistry.length})`,
-    );
+    throw new Error(`No onCall handler at index ${idx} (registry length=${registry.length})`);
   }
   return handler;
 }
@@ -184,8 +190,7 @@ export function getOnCallHandler(indexFromEnd: number): (req: unknown) => Promis
 // =============================================================================
 
 /**
- * Verifica que el emulador de Firestore responde. Llamar en `beforeAll`
- * de cada integration test para fallar rápido si el emulador no está up.
+ * Verifica que el emulador de Firestore responde. Llamar en `beforeAll`.
  */
 export async function assertEmulatorsUp(): Promise<void> {
   try {
@@ -199,15 +204,10 @@ export async function assertEmulatorsUp(): Promise<void> {
 
 /**
  * Borra todos los templates de todas las organizaciones y los users de prueba.
- * Llamar en `afterAll` de cada integration test.
- *
- * Nota: en el Firestore emulator, borrar el parent doc borra las
- * sub-collections automáticamente. En producción NO es así — pero estos
- * helpers son solo para tests contra emulador.
+ * Llamar en `afterAll`.
  */
 export async function cleanupTemplatesIntegration(): Promise<void> {
   try {
-    // Borrar templates (de todas las organizaciones)
     const orgsSnap = await templatesTestDb.collection('organizations').get();
     for (const orgDoc of orgsSnap.docs) {
       const templatesSnap = await templatesTestDb
@@ -220,12 +220,10 @@ export async function cleanupTemplatesIntegration(): Promise<void> {
       }
     }
 
-    // Borrar organizations de prueba (cascada a sub-collections en emulator)
     for (const orgDoc of orgsSnap.docs) {
       await orgDoc.ref.delete().catch(() => undefined);
     }
 
-    // Borrar users de prueba
     const users = await templatesTestAuth.listUsers(50);
     await Promise.all(
       users.users.map((u) => {

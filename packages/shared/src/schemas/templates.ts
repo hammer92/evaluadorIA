@@ -160,10 +160,12 @@ export const templateSchema = z.object({
 });
 export type Template = z.infer<typeof templateSchema>;
 
-// Input para CREAR (omite campos auto-generados)
+// Input para CREAR (omite campos auto-generados y el organizationId que viene
+// del auth context, no del body del request).
 export const createTemplateInputSchema = templateSchema
   .omit({
     templateId: true,
+    organizationId: true,
     status: true,
     createdBy: true,
     createdByRole: true,
