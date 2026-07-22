@@ -1360,3 +1360,62 @@ Cliente llamaba `http://127.0.0.1:5001/admin-platform-dev/us-central1/v1AuthSign
 3. `pnpm emulators` vs `pnpm emulators:test` deben usar el mismo project ID que el cliente (`admin-platform-dev`) para evitar surprises.
 
 ---
+
+## Operational Cleanup Sprint — Workspace Detection
+
+**Timestamp**: 2026-07-22T21:16:07Z
+**User Input**: "usando IA-dlc y continua"
+**AI Response**: "AI-DLC resumed (existing project, brownfield). Workspace Detection ejecutada. Operational issues detectados: (1) stale rebase state en `.git/rebase-merge/` apuntando a branch borrada `feat/sdd-10-backend-gaps-pr-b-slice-1-create` con 8 commits (f9b5605..fe1c046) cuyo contenido ya esta merged via PR #23 (`719bb8d test(functions,shared): integration tests for all 8 templates Cloud Functions (PR #B)`). (2) 4 stashes obsoletos: stash@{0} WIP de INCEPTION docs para sdd-10-fase2-ui (mergeado en 33676a3/35ff7e2), stash@{1} WIP de branch borrada `fix/ci-repository-driver-default`, stash@{2} WIP de strict TS refactors (absorbido en sdd-01-remediation sprint), stash@{3} lint-staged automatic backup de cambio revertido. Presentando Welcome Back prompt."
+**Context**: INCEPTION - Workspace Detection (session resume)
+
+**Skills activated**:
+
+- `using-agent-skills` (discovery skill, mandatory Step 0)
+- `context-engineering` (MANDATORY per Workspace Detection phase per AI-DLC matrix)
+- `git-workflow-and-versioning` (MANDATORY before any git operation per cross-cutting rules)
+- `code-review-and-quality` (MANDATORY per cross-cutting rules — applied 5-axis review to housekeeping ops: correctness=no logic changed, security=no secrets, architecture=N/A operational, performance=N/A, readability=N/A)
+
+---
+
+## Operational Cleanup Sprint — User Decision
+
+**Timestamp**: 2026-07-22T21:25:00Z
+**User Input**: "Limpiar state operacional (rebase + stashes)"
+**AI Response**: "Iniciando sprint operacional de cleanup. Etapas: (1) `git rebase --abort` para limpiar state stale (8 commits rebaseados son contenido duplicado ya merged en PR #23 — safe to abort). (2) Presentar análisis stash-por-stash (read-only via `git stash show -p`) al usuario para autorización explícita de drops. (3) Drop autorizado de 4 stashes + delete de branch huérfana. (4) Update aidlc-state.md + audit.md con log. (5) Commit housekeeping. (6) Verificar typecheck/lint/test/build PASS post-cleanup (no se modifico código pero se validan los gates antes del commit de cierre)."
+**Context**: TOOLING - Operational cleanup sprint START
+
+**Skills activated**: `incremental-implementation` (single-vertical-slice housekeeping: cleanup ops only, no code changes), `debugging-and-error-recovery` (analyze rebase state + stash contents before any destructive op).
+
+---
+
+## Operational Cleanup Sprint — Destructive Operations Authorized
+
+**Timestamp**: 2026-07-22T21:30:00Z
+**User Input**: "Dropear los 4 stashes" + "Eliminar branch local"
+**AI Response**: "User autorizó drops + branch delete. Ejecución:
+
+1. `git stash drop stash@{3}` → Dropped stash@{3} (bd583180a811eb45a8b3a7842a53e7d7656d0c02)
+2. `git stash drop stash@{2}` → Dropped stash@{2} (43b595c04d7c54ea0c44bebaac2145d3b9ab7265)
+3. `git stash drop stash@{1}` → Dropped stash@{1} (aab433908e3203907aa0af2a52bea179536d09a8)
+4. `git stash drop stash@{0}` → Dropped stash@{0} (8226a1f76cc7c27003ac39ceca11a11871d24a9c)
+5. `git branch -D feat/sdd-10-backend-gaps-pr-b-slice-1-create` → Deleted branch (was fe1c046).
+6. `git stash list` → empty ✅
+7. `git branch` → solo `main` ✅
+8. `git status --short` → clean ✅
+
+Recovery via reflog: hashes de stash (bd58318, 43b595c, aab4339, 8226a1f) y commit de branch (fe1c046) registrados arriba — recuperables via `git fsck --lost-found` o `git reflog` durante 30-90 días hasta expiración del reflog."
+**Context**: TOOLING - Operational cleanup sprint EXECUTION
+
+**Recoverability audit**: Los 4 stashes tienen hashes registrados; `git reflog | grep stash` los lista mientras dure el reflog. La branch `feat/sdd-10-backend-gaps-pr-b-slice-1-create` queda como commit huérfano (fe1c046) en object store, recuperable via `git reflog | grep fe1c046`.
+
+**Forbidden git ops audit (per `.agents/skills/git-workflow-and-versioning/SKILL.md` §Forbidden git operations)**:
+
+- ✅ `git stash drop` ejecutado 4 veces — **AUTORIZADO explícitamente por user** (overrides policy default).
+- ✅ `git branch -D` ejecutado — **AUTORIZADO explícitamente por user** (branch sin upstream, contenido ya merged via PR #23).
+- ❌ `git reset --hard` NO ejecutado.
+- ❌ `git checkout -- <path>` NO ejecutado.
+- ❌ `git clean -fd` NO ejecutado.
+- ❌ `git stash pop` NO ejecutado (no era necesario, no había conflict).
+- ❌ `--no-verify` NO usado (commit de cierre pasará por Husky pre-commit + commit-msg hooks).
+
+---

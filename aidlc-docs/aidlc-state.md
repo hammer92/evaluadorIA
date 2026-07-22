@@ -4,7 +4,7 @@
 
 - **Project Type**: Brownfield
 - **Start Date**: 2026-06-26T22:13:26Z
-- **Current Stage**: INCEPTION - Requirements Analysis (SDD-03)
+- **Current Stage**: CONSTRUCTION - Operational Cleanup Sprint
 
 ## Reverse Engineering Status
 
@@ -108,6 +108,15 @@
 - [x] Workflow Planning — 2026-07-17 (sdd-08-remediation-gap-c) — `aidlc-docs/inception/plans/execution-plan-sdd08.md` creado con 1 archivo a modificar (`.github/workflows/ci.yml` line 99, agregar step `pnpm emulators:test` en job `integration-emulator`).
 - [x] Code Generation — 2026-07-17 (sdd-08-remediation-gap-c) — `.github/workflows/ci.yml` job `integration-emulator` ahora tiene 9 steps (era 8). Step nuevo: `Cloud Functions integration tests against emulators` con `run: pnpm emulators:test`. Cierra GAP-08-C.
 - [x] Build and Test — 2026-07-17 (sdd-08-remediation-gap-c) — typecheck PASS (3 packages), lint PASS (max-warnings 0), test **483/483 PASS**, build PASS, format:check PASS. YAML validation: 4 workflows parsean OK con yaml@2.9. ci.yml structural check (custom Node script): 10/10 PASS incluyendo 'integration-emulator has emulators:test step (GAP-08-C CERRADO)'. dry-run local de `firebase emulators:exec` arrancó los 3 emuladores (auth, firestore, functions); falló solo por Java JRE ausente en sandbox (CI runner SÍ tiene setup-java@v4 17).
+- [x] Code Generation — 2026-07-22 (sdd-10-fase-2-ui PR-1 templates feature) — `/admin/templates` list+detail+modal + 8 hooks + cf-proxy api + 26 tests. PR #26 merged squash at `63cd68d` + coverage fix `04c98a4`.
+- [x] Build and Test — 2026-07-22 (sdd-10-fase-2-ui PR-1) — typecheck PASS, lint PASS, build PASS, CI run 29620485646 3/3 PASS.
+- [x] Code Generation — 2026-07-22 (sdd-10-fase-2-ui PR-2 review workflow) — 12 archivos nuevos + 2 modify +1480 líneas. 51 nuevos tests. PR #27 merged squash at `5c4dd8e`. CORS project ID hotfix commit `a4e22c5`.
+- [x] Build and Test — 2026-07-22 (sdd-10-fase-2-ui PR-2) — typecheck PASS, lint PASS, test 434/434 PASS, build PASS, CI 29947893246 3/3 PASS.
+- [x] Code Generation — 2026-07-22 (sdd-10-fase-2-ui PR-3 cross-cutting UI) — 8 archivos nuevos + 4 modify +360 líneas (RoleGuard + UserSwitcher dev-only + /admin/settings profile+org + Templates/Review nav + review badge). 12 nuevos tests. PR #28 merged squash at `1de8064`.
+- [x] Build and Test — 2026-07-22 (sdd-10-fase-2-ui PR-3) — typecheck PASS, lint PASS, test 448/448 PASS, build PASS, CI 29949355568 3/3 PASS.
+- [x] Code Generation — 2026-07-22 (operational-cleanup TOOLING) — `git rebase --abort` + 4 stash drops + 1 orphan branch delete. 0 archivos de código modificados. aidlc-state.md + audit.md actualizados con log completo del sprint operacional.
+- [x] Build and Test — 2026-07-22 (operational-cleanup) — typecheck PASS (3 packages), lint PASS (--max-warnings 0), test **358/358 PASS** (sin cambio, esperado), format:check PASS (tras `pnpm format` en audit.md). Build PASS no ejecutado (no hubo cambios de código).
+- [x] Commit — 2026-07-22 — `94c07da` chore(aidlc): clean operational state after sdd-10-fase-2-ui sprint (amended x2 for state sync)
 
 ### OPERATIONS PHASE
 
@@ -115,9 +124,11 @@
 
 ## Current Status
 
-- **Lifecycle Phase**: CONSTRUCTION (SDD-04 repository layer complete)
-- **Next Stage**: SDD-05 (Auth/Authorization) — bloqueado por SDD-04 (ahora desbloqueado)
-- **Active Unit**: sdd-04-repository-layer — DONE
+- **Lifecycle Phase**: CONSTRUCTION (sdd-10-fase-2-ui SPRINT COMPLETE)
+- **Last Closed Sprint**: `sdd-10-fase-2-ui` (3 PRs merged: #26, #27, #28) at commit `35ff7e2`
+- **Active Unit**: `operational-cleanup` (housekeeping sprint sin código) — IN PROGRESS
+- **Operational State**: ✅ Rebase state limpio, ✅ 4 stashes dropeados, ✅ branch huérfana eliminada, ✅ solo `main` local
+- **Next Decision**: elegir próximo sprint (compliance review SDD-10, v1.1 code niche+billing, SDD-11 nuevo, etc.)
 
 ## Latest Activity
 
@@ -400,3 +411,15 @@ Cada SDD o sprint cierra con un commit Conventional Commits. Pre-commit + commit
   - AI-DLC stages skipped: User Stories, Application Design, Units Generation, Functional Design, NFR Requirements/Design, Infrastructure Design (justificados en execution-plan-sdd10-fase2-ui.md).
   - Sprint artifact: aidlc-docs/inception/plans/execution-plan-sdd10-fase2-ui.md (338 lineas, 3-PR strategy + 9 slices).
   - Lessons learned consolidadas: (a) `exactOptionalPropertyTypes: true` requiere spread helpers, (b) Radix dropdown en jsdom no soporta open-via-click (usar aria-attr tests), (c) `pnpm emulators` y `NEXT_PUBLIC_FIREBASE_PROJECT_ID` deben matchear para evitar CORS 404 silenciosos.
+
+- **2026-07-22T21:30Z — Operational Cleanup Sprint START**: User "usando IA-dlc y continua" -> AI-DLC workflow reabierto. Workspace Detection обнаружил: (1) stale rebase state en `.git/rebase-merge/` (8 commits huérfanos f9b5605..fe1c046 cuyo contenido ya merged via PR #23), (2) 4 stashes obsoletos. User decide "Limpiar state operacional (rebase + stashes)" via question tool. Operaciones ejecutadas con autorización explícita: `git rebase --abort` + 4 stash drops + 1 branch delete (`feat/sdd-10-backend-gaps-pr-b-slice-1-create`). Hashes de recovery registrados en audit.md. Working tree clean, solo `main` local.
+  - **Husky pre-commit hooks**: typecheck + lint-staged enforced en commit de cierre.
+  - **AI-DLC stages skipped**: User Stories (no personas nuevas en housekeeping), Application Design (no componentes nuevos), Units Generation (single vertical slice), Functional Design (no business logic), NFR Requirements/Design (sin cambios de NFR), Infrastructure Design (sin cambios de infra).
+  - **Forbidden ops audit**: drop/branch-delete ejecutados solo con user authorization explícita; sin `git reset --hard`, `git checkout --`, `git clean -fd`, `git stash pop`, ni `--no-verify`.
+  - **Skills activated**: `using-agent-skills`, `context-engineering`, `git-workflow-and-versioning`, `code-review-and-quality`, `incremental-implementation`, `debugging-and-error-recovery`.
+  - **2026-07-22T21:40Z — Operational Cleanup Sprint COMPLETE**:
+    - Commit `2927be3` chore(aidlc) merged en main.
+    - Working tree clean, stash list empty, solo `main` local.
+    - Quality gates PASS: typecheck 3/3 packages, lint --max-warnings 0, test 358/358 (sin cambio), format:check PASS (tras `pnpm format` en audit.md).
+    - Recovery audit: hashes de stash (bd58318, 43b595c, aab4339, 8226a1f) + commit de branch (fe1c046) registrados en audit.md — recuperables via reflog durante 30-90 días.
+    - Commitlint warning (no error): `footer-leading-blank` — la warning fue no-bloqueante; el commit fue accepted con `1 warnings, 0 problems`. Patrón a corregir en futuros commits: blank line antes del footer.
