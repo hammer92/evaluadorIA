@@ -22,7 +22,14 @@ import { templateFromFirestore, type TemplateDocRaw } from './mapper.js';
 const getTemplateInputSchema = z.object({ templateId: z.string().min(1).max(32) });
 export type GetTemplateInput = z.infer<typeof getTemplateInputSchema>;
 
-export type GetTemplateOutput = Template | null;
+// Output type: el template + las transiciones disponibles para el caller
+// (la UI las usa para renderizar botones de acción). Tipo explícito en vez
+// de `Object.assign` para mantener el type boundary claro.
+export interface TemplateWithTransitions extends Template {
+  availableTransitions: Pick<Transition, 'from' | 'to' | 'label' | 'variant' | 'requiresComment'>[];
+}
+
+export type GetTemplateOutput = TemplateWithTransitions | null;
 
 export const v1TemplatesGet = onCall(
   {
@@ -52,29 +59,20 @@ export const v1TemplatesGet = onCall(
         return null;
       }
 
-      // Adjuntar availableTransitions para que la UI no tenga que recalcular.
-      const availableTransitions: Transition[] = [];
-      for (const candidate of [
-        'draft',
-        'in_review',
-        'changes_requested',
-        'approved',
-        'rejected',
-      ] as const) {
-        const t = getTransition(template.status, candidate);
-        if (t?.allowedRoles.includes(ctx.role)) {
-          availableTransitions.push(t);
-        }
-      }
-      return Object.assign(template, {
-        availableTransitions: availableTransitions.map((t) => ({
+      const availableTransitions = (
+        ['draft', 'in_review', 'changes_requested', 'approved', 'rejected'] as const
+      )
+        .map((candidate) => getTransition(template.status, candidate))
+        .filter((t): t is Transition => t?.allowedRoles.includes(ctx.role) ?? false)
+        .map((t) => ({
           from: t.from,
           to: t.to,
           label: t.label,
           variant: t.variant,
           requiresComment: t.requiresComment,
-        })),
-      });
+        }));
+
+      return { ...template, availableTransitions };
     } catch (e) {
       handleError(e);
     }

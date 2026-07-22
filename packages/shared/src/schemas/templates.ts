@@ -67,7 +67,8 @@ export const STATUS_COLORS: Record<TemplateStatus, string> = {
 
 export const topicSchema = z.string().min(2).max(80);
 
-export const recipeSchema = z.object({
+// Schema base sin refine — usado por `.omit()` en recipeInputSchema.
+export const recipeSchemaBase = z.object({
   recipeId: z.string().min(1).max(32),
   competencyName: z
     .string()
@@ -92,23 +93,21 @@ export const recipeSchema = z.object({
   difficulty: difficultySchema,
   topicsCovered: z.array(topicSchema).max(20).default([]),
 });
-export type Recipe = z.infer<typeof recipeSchema>;
 
-// Validación cross-field: cada receta debe pedir al menos 1 pregunta.
-export const recipeBusinessRules = recipeSchema.refine(
+// RecipeSchema con la business rule aplicada (SDD §4.2).
+// `.refine()` retorna ZodEffects, por eso derivamos recipeInputSchema desde
+// recipeSchemaBase (sin refine) y re-aplicamos el refine manualmente.
+export const recipeSchema = recipeSchemaBase.refine(
   (r) => r.qtyMultipleChoice + r.qtyMultiChoice >= 1,
   {
     message: 'La receta debe solicitar al menos 1 pregunta en total',
     path: ['qtyMultipleChoice'],
   },
 );
-export type RecipeWithBusinessRules = z.infer<typeof recipeBusinessRules>;
+export type Recipe = z.infer<typeof recipeSchema>;
 
 // Helper para input de recipe (sin recipeId, se genera server-side).
-// IMPORTANTE: omit() solo funciona sobre ZodObject (no ZodEffects), por eso
-// derivamos desde `recipeSchema` (sin refine) y re-aplicamos el refine aquí
-// para que recipeInputSchema mantenga las mismas business rules.
-export const recipeInputSchema = recipeSchema
+export const recipeInputSchema = recipeSchemaBase
   .omit({ recipeId: true })
   .refine((r) => r.qtyMultipleChoice + r.qtyMultiChoice >= 1, {
     message: 'La receta debe solicitar al menos 1 pregunta en total',
