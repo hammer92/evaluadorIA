@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRole } from '@/features/auth/components/role-provider';
 import { ReviewHistoryList } from '@/features/templates/components/review-history-list';
 import { TemplateActionBar } from '@/features/templates/components/template-action-bar';
+import { TemplateFormModal } from '@/features/templates/components/template-form-modal';
 import { useReviewHistory, useTemplate } from '@/features/templates/hooks/use-templates';
 
 function formatDate(value: string | Date): string {
@@ -221,15 +222,12 @@ export function TemplateDetail({ templateId }: { templateId: string }) {
         </TabsContent>
       </Tabs>
 
-      {/*
-       * Edit modal wired up in slice 7 (PR-1).
-       * Placeholder to keep this slice focused on detail view.
-       */}
-      {editing && (
-        <div className="text-body-sm text-on-surface-variant">
-          Edit modal pendiente (slice 7). Template: {template.name}
-        </div>
-      )}
+      <TemplateFormModal
+        open={editing}
+        onOpenChange={(o) => !o && setEditing(false)}
+        mode="edit"
+        template={template}
+      />
     </div>
   );
 }

@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRole } from '@/features/auth/components/role-provider';
 import type { ListTemplatesFilters } from '@/features/templates/api/templates-api';
+import { DeleteTemplateDialog } from '@/features/templates/components/delete-template-dialog';
 import { TemplateFiltersBar } from '@/features/templates/components/template-filters';
+import { TemplateFormModal } from '@/features/templates/components/template-form-modal';
 import { TemplatesTable } from '@/features/templates/components/templates-table';
 import { useTemplatesList } from '@/features/templates/hooks/use-templates';
 
@@ -121,22 +123,20 @@ export default function TemplatesPage() {
       )}
 
       {/*
-       * Form modal + delete dialog wired up in slice 7+8 (this PR).
-       * Placeholder action stubs to keep this slice focused on list+filters+table.
+       * Form modal (create/edit) + delete dialog wired up in slices 7+8.
        */}
-      {createOpen && (
-        <div className="text-body-sm text-on-surface-variant">Form modal pendiente (slice 7).</div>
-      )}
-      {editing && (
-        <div className="text-body-sm text-on-surface-variant">
-          Edit modal pendiente (slice 7). Template: {editing.name}
-        </div>
-      )}
-      {deleting && (
-        <div className="text-body-sm text-on-surface-variant">
-          Delete dialog pendiente (slice 8). Template: {deleting.name}
-        </div>
-      )}
+      <TemplateFormModal open={createOpen} onOpenChange={setCreateOpen} mode="create" />
+      <TemplateFormModal
+        open={editing !== null}
+        onOpenChange={(o) => !o && setEditing(null)}
+        mode="edit"
+        {...(editing ? { template: editing } : {})}
+      />
+      <DeleteTemplateDialog
+        open={deleting !== null}
+        onOpenChange={(o) => !o && setDeleting(null)}
+        template={deleting}
+      />
     </div>
   );
 }
