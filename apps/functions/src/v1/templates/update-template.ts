@@ -113,6 +113,14 @@ export const v1TemplatesUpdate = onCall(
           after: input.maxRetries,
         });
       }
+      if (input.passingScore !== undefined && input.passingScore !== current.passingScore) {
+        updates['passing_score'] = input.passingScore;
+        fieldChanges.push({
+          field: 'passingScore',
+          before: current.passingScore,
+          after: input.passingScore,
+        });
+      }
       if (input.recipes !== undefined) {
         updates['recipes'] = recipesInputToFirestore(input.recipes);
         fieldChanges.push({

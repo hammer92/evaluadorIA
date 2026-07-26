@@ -177,7 +177,7 @@ describe('state machine', () => {
   describe('canEdit', () => {
     const baseTemplate = {
       status: 'draft' as TemplateStatus as TemplateStatus,
-      deletedAt: null as Date | null,
+      deletedAt: null as string | null,
     };
 
     it('admin puede editar en draft', () => {
@@ -238,7 +238,7 @@ describe('state machine', () => {
     });
 
     it('template archivado: nadie puede editar', () => {
-      const archived = { ...baseTemplate, deletedAt: new Date() };
+      const archived = { ...baseTemplate, deletedAt: '2026-07-22T10:00:00.000Z' };
       for (const role of ALL_ROLES) {
         expect(canEdit(archived, role).canEdit).toBe(false);
       }
@@ -248,7 +248,7 @@ describe('state machine', () => {
   describe('canViewTemplate', () => {
     const baseTemplate = {
       status: 'draft' as TemplateStatus as TemplateStatus,
-      deletedAt: null as Date | null,
+      deletedAt: null as string | null,
     };
 
     it('recruiter ve approved pero no draft', () => {
@@ -273,13 +273,13 @@ describe('state machine', () => {
       const t = {
         ...baseTemplate,
         status: 'approved' as TemplateStatus as TemplateStatus,
-        deletedAt: new Date(),
+        deletedAt: '2026-07-22T10:00:00.000Z',
       };
       expect(canViewTemplate(t, 'recruiter')).toBe(false);
     });
 
     it('solo admin ve templates deletedAt', () => {
-      const t = { ...baseTemplate, status: 'draft' as TemplateStatus, deletedAt: new Date() };
+      const t = { ...baseTemplate, status: 'draft' as TemplateStatus, deletedAt: '2026-07-22T10:00:00.000Z' };
       expect(canViewTemplate(t, 'admin')).toBe(true);
       expect(canViewTemplate(t, 'expert')).toBe(false);
       expect(canViewTemplate(t, 'recruiter')).toBe(false);

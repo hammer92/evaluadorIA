@@ -78,7 +78,7 @@ export const v1TemplatesGetReviewHistory = onCall(
             action: raw.action,
             comment: raw.comment ?? undefined,
             changes: raw.changes ?? undefined,
-            createdAt: raw.created_at.toDate(),
+            createdAt: raw.created_at.toDate().toISOString(),
           });
         });
 

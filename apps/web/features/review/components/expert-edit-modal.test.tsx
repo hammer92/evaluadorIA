@@ -45,11 +45,13 @@ const baseTemplate: Template = {
   status: 'in_review',
   createdBy: 'jane@example.com',
   createdByRole: 'recruiter',
-  createdAt: new Date('2026-07-22T10:00:00Z'),
-  updatedAt: new Date('2026-07-22T11:00:00Z'),
+  createdAt: '2026-07-22T10:00:00.000Z',
+  updatedAt: '2026-07-22T11:00:00.000Z',
   approvedBy: null,
   approvedAt: null,
   deletedAt: null,
+  passingScore: 70,
+  version: 0,
 };
 
 function makeWrapper() {

@@ -48,12 +48,16 @@ export function useAuth(): AuthState {
   useEffect(() => {
     let cancelled = false;
     const unsub = onAuthStateChanged(auth, (user) => {
+      if (cancelled) return;
+      if (!user) {
+        setState({ user: null, claims: null, loading: false, error: null });
+        return;
+      }
+      // Seteamos el user inmediatamente (sin esperar a los claims) para que
+      // el admin layout NO redirija a /login durante la carga de claims.
+      // Los claims se fetchean en background y se setean cuando llegan.
+      setState((prev) => ({ ...prev, user: toAuthUser(user), loading: false }));
       void (async () => {
-        if (cancelled) return;
-        if (!user) {
-          setState({ user: null, claims: null, loading: false, error: null });
-          return;
-        }
         try {
           // forceRefresh=true para que los claims seteados por la CF (server-side)
           // se reflejen en el cliente.
@@ -68,7 +72,15 @@ export function useAuth(): AuthState {
           });
         } catch (e) {
           if (cancelled) return;
-          setState({ user: null, claims: null, loading: false, error: e as Error });
+          // El user ESTÁ autenticado en Firebase aunque falle el fetch de claims.
+          // Mantenemos el user y dejamos claims null para que el layout muestre
+          // un error (no redirigimos a /login porque eso causaría un loop).
+          setState({
+            user: toAuthUser(user),
+            claims: null,
+            loading: false,
+            error: e as Error,
+          });
         }
       })();
     });

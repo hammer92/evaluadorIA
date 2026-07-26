@@ -16,8 +16,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-function formatDate(value: string | Date): string {
+function formatDate(value: string | Date | null | undefined): string {
+  if (value == null || value === '') return '—';
   const d = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return '—';
   return d.toLocaleString('es-AR', {
     year: 'numeric',
     month: 'short',

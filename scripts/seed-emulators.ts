@@ -1,9 +1,18 @@
 /* eslint-disable no-console */
 /**
- * Seed script — puebla los emuladores de Firebase con 1 org + 3 users.
+ * Seed script — puebla los emuladores de Firebase con datos de demo.
  *
- * Idempotente: corre N veces y el resultado es el mismo.
- * Conectarse a emuladores locales: requiere que `pnpm emulators` esté corriendo.
+ * Por defecto crea:
+ *   - 1 organización: org_default / "Empresa Demo"
+ *   - 1 usuario admin: admin@empresa.com  pass=1234567890  role=admin
+ *   - 1 usuario recruiter: recruiter@empresa.com  role=recruiter
+ *   - 1 usuario expert: expert@empresa.com       role=expert
+ *
+ * Idempotente: corre N veces y los registros quedan consistentes. Si un user
+ * ya existe en Auth, se le setea la password (para que sobreviva a un
+ * export/import) y se re-aplican los custom claims.
+ *
+ * Conectarse a emuladores locales: requiere que los emuladores estén corriendo.
  *
  * Uso:
  *   pnpm seed:emulators
@@ -12,6 +21,55 @@
 import { FieldValue } from 'firebase-admin/firestore';
 
 import { getAdminApp, getAdminAuth, getAdminDb } from '../apps/functions/src/firebase-admin.js';
+
+const ORG_ID = 'org_default';
+
+const DEFAULT_ADMIN_PASSWORD = '1234567890';
+
+type SeedUser = {
+  uid: string;
+  email: string;
+  role: 'admin' | 'recruiter' | 'expert';
+  password?: string;
+  displayName: string;
+};
+
+const SEED_USERS: SeedUser[] = [
+  {
+    uid: 'u_admin',
+    email: 'admin@empresa.com',
+    role: 'admin',
+    password: DEFAULT_ADMIN_PASSWORD,
+    displayName: 'Admin Empresa',
+  },
+  { uid: 'u_recruiter', email: 'recruiter@empresa.com', role: 'recruiter', displayName: 'Recruiter' },
+  { uid: 'u_expert', email: 'expert@empresa.com', role: 'expert', displayName: 'Expert' },
+];
+
+async function ensureAuthUser(
+  auth: ReturnType<typeof getAdminAuth>,
+  u: SeedUser,
+): Promise<void> {
+  try {
+    await auth.createUser({
+      uid: u.uid,
+      email: u.email,
+      ...(u.password ? { password: u.password } : {}),
+      displayName: u.displayName,
+    });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!msg.includes('already exists')) {
+      throw e;
+    }
+    // El user ya existe: si tenemos password, la re-aplicamos para garantizar
+    // que sobrevive a export/import del emulador (la password no se persiste
+    // en el export por default, hay que re-setearla).
+    if (u.password) {
+      await auth.updateUser(u.uid, { password: u.password });
+    }
+  }
+}
 
 async function main(): Promise<void> {
   // Apuntar Admin SDK a los emuladores locales ANTES de instanciar.
@@ -28,10 +86,10 @@ async function main(): Promise<void> {
   // ============ 1. Organización por defecto ============
   await db
     .collection('organizations')
-    .doc('org_default')
+    .doc(ORG_ID)
     .set(
       {
-        name: 'Default Org',
+        name: 'Empresa Demo',
         slug: 'default',
         plan: 'free',
         settings: { timezone: 'UTC', locale: 'es' },
@@ -44,27 +102,13 @@ async function main(): Promise<void> {
     );
 
   // ============ 2. Usuarios seed ============
-  const seedUsers = [
-    { uid: 'u_admin', email: 'admin@example.com', role: 'admin' as const },
-    { uid: 'u_recruiter', email: 'recruiter@example.com', role: 'recruiter' as const },
-    { uid: 'u_expert', email: 'expert@example.com', role: 'expert' as const },
-  ];
-
-  for (const u of seedUsers) {
-    // Crear/recuperar user en Auth (idempotente: 'already exists' se ignora)
-    try {
-      await auth.createUser({ uid: u.uid, email: u.email });
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (!msg.includes('already exists')) {
-        throw e;
-      }
-    }
+  for (const u of SEED_USERS) {
+    await ensureAuthUser(auth, u);
 
     // Custom Claims (server-authoritative)
     await auth.setCustomUserClaims(u.uid, {
       role: u.role,
-      organizationId: 'org_default',
+      organizationId: ORG_ID,
     });
 
     // Mirror en Firestore
@@ -74,10 +118,10 @@ async function main(): Promise<void> {
       .set(
         {
           email: u.email,
-          display_name: u.email.split('@')[0],
+          display_name: u.displayName,
           photo_url: null,
           role: u.role,
-          organization_id: 'org_default',
+          organization_id: ORG_ID,
           status: 'active',
           last_login_at: null,
           created_at: FieldValue.serverTimestamp(),
@@ -93,10 +137,11 @@ async function main(): Promise<void> {
   void getAdminApp();
 
   console.log('Seed complete: 1 organization + 3 users');
-  console.log('  org_default  (admin-platform-dev)');
-  console.log('  u_admin      admin@example.com     role=admin');
-  console.log('  u_recruiter  recruiter@example.com role=recruiter');
-  console.log('  u_expert     expert@example.com    role=expert');
+  console.log(`  ${ORG_ID.padEnd(11)}  (Empresa Demo)`);
+  for (const u of SEED_USERS) {
+    const pwd = u.password ? ` pass=${u.password}` : '';
+    console.log(`  ${u.uid.padEnd(11)}  ${u.email.padEnd(28)} role=${u.role}${pwd}`);
+  }
   console.log('UI del emulador: http://localhost:4000');
 }
 

@@ -63,6 +63,7 @@ export const v1TemplatesCreate = onCall(
         niche: input.niche,
         time_limit_minutes: input.timeLimitMinutes,
         max_retries: input.maxRetries,
+        passing_score: input.passingScore,
         recipes: recipesInputToFirestore(input.recipes),
         status: 'draft' as const,
         created_by: ctx.uid,
@@ -72,6 +73,7 @@ export const v1TemplatesCreate = onCall(
         approved_by: null,
         approved_at: null,
         deleted_at: null,
+        version: 0,
       };
       await templatesCol.doc(templateId).set(docData);
 
@@ -85,7 +87,7 @@ export const v1TemplatesCreate = onCall(
         metadata: { name: input.name, niche: input.niche, recipeCount: input.recipes.length },
       });
 
-      const nowDate = new Date();
+      const nowDate = new Date().toISOString();
       return {
         templateId,
         organizationId,
@@ -94,6 +96,7 @@ export const v1TemplatesCreate = onCall(
         niche: input.niche,
         timeLimitMinutes: input.timeLimitMinutes,
         maxRetries: input.maxRetries,
+        passingScore: input.passingScore,
         recipes: input.recipes.map((r, i) => ({
           recipeId: `r${i}`,
           competencyName: r.competencyName,
@@ -111,6 +114,7 @@ export const v1TemplatesCreate = onCall(
         approvedBy: null,
         approvedAt: null,
         deletedAt: null,
+        version: 0,
       };
     } catch (e) {
       if (e instanceof HttpsError) throw e;

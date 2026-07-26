@@ -2,6 +2,7 @@
 
 import type { Template } from '@shared/schemas/templates';
 import { Edit, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 
@@ -9,20 +10,22 @@ export function TemplateActionBar({
   template,
   canEdit,
   canDelete,
-  onEdit,
+  editHref,
 }: {
   template: Template;
   canEdit: boolean;
   canDelete: boolean;
-  onEdit: () => void;
+  editHref: string;
 }): React.JSX.Element | null {
   if (!canEdit && !canDelete) return null;
   return (
     <div className="flex flex-wrap gap-stack-sm">
       {canEdit && (
-        <Button variant="outline" size="sm" onClick={onEdit}>
-          <Edit className="mr-2 h-4 w-4" />
-          Editar
+        <Button asChild variant="outline" size="sm">
+          <Link href={editHref}>
+            <Edit className="mr-2 h-4 w-4" />
+            Editar
+          </Link>
         </Button>
       )}
       {canDelete && (

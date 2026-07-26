@@ -171,6 +171,8 @@ describe('useCreateTemplate', () => {
       niche: 'school',
       timeLimitMinutes: 30,
       maxRetries: 1,
+      passingScore: 70,
+      version: 0,
       recipes: [
         {
           competencyName: 'Hooks',
@@ -248,25 +250,22 @@ describe('useExpertEditTemplate', () => {
 
 describe('useReviewHistory', () => {
   beforeEach(() =>
-    mockReviewHistory.mockResolvedValue({
-      templateId: 'tpl_1',
-      events: [
-        {
-          reviewId: 'r_1',
-          actorId: 'u_1',
-          actorName: 'Admin',
-          actorRole: 'admin',
-          action: 'submitted',
-          createdAt: '2026-07-22T00:00:00Z',
-        },
-      ],
-    }),
+    mockReviewHistory.mockResolvedValue([
+      {
+        reviewId: 'r_1',
+        actorId: 'u_1',
+        actorName: 'Admin',
+        actorRole: 'admin',
+        action: 'submitted',
+        createdAt: '2026-07-22T00:00:00Z',
+      },
+    ]),
   );
   afterEach(() => vi.clearAllMocks());
 
   it('returns events', async () => {
     const { result } = renderHook(() => useReviewHistory('tpl_1'), { wrapper: wrapper() });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data?.events).toHaveLength(1);
+    expect(result.current.data).toHaveLength(1);
   });
 });

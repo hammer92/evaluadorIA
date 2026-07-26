@@ -2,6 +2,8 @@
 
 import type { Template } from '@shared/schemas/templates';
 import { Plus } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -10,7 +12,6 @@ import { useRole } from '@/features/auth/components/role-provider';
 import type { ListTemplatesFilters } from '@/features/templates/api/templates-api';
 import { DeleteTemplateDialog } from '@/features/templates/components/delete-template-dialog';
 import { TemplateFiltersBar } from '@/features/templates/components/template-filters';
-import { TemplateFormModal } from '@/features/templates/components/template-form-modal';
 import { TemplatesTable } from '@/features/templates/components/templates-table';
 import { useTemplatesList } from '@/features/templates/hooks/use-templates';
 
@@ -24,10 +25,9 @@ const INITIAL_FILTERS: ListTemplatesFilters = {
 };
 
 export default function TemplatesPage() {
+  const router = useRouter();
   const [filters, setFilters] = useState<ListTemplatesFilters>(INITIAL_FILTERS);
-  const [editing, setEditing] = useState<Template | null>(null);
   const [deleting, setDeleting] = useState<Template | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
 
   const { data, isLoading, isError, error } = useTemplatesList(filters);
   const role = useRole();
@@ -48,9 +48,11 @@ export default function TemplatesPage() {
           </p>
         </div>
         {canEdit && (
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo template
+          <Button asChild>
+            <Link href="/admin/templates/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo template
+            </Link>
           </Button>
         )}
       </header>
@@ -90,7 +92,7 @@ export default function TemplatesPage() {
         <>
           <TemplatesTable
             templates={data.items}
-            onEdit={(t) => setEditing(t)}
+            onEdit={(t) => router.push(`/admin/templates/edit?templateId=${t.templateId}`)}
             onDelete={(t) => setDeleting(t)}
             canEdit={canEdit}
             canDelete={canDelete}
@@ -123,15 +125,9 @@ export default function TemplatesPage() {
       )}
 
       {/*
-       * Form modal (create/edit) + delete dialog wired up in slices 7+8.
+       * Delete confirmation dialog. Create/edit se resolvieron en pantallas
+       * dedicadas (/admin/templates/new y /admin/templates/edit).
        */}
-      <TemplateFormModal open={createOpen} onOpenChange={setCreateOpen} mode="create" />
-      <TemplateFormModal
-        open={editing !== null}
-        onOpenChange={(o) => !o && setEditing(null)}
-        mode="edit"
-        {...(editing ? { template: editing } : {})}
-      />
       <DeleteTemplateDialog
         open={deleting !== null}
         onOpenChange={(o) => !o && setDeleting(null)}

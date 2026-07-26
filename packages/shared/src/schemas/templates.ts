@@ -141,6 +141,15 @@ export const templateSchema = z.object({
     .min(5, 'Mínimo 5 minutos')
     .max(240, 'Máximo 240 minutos (4 horas)'),
   maxRetries: z.number().int().min(0, 'Mínimo 0 reintentos').max(5, 'Máximo 5 reintentos'),
+  // Score mínimo (0-100) requerido para aprobar la evaluación. Default 70%.
+  // Se persiste en Firestore como `passing_score` (snake_case) y se mapea
+  // a `passingScore` en el cliente vía mapper.ts.
+  passingScore: z
+    .number()
+    .int()
+    .min(0, 'Mínimo 0%')
+    .max(100, 'Máximo 100%')
+    .default(70),
 
   // Recetas
   recipes: z
@@ -152,11 +161,18 @@ export const templateSchema = z.object({
   status: templateStatusSchema,
   createdBy: z.string().min(1),
   createdByRole: roleSchema,
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  // Fechas en wire format ISO 8601 string. El backend (mapper.ts) garantiza
+  // strings consistentes; el cliente las parsea con `new Date(...)` al renderizar.
+  createdAt: z.string(),
+  updatedAt: z.string(),
   approvedBy: z.string().nullable(),
-  approvedAt: z.date().nullable(),
-  deletedAt: z.date().nullable(),
+  approvedAt: z.string().nullable(),
+  deletedAt: z.string().nullable(),
+  // Versión del template. Se incrementa automáticamente cada vez que el
+  // template transiciona a `approved` (en `v1TemplatesTransition`).
+  // Default 0 = nunca aprobado. 1 = primera aprobación, 2 = segunda, etc.
+  // Se preserva al reabrir (status → draft) porque es historial de aprobaciones.
+  version: z.number().int().min(0).default(0),
 });
 export type Template = z.infer<typeof templateSchema>;
 
@@ -188,6 +204,7 @@ export const updateTemplateInputSchema = z.object({
   niche: nicheSchema.optional(),
   timeLimitMinutes: z.number().int().min(5).max(240).optional(),
   maxRetries: z.number().int().min(0).max(5).optional(),
+  passingScore: z.number().int().min(0).max(100).optional(),
   recipes: z.array(recipeInputSchema).min(1).max(20).optional(),
 });
 export type UpdateTemplateInput = z.infer<typeof updateTemplateInputSchema>;
@@ -255,7 +272,7 @@ export const reviewEventSchema = z.object({
   // OQ-2: el comment puede contener sugerencias del expert (max 2000 chars).
   comment: z.string().max(2000).optional(),
   changes: z.array(fieldChangeSchema).optional(),
-  createdAt: z.date(),
+  createdAt: z.string(),
 });
 export type ReviewEvent = z.infer<typeof reviewEventSchema>;
 

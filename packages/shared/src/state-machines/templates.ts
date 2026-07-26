@@ -121,7 +121,7 @@ export function canTransition(from: TemplateStatus, to: TemplateStatus, role: Ro
 
 interface EditableTemplate {
   status: TemplateStatus;
-  deletedAt?: Date | null;
+  deletedAt?: string | null;
 }
 
 export interface CanEditAllowed {
@@ -185,7 +185,7 @@ export function canEdit(template: EditableTemplate, role: Role): CanEditResult {
 
 interface ViewableTemplate {
   status: TemplateStatus;
-  deletedAt: Date | null;
+  deletedAt: string | null;
 }
 
 export function canViewTemplate(template: ViewableTemplate, role: Role): boolean {

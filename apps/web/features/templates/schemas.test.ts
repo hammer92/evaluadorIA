@@ -46,6 +46,7 @@ describe('templateFormSchema', () => {
       niche: 'school',
       timeLimitMinutes: 60,
       maxRetries: 1,
+      passingScore: 70,
       recipes: [validRecipe],
     });
     expect(result.recipes).toHaveLength(1);
@@ -58,6 +59,7 @@ describe('templateFormSchema', () => {
         niche: 'school',
         timeLimitMinutes: 60,
         maxRetries: 1,
+        passingScore: 70,
         recipes: [validRecipe],
       }),
     ).toThrow();
@@ -70,6 +72,7 @@ describe('templateFormSchema', () => {
         niche: 'school',
         timeLimitMinutes: 60,
         maxRetries: 1,
+        passingScore: 70,
         recipes: [],
       }),
     ).toThrow();
@@ -82,6 +85,7 @@ describe('templateFormSchema', () => {
         niche: 'school',
         timeLimitMinutes: 60,
         maxRetries: 1,
+        passingScore: 70,
         recipes: [{ ...validRecipe, qtyMultipleChoice: 0, qtyMultiChoice: 0 }],
       }),
     ).toThrow();

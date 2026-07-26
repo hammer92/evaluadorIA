@@ -72,6 +72,7 @@ const validCreateInput = {
   description: 'Plantilla inicial para examen de álgebra',
   niche: 'school' as const,
   timeLimitMinutes: 60,
+  passingScore: 70,
   maxRetries: 2,
   recipes: [validRecipeInput],
 };

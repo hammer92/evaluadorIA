@@ -1,6 +1,7 @@
 import type {
   CreateTemplateInput,
   RecipeInput,
+  ReviewEvent,
   Template,
   UpdateTemplateInput,
 } from '@shared/schemas/templates';
@@ -36,20 +37,6 @@ export interface ListTemplatesResult {
   pageSize: number;
   total: number;
   hasMore: boolean;
-}
-
-export interface ReviewHistoryResult {
-  templateId: string;
-  events: {
-    reviewId: string;
-    actorId: string;
-    actorName: string;
-    actorRole: string;
-    action: string;
-    comment?: string;
-    changes?: { field: string; before: unknown; after: unknown }[];
-    createdAt: string;
-  }[];
 }
 
 export function listTemplates(filters: ListTemplatesFilters): Promise<ListTemplatesResult> {
@@ -111,8 +98,8 @@ export function expertEditTemplate(input: ExpertEditInput): Promise<Template> {
   return unwrapData(fn(input));
 }
 
-export function getReviewHistory(templateId: string): Promise<ReviewHistoryResult> {
-  const fn = httpsCallable<{ templateId: string }, ReviewHistoryResult>(
+export function getReviewHistory(templateId: string): Promise<ReviewEvent[]> {
+  const fn = httpsCallable<{ templateId: string }, ReviewEvent[]>(
     functions,
     'v1TemplatesGetReviewHistory',
   );

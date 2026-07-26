@@ -61,6 +61,7 @@ export const templateFormSchema = z.object({
   niche: nicheSchema,
   timeLimitMinutes: z.number().int().min(5, 'Mínimo 5 minutos').max(240, 'Máximo 240 minutos'),
   maxRetries: z.number().int().min(0).max(5),
+  passingScore: z.number().int().min(0, 'Mínimo 0%').max(100, 'Máximo 100%'),
   recipes: z.array(recipeFormSchema).min(1, 'El template debe tener al menos 1 receta').max(20),
 });
 export type TemplateFormValues = z.infer<typeof templateFormSchema>;

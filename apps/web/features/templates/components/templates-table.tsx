@@ -34,8 +34,10 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
-function formatDate(value: string | Date): string {
+function formatDate(value: string | Date | null | undefined): string {
+  if (value == null || value === '') return '—';
   const d = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return '—';
   return d.toLocaleDateString('es-AR', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 

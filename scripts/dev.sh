@@ -88,6 +88,12 @@ cmd_dev() {
   echo ""
   wait_for_emulators
 
+  # Si los emuladores arrancan vacíos (no hay data persistida en
+  # ./emulator-data), corre el seed automáticamente. Idempotente: si ya hay
+  # usuarios, no hace nada. Si falla el seed, loguea y sigue (no bloquea el
+  # dev server).
+  bash "$ROOT_DIR/scripts/emulators.sh" wait-and-seed-if-empty || true
+
   run_dev_web
 }
 

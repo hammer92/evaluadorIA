@@ -30,10 +30,19 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    // Caso 1: loading terminó y no hay user → no autenticado.
     if (!auth.loading && !auth.user) {
       router.replace('/login?next=/admin');
+      return;
     }
-  }, [auth.loading, auth.user, router]);
+    // Caso 2: user autenticado PERO los claims fallaron (auth.error) y no
+    // tenemos claims → permisos inválidos. Solo redirigimos si HAY un error
+    // (no si los claims aún están cargando — eso es el estado normal después
+    // de signIn).
+    if (!auth.loading && auth.user && !auth.claims && auth.error) {
+      router.replace('/login?next=/admin&error=no-claims');
+    }
+  }, [auth.loading, auth.user, auth.claims, auth.error, router]);
 
   if (auth.loading) {
     return (
@@ -43,8 +52,30 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!auth.user || !auth.claims) {
+  if (!auth.user) {
     return null;
+  }
+
+  if (!auth.claims) {
+    // User autenticado pero sin claims. Distinguimos dos casos:
+    // 1. Claims aún cargando (sin error) → mostrar spinner.
+    // 2. Claims fallaron (con error) → mostrar mensaje. El useEffect redirige.
+    if (auth.error) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-surface-neutral">
+          <div className="rounded-tv border border-status-error/30 bg-status-error/5 p-stack-md text-body-md text-status-error">
+            <p className="font-medium">Tu cuenta no tiene permisos asignados.</p>
+            <p className="mt-1 text-on-surface-variant">Contactá al administrador para que asigne un rol a tu cuenta.</p>
+          </div>
+        </div>
+      );
+    }
+    // Claims cargando — mantener el spinner.
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-surface-neutral">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
+      </div>
+    );
   }
 
   return (

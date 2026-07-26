@@ -132,8 +132,9 @@ function EmailLoginForm({ nextUrl }: { nextUrl?: string | undefined }) {
     try {
       await signInWithEmail(values.email, values.password);
       toast.success('Sesión iniciada');
+      // router.push solo, sin router.refresh(). El refresh puede re-montar el
+      // admin layout y causar una race con la propagación del auth state.
       router.push(nextUrl ?? '/admin');
-      router.refresh();
     } catch (e) {
       console.error('[login-email] error:', e);
       setServerError(getAuthErrorMessage(e));

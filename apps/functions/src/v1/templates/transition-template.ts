@@ -89,9 +89,12 @@ export const v1TemplatesTransition = onCall(
         if (input.toStatus === 'approved') {
           updates['approved_by'] = ctx.uid;
           updates['approved_at'] = now;
+          // Incrementar la versión solo en aprobación exitosa.
+          // Back-compat: ?? 0 para templates legacy sin el campo.
+          updates['version'] = (current.version ?? 0) + 1;
         }
         if (input.toStatus === 'draft') {
-          // Reabrir: limpiar approved_by/at.
+          // Reabrir: limpiar approved_by/at (la versión NO se resetea, es historial).
           updates['approved_by'] = null;
           updates['approved_at'] = null;
         }

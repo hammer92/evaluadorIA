@@ -15,6 +15,9 @@ export interface TemplateDocRaw {
   niche: 'school' | 'university' | 'exam_practice';
   time_limit_minutes: number;
   max_retries: number;
+  // Score mínimo para aprobar (0-100). Persistido en snake_case.
+  // Para templates legacy creados antes de este campo, se asume 70%.
+  passing_score?: number;
   recipes: {
     recipe_id?: string;
     competency_name: string;
@@ -32,7 +35,20 @@ export interface TemplateDocRaw {
   approved_by: string | null;
   approved_at: { toDate: () => Date } | null;
   deleted_at: { toDate: () => Date } | null;
+  // Versión: 0 = sin aprobar; se incrementa en cada transición a 'approved'.
+  // Optional para back-compat con templates legacy.
+  version?: number;
 }
+
+// =============================================================================
+// IMPORTANTE: el wire format de fechas es ISO 8601 string (no Date).
+// =============================================================================
+// El Firebase Functions emulator serializa Date objects como `{}` (objeto
+// vacío) — verificado en 2026-07-22 reproduciendo el bug
+// `d.toLocaleDateString is not a function` en templates-table.tsx:39.
+// Para que la respuesta sea consistente entre emulator y producción,
+// devolvemos siempre `.toDate().toISOString()` desde el mapper.
+// =============================================================================
 
 export interface RecipeInput {
   recipeId?: string;
@@ -53,6 +69,8 @@ export function templateFromFirestore(templateId: string, raw: TemplateDocRaw): 
     niche: raw.niche,
     timeLimitMinutes: raw.time_limit_minutes,
     maxRetries: raw.max_retries,
+    // Fallback a 70 para documentos legacy sin el campo (back-compat).
+    passingScore: raw.passing_score ?? 70,
     recipes: raw.recipes.map((r, i) => ({
       recipeId: r.recipe_id ?? `${templateId}__r${i}`,
       competencyName: r.competency_name,
@@ -65,11 +83,13 @@ export function templateFromFirestore(templateId: string, raw: TemplateDocRaw): 
     status: raw.status,
     createdBy: raw.created_by,
     createdByRole: raw.created_by_role,
-    createdAt: raw.created_at.toDate(),
-    updatedAt: raw.updated_at.toDate(),
+    createdAt: raw.created_at.toDate().toISOString(),
+    updatedAt: raw.updated_at.toDate().toISOString(),
     approvedBy: raw.approved_by,
-    approvedAt: raw.approved_at?.toDate() ?? null,
-    deletedAt: raw.deleted_at?.toDate() ?? null,
+    approvedAt: raw.approved_at?.toDate().toISOString() ?? null,
+    deletedAt: raw.deleted_at?.toDate().toISOString() ?? null,
+    // Back-compat: 0 para templates legacy sin el campo.
+    version: raw.version ?? 0,
   };
 }
 
