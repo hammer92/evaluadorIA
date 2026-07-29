@@ -35,10 +35,10 @@ describe('NAV_ITEMS', () => {
     expect(templates?.requiredRoles).toEqual(['admin', 'recruiter']);
   });
 
-  it('Revisión requiere admin y tiene badge reviewCount', () => {
+  it('Revisión requiere admin o expert y tiene badge reviewCount', () => {
     const review = NAV_ITEMS.find((i) => i.label === 'Revisión');
     expect(review?.href).toBe('/admin/review');
-    expect(review?.requiredRoles).toEqual(['admin']);
+    expect(review?.requiredRoles).toEqual(['admin', 'expert']);
     expect(review?.badge).toBe('reviewCount');
   });
 

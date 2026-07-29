@@ -23,7 +23,7 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/admin/review',
     label: 'Revisión',
     icon: ClipboardCheck,
-    requiredRoles: ['admin'],
+    requiredRoles: ['admin', 'expert'],
     badge: 'reviewCount',
   },
   {
