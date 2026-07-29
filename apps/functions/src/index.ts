@@ -39,5 +39,10 @@ export { v1TemplatesTransition } from './v1/templates/transition-template.js';
 export { v1TemplatesExpertEdit } from './v1/templates/expert-edit-template.js';
 export { v1TemplatesGetReviewHistory } from './v1/templates/get-review-history.js';
 
+// v1/templates/preview (SDD-11)
+export { v1TemplatePreviewGenerate } from './v1/templates/preview/generate-preview.js';
+export { v1TemplatePreviewGet } from './v1/templates/preview/get-preview.js';
+export { v1TemplatePreviewAnswered } from './v1/templates/preview/answered-preview.js';
+
 // Utility (no se deploya como endpoint — uso interno desde otras CFs)
 export { setUserRole } from './v1/users/set-role.js';
