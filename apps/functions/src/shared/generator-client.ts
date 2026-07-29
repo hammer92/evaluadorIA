@@ -29,6 +29,7 @@ import {
   type PreviewQuestion,
   previewQuestionTypeSchema,
 } from '@platform/shared';
+import { logger } from 'firebase-functions/v2';
 import { z } from 'zod';
 
 import { GEMINI_MODEL, getAI } from './genkit.js';
@@ -46,7 +47,7 @@ export interface GeneratorOutput {
   refusal: { refused: true; reason: string; message: string } | null;
 }
 
-const PROMPT_VERSION = 'generator/genkit-v1.0';
+export const PROMPT_VERSION = 'generator/genkit-v1.0';
 
 // =============================================================================
 // Schemas para `ai.generate({ output: { schema } })`
@@ -134,45 +135,88 @@ export async function generateQuestionsForPreview(
   let totalGenerated = 0;
   let totalFlagged = 0;
 
-  // Generar cada recipe SECUENCIALMENTE. Probamos `Promise.all` antes y
-  // Gemini truncó las respuestas concurrentes (cada call recibe menos
-  // tokens visibles porque algunas se procesan en paralelo). Serial da
-  // ~25s por recipe × 4 = 100s, dentro del timeout 300s del onCall.
+  // Generar cada recipe en CHUNKS PEQUEÑOS (máx 2 preguntas por call)
+  // para reducir truncación por maxOutputTokens de Gemini Flash. Cada call
+  // serial; agregamos los resultados antes de pasar al siguiente chunk.
+  // Probamos `Promise.all` y chunks grandes antes; ambos truncaban.
+  // Sweet spot: 2 preguntas × ~1000 chars ≈ 2000 chars output — fits
+  // comfortably en 4096 output tokens sin pensarlo.
+  const MAX_Q_PER_CALL = 2;
+
   for (const recipe of template.recipes) {
-    const recipeInput: RecipeInput = {
-      templateId: template.templateId,
-      recipeId: recipe.recipeId,
-      competencyName: recipe.competencyName,
-      competencyContext: recipe.competencyContext,
-      niche: template.niche,
-      qtyMultipleChoice: recipe.qtyMultipleChoice,
-      qtyMultiChoice: recipe.qtyMultiChoice,
-      difficulty: recipe.difficulty,
-      topicsCovered: recipe.topicsCovered,
-      language: 'es',
-    };
+    // Construir lista de chunks a generar para esta recipe. Cada chunk
+    // pide una cantidad (qtyMultipleChoice + qtyMultiChoice) total
+    // distribuida entre calls. Simplificamos: 1 chunk si <=MAX_Q_PER_CALL,
+    // sino N chunks con ceil(total/MAX_Q_PER_CALL).
+    const total = recipe.qtyMultipleChoice + recipe.qtyMultiChoice;
+    const chunks = Math.max(1, Math.ceil(total / MAX_Q_PER_CALL));
 
-    const recipeOutput = await callGenerator(recipeInput);
+    let accumulatedForRecipe = 0;
+    for (let chunkIdx = 0; chunkIdx < chunks; chunkIdx++) {
+      const remaining = total - accumulatedForRecipe;
+      const chunkQty = Math.min(MAX_Q_PER_CALL, remaining);
+      // Distribuir proportionally: si total es 6 y MAX es 2, son 3 chunks
+      // de 2. Si total es 5 y MAX es 2, son chunks de 2,2,1. Si total es 1,
+      // es 1 chunk de 1.
+      // Para simplificar, asumimos mitad multipleChoice / mitad multiChoice
+      // en cada chunk. Si el recipe tiene 4 multiple + 2 multi, chunks de
+      // 2 cada uno con 1 multiple + 1 multi (cuando se puede).
+      let chunkSingle: number;
+      let chunkMulti: number;
+      if (chunkQty === remaining) {
+        // último chunk — usar lo que queda
+        chunkSingle = Math.min(recipe.qtyMultipleChoice - accumulatedForRecipe * 0, 0);
+        chunkSingle = Math.max(0, recipe.qtyMultipleChoice - accumulatedForRecipe);
+        chunkMulti = Math.max(0, remaining - chunkSingle);
+      } else {
+        const remainingSingle = Math.max(0, recipe.qtyMultipleChoice - accumulatedForRecipe);
+        const remainingMulti = Math.max(0, recipe.qtyMultiChoice - Math.floor(accumulatedForRecipe / 2));
+        chunkSingle = Math.min(chunkQty, remainingSingle);
+        chunkMulti = chunkQty - chunkSingle;
+        if (chunkMulti > remainingMulti) {
+          chunkMulti = remainingMulti;
+          chunkSingle = chunkQty - chunkMulti;
+        }
+      }
 
-    if (recipeOutput.refusal) {
-      return {
-        questions: [],
-        totalRequested: totalRequested + recipeOutput.totalRequested,
-        totalGenerated: 0,
-        totalFlagged: 0,
-        totalRefused: 1,
-        refusal: recipeOutput.refusal,
+      if (chunkSingle + chunkMulti === 0) break;
+
+      const recipeInput: RecipeInput = {
+        templateId: template.templateId,
+        recipeId: recipe.recipeId,
+        competencyName: recipe.competencyName,
+        competencyContext: recipe.competencyContext,
+        niche: template.niche,
+        qtyMultipleChoice: chunkSingle,
+        qtyMultiChoice: chunkMulti,
+        difficulty: recipe.difficulty,
+        topicsCovered: recipe.topicsCovered,
+        language: 'es',
       };
-    }
 
-    for (const q of recipeOutput.questions) {
-      allQuestions.push(q);
+      const recipeOutput = await callGenerator(recipeInput);
+
+      if (recipeOutput.refusal) {
+        return {
+          questions: [],
+          totalRequested: totalRequested + recipeOutput.totalRequested,
+          totalGenerated: 0,
+          totalFlagged: 0,
+          totalRefused: 1,
+          refusal: recipeOutput.refusal,
+        };
+      }
+
+      for (const q of recipeOutput.questions) {
+        allQuestions.push(q);
+      }
+      totalRequested += recipeOutput.totalRequested;
+      totalGenerated += recipeOutput.totalGenerated;
+      totalFlagged += recipeOutput.questions.filter(
+        (q) => q.selfAssessment.flagForReview,
+      ).length;
+      accumulatedForRecipe += chunkQty;
     }
-    totalRequested += recipeOutput.totalRequested;
-    totalGenerated += recipeOutput.totalGenerated;
-    totalFlagged += recipeOutput.questions.filter(
-      (q) => q.selfAssessment.flagForReview,
-    ).length;
   }
 
   return {
@@ -343,29 +387,46 @@ async function callGenerator(input: RecipeInput): Promise<GeneratorOutput> {
 
   const ai = getAI();
 
-  // Bypass Genkit's output parsing — pedirle solo text crudo y extraer JSON
-  // nosotros mismos con `extractJsonObject` (balanced-brace matcher que
-  // ignora `}` dentro de strings escapados).
-  const response = await ai.generate({
-    system: SYSTEM_PROMPT,
-    prompt: buildUserPrompt(input),
-    config: {
-      temperature: 0.4,
-      // 4096 output tokens. Sin thinkingConfig porque Lite/Flash
-      // actuales no soportan thinkingBudget=0 (vuelve 400).
-      maxOutputTokens: 4096,
-      responseMimeType: 'application/json',
-    },
-  });
-
-  // Extraer JSON del text crudo.
-  const rawText = response.text ?? '';
-  let parsedJson: unknown;
-  try {
-    parsedJson = extractJsonObject(rawText);
-  } catch (e) {
+  // Gemini es no-determinista en output length: a veces trunca el JSON
+  // mid-stream (típicamente bajo contexts de preguntas con code blocks).
+  // Reintentamos hasta 2 veces con backoff lineal antes de fallar.
+  // Temperatura mas alta en retry1 ayuda a esquivar finishReason=STOP
+  // prematuro.
+  let parsedJson: undefined;
+  let lastError: Error | undefined;
+  let rawText = '';
+  const attempts: { temperature: number; maxOutputTokens: number }[] = [
+    { temperature: 0.4, maxOutputTokens: 8192 },
+    { temperature: 0.6, maxOutputTokens: 8192 },
+  ];
+  for (let i = 0; i < attempts.length; i++) {
+    const cfg = attempts[i];
+    const temperature = cfg?.temperature ?? 0.4;
+    const maxOutputTokens = cfg?.maxOutputTokens ?? 8192;
+    try {
+      const response = await ai.generate({
+        system: SYSTEM_PROMPT,
+        prompt: buildUserPrompt(input),
+        config: {
+          temperature,
+          maxOutputTokens,
+          responseMimeType: 'application/json',
+        },
+      });
+      rawText = response.text ?? '';
+      parsedJson = extractJsonObject(rawText) as undefined;
+      lastError = undefined;
+      break;
+    } catch (e) {
+      lastError = e as Error;
+      if (i < attempts.length - 1) {
+        logger.warn(`callGenerator attempt ${i + 1} truncated, retrying with higher temperature`);
+      }
+    }
+  }
+  if (parsedJson === undefined) {
     throw new Error(
-      `Gemini response was not valid JSON. Raw (first 500 chars): ${rawText.slice(0, 500)}... | Parse error: ${(e as Error).message}`,
+      `Gemini response was not valid JSON after retries. Last raw (first 500 chars): ${rawText.slice(0, 500)}... | Parse error: ${lastError?.message}`,
     );
   }
 

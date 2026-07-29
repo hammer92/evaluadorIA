@@ -15,7 +15,11 @@ import { ALLOWED_ORIGINS_DEPLOY } from '../../../deploy-config.js';
 import { getAdminDb } from '../../../firebase-admin.js';
 import { writeAuditLog } from '../../../shared/audit.js';
 import { RepositoryError } from '../../../shared/errors.js';
-import { generateQuestionsForPreview } from '../../../shared/generator-client.js';
+import {
+  PROMPT_VERSION,
+  generateQuestionsForPreview,
+} from '../../../shared/generator-client.js';
+import { GEMINI_MODEL } from '../../../shared/genkit.js';
 import { handleError } from '../../../shared/handle-error.js';
 import { withAuth, type AuthedContext } from '../../../shared/on-call-auth.js';
 import { validateInput } from '../../../shared/validate-input.js';
@@ -167,8 +171,12 @@ export const v1TemplatePreviewGenerate = onCall(
             name: ctx.email,
             role: ctx.role,
           },
-          modelVersion: 'gpt-4o-2024-08-06',
-          promptVersion: 'generator/v1.0',
+          // SDD-GENKIT-01: use constants from genkit.ts (Gemini Flash Lite +
+          // generator/genkit-v1.0 prompt). El stub viejo hardcodeaba
+          // los strings del modelo OpenAI anterior; con la integracion
+          // real ahora reflejamos el modelo activo.
+          modelVersion: GEMINI_MODEL,
+          promptVersion: PROMPT_VERSION,
           totalRequested: generatorOutput.totalRequested,
           totalGenerated: generatorOutput.totalGenerated,
           totalFlagged: generatorOutput.totalFlagged,
