@@ -39,8 +39,8 @@ vi.mock('../../../shared/generator-client.js', () => ({
   generateQuestionsForPreview: vi.fn(async () => mockGeneratorOutput),
 }));
 
-import { v1TemplatePreviewGenerate } from '../generate-preview.js';
-import { v1TemplatePreviewGet } from '../get-preview.js';
+import { v1TemplatePreviewGenerate } from '../preview/generate-preview.js';
+import { v1TemplatePreviewGet } from '../preview/get-preview.js';
 
 import {
   assertEmulatorsUp,
@@ -74,7 +74,7 @@ async function seedTemplate(templateId: string, updatedAt: Date): Promise<void> 
       recipes: [
         {
           recipe_id: 'r0',
-          competency_name: 'C',
+          competency_name: 'Competencia valida',
           competency_context: 'Contexto suficiente para el schema de 20 chars.',
           qty_multiple_choice: 1,
           qty_multi_choice: 0,

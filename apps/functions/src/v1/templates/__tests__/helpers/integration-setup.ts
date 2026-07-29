@@ -208,6 +208,26 @@ export async function assertEmulatorsUp(): Promise<void> {
  */
 export async function cleanupTemplatesIntegration(): Promise<void> {
   try {
+    // 1. Borrar subcolecciones de SDD-11 huérfanas via collection-group.
+    // Firestore no cascade-delete subcollections cuando se borra un doc
+    // padre, y `tDoc.ref.delete()` solo borra el doc padre. Si el padre
+    // ya no existe, no se llega a las subcolecciones via la jerarquía.
+    // collection-group alcanza los huérfanos y los borra determinísticamente.
+    for (const sub of [
+      'previewQuestions',
+      'previewRegenerations',
+      'previewSessions',
+      'reviews',
+      'audit_logs',
+    ]) {
+      const groupSnap = await templatesTestDb.collectionGroup(sub).get();
+      for (const subDoc of groupSnap.docs) {
+        await subDoc.ref.delete().catch(() => undefined);
+      }
+    }
+
+    // 3. Borrar todos los templates de todas las organizaciones (incluyendo
+    //    las subcolecciones de SDD-11 que aún tengan padre vivo).
     const orgsSnap = await templatesTestDb.collection('organizations').get();
     for (const orgDoc of orgsSnap.docs) {
       const templatesSnap = await templatesTestDb
@@ -216,6 +236,12 @@ export async function cleanupTemplatesIntegration(): Promise<void> {
         .collection('templates')
         .get();
       for (const tDoc of templatesSnap.docs) {
+        for (const sub of ['previewQuestions', 'previewRegenerations', 'previewSessions']) {
+          const subSnap = await tDoc.ref.collection(sub).get();
+          for (const subDoc of subSnap.docs) {
+            await subDoc.ref.delete().catch(() => undefined);
+          }
+        }
         await tDoc.ref.delete().catch(() => undefined);
       }
     }

@@ -48,10 +48,10 @@ const mockGeneratorOutput = vi.hoisted(() => ({
       ],
       correctOptionIds: ['a'],
       feedbackPerOption: [
-        { optionId: 'a', isCorrect: true, feedback: 'Correcta porque es la primera opción.', rationale: null },
-        { optionId: 'b', isCorrect: false, feedback: 'Incorrecta.', rationale: null },
-        { optionId: 'c', isCorrect: false, feedback: 'Incorrecta.', rationale: null },
-        { optionId: 'd', isCorrect: false, feedback: 'Incorrecta.', rationale: null },
+        { optionId: 'a', isCorrect: true, feedback: 'Correcta porque cumple la condición esperada en el contexto de testing planteado por la receta.', rationale: null },
+        { optionId: 'b', isCorrect: false, feedback: 'Incorrecta: no cumple la condición principal esperada en el contexto de testing planteado por la receta.', rationale: null },
+        { optionId: 'c', isCorrect: false, feedback: 'Incorrecta: introduce una variante no esperada en el contexto de testing planteado por la receta actual.', rationale: null },
+        { optionId: 'd', isCorrect: false, feedback: 'Incorrecta: el escenario que describe no aplica al contexto de testing planteado por la receta analizada.', rationale: null },
       ],
       competencyId: 'r0',
       niche: 'school',
@@ -85,7 +85,7 @@ vi.mock('../../../shared/generator-client.js', () => ({
 // =============================================================================
 // Static imports
 // =============================================================================
-import { v1TemplatePreviewGenerate } from '../generate-preview.js';
+import { v1TemplatePreviewGenerate } from '../preview/generate-preview.js';
 
 import {
   assertEmulatorsUp,
