@@ -13,7 +13,7 @@ export function Header({ email, role }: { email: string; role: Role }) {
       </div>
       <div className="flex items-center gap-3">
         <ThemeToggle />
-        <UserMenu />
+        <UserMenu email={email} />
       </div>
     </header>
   );

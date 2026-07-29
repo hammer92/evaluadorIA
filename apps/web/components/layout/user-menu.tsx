@@ -1,5 +1,6 @@
 'use client';
 
+import { ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -14,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { signOutCurrent } from '@/features/auth/api/auth-api';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // UserMenu — avatar + dropdown con signOut.
@@ -22,7 +24,15 @@ import { signOutCurrent } from '@/features/auth/api/auth-api';
 // Después del signOut, redirect a /login.
 // =============================================================================
 
-export function UserMenu() {
+function getInitials(email: string): string {
+  const local = email.split('@')[0] ?? '';
+  const parts = local.split(/[._-]/).filter(Boolean);
+  if (parts.length === 0) return 'U';
+  if (parts.length === 1) return (parts[0] ?? 'U').slice(0, 2).toUpperCase();
+  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase();
+}
+
+export function UserMenu({ email }: { email: string }) {
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -43,19 +53,29 @@ export function UserMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Avatar className="h-8 w-8 cursor-pointer">
-          <AvatarImage src="" alt="User" />
-          <AvatarFallback>U</AvatarFallback>
+      <DropdownMenuTrigger
+        aria-label={`Abrir menú de cuenta (${email})`}
+        title="Abrir menú de cuenta"
+        className={cn(
+          'flex items-center gap-1 rounded-full p-0.5 outline-none',
+          'focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2',
+          'hover:bg-navy/5 transition-colors',
+        )}
+      >
+        <Avatar className="h-8 w-8">
+          <AvatarImage src="" alt="" />
+          <AvatarFallback>{getInitials(email)}</AvatarFallback>
         </Avatar>
+        <ChevronDown size={14} className="text-on-surface-variant" aria-hidden />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
+        <DropdownMenuLabel>{email}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem>Perfil</DropdownMenuItem>
         <DropdownMenuItem>Settings</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
+          aria-label="Cerrar sesión"
           onSelect={(e) => {
             e.preventDefault();
             void handleSignOut();
