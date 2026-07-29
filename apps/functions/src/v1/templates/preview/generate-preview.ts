@@ -109,6 +109,10 @@ export const v1TemplatePreviewGenerate = onCall(
   {
     cors: ALLOWED_ORIGINS_DEPLOY,
     enforceAppCheck: false,
+    // 5 min — 4 recipes en paralelo con Gemini Flash demoran ~30-45s;
+    // serial era 120s y rompía el default de 60s. Parallelizamos dentro
+    // y damos margen.
+    timeoutSeconds: 300,
   },
   withAuth<GeneratePreviewInput, TemplatePreview>(
     ['admin', 'expert'],

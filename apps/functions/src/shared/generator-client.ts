@@ -64,20 +64,24 @@ const previewFeedbackLiteSchema = z.object({
   optionId: z.string().min(1).max(4),
   isCorrect: z.boolean(),
   feedback: z.string().min(50).max(800),
-  rationale: z.string().max(500).nullable(),
+  // Gemini omite rationale cuando no aporta. Default null para que el
+  // parse no falle por este campo opcional.
+  rationale: z.string().max(500).nullable().default(null),
 });
 
 const previewSelfAssessmentLiteSchema = z.object({
-  estimatedDifficulty: z.enum(['easy', 'medium', 'hard']),
-  confidence: z.number().min(0).max(1),
-  flagForReview: z.boolean(),
-  flagReason: z.string().max(300).nullable(),
+  estimatedDifficulty: z.enum(['easy', 'medium', 'hard']).default('medium'),
+  confidence: z.number().min(0).max(1).default(0.85),
+  flagForReview: z.boolean().default(false),
+  flagReason: z.string().max(300).nullable().default(null),
 });
 
 const generatorQuestionLiteSchema = z.object({
   type: previewQuestionTypeSchema,
   stem: z.string().min(20).max(1000),
-  context: z.string().max(1500).nullable(),
+  // Gemini omite context cuando no aporta — default null evita el error
+  // "Required" sobre el campo nullable.
+  context: z.string().max(1500).nullable().default(null),
   options: z.array(previewOptionLiteSchema).min(4).max(6),
   correctOptionIds: z.array(z.string().min(1).max(4)).min(1),
   feedbackPerOption: z.array(previewFeedbackLiteSchema).min(1),
@@ -87,13 +91,18 @@ type GeneratorQuestionLite = z.infer<typeof generatorQuestionLiteSchema>;
 
 const generatorResponseSchema = z.object({
   questions: z.array(generatorQuestionLiteSchema),
+  // Gemini suele omitir `refusal` cuando no rechaza la receta — declararlo
+  // como `.default(null)` lo hace opcional en el JSON schema resultante y
+  // evita el error "must have required property 'refusal'" cuando el
+  // modelo retorna solo el array de questions.
   refusal: z
     .object({
       refused: z.literal(true),
       reason: z.string().min(1).max(80),
       message: z.string().min(1).max(500),
     })
-    .nullable(),
+    .nullable()
+    .default(null),
 });
 
 // =============================================================================
@@ -124,8 +133,11 @@ export async function generateQuestionsForPreview(
   let totalRequested = 0;
   let totalGenerated = 0;
   let totalFlagged = 0;
-  let refusal: GeneratorOutput['refusal'] = null;
 
+  // Generar cada recipe SECUENCIALMENTE. Probamos `Promise.all` antes y
+  // Gemini truncó las respuestas concurrentes (cada call recibe menos
+  // tokens visibles porque algunas se procesan en paralelo). Serial da
+  // ~25s por recipe × 4 = 100s, dentro del timeout 300s del onCall.
   for (const recipe of template.recipes) {
     const recipeInput: RecipeInput = {
       templateId: template.templateId,
@@ -143,8 +155,14 @@ export async function generateQuestionsForPreview(
     const recipeOutput = await callGenerator(recipeInput);
 
     if (recipeOutput.refusal) {
-      refusal = recipeOutput.refusal;
-      break;
+      return {
+        questions: [],
+        totalRequested: totalRequested + recipeOutput.totalRequested,
+        totalGenerated: 0,
+        totalFlagged: 0,
+        totalRefused: 1,
+        refusal: recipeOutput.refusal,
+      };
     }
 
     for (const q of recipeOutput.questions) {
@@ -162,8 +180,8 @@ export async function generateQuestionsForPreview(
     totalRequested,
     totalGenerated,
     totalFlagged,
-    totalRefused: refusal ? 1 : 0,
-    refusal,
+    totalRefused: 0,
+    refusal: null,
   };
 }
 
@@ -186,6 +204,24 @@ const SYSTEM_PROMPT = [
   '- Si la receta no permite generar preguntas de calidad (ej. contexto',
   '  insuficiente o tema sensible), devolver refusal en vez de inventar.',
   '- Mantener el stem contextualizado en el dominio y dificultad pedidos.',
+  '',
+  'FORMATO de salida (JSON estricto, sin markdown fences):',
+  '{',
+  '  "questions": [',
+  '    {',
+  '      "type": "single_answer" | "multi_answer",',
+  '      "stem": "...",',
+  '      "context": string | null,',
+  '      "options": [{"id":"a","text":"..."},{"id":"b","text":"..."},{"id":"c","text":"..."},{"id":"d","text":"..."}],',
+  '      "correctOptionIds": ["a"] o ["a","c"],',
+  '      "feedbackPerOption": [{"optionId":"a","isCorrect":true,"feedback":"...","rationale":null},...],',
+  '      "selfAssessment": {"estimatedDifficulty":"easy|medium|hard","confidence":0.85,"flagForReview":false,"flagReason":null}',
+  '    }, ...',
+  '  ],',
+  '  "refusal": null o {refused:true,reason:"...",message:"..."}',
+  '}',
+  'Siempre devolver el wrapper {"questions":[...], "refusal":null} aunque',
+  'haya una sola pregunta. NUNCA devolver un array a nivel raíz.',
 ].join('\n');
 
 function buildUserPrompt(input: RecipeInput): string {
@@ -215,6 +251,61 @@ function buildUserPrompt(input: RecipeInput): string {
     'con reason corto y message descriptiva (max 500 chars).',
   ];
   return lines.join('\n');
+}
+
+/**
+ * Extrae el primer objeto JSON balanceado desde un texto que puede tener
+ * markdown fences, prefijos o sufijos. Si hay fences los strippea; busca
+ * el primer `{` y el último `}` balanceado. Si no encuentra, tira error
+ * con el raw text incluido para debug.
+ */
+function extractJsonObject(text: string): unknown {
+  // Strip markdown code fences (```json, ```, ```JSON, etc).
+  const stripped = text.replace(/```(?:json|JSON)?\s*/g, '').replace(/```/g, '');
+  const start = stripped.indexOf('{');
+  if (start === -1) {
+    throw new Error(
+      `No JSON object opener '{'. Raw: ${text.slice(0, 500)}${text.length > 500 ? '... [truncated]' : ''}`,
+    );
+  }
+  // Match balanced braces desde `start`. Si la respuesta de Gemini fue
+  // truncada por maxOutputTokens, encontramos el cierre correcto del
+  // nivel 0 (raiz) sin confundirnos con '}' dentro de strings escapados
+  // o nested objects.
+  let depth = 0;
+  let end = -1;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < stripped.length; i++) {
+    const ch = stripped[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === '\\' && inString) {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === '{' || ch === '[') depth++;
+    else if (ch === '}' || ch === ']') {
+      depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end === -1) {
+    throw new Error(
+      `No balanced JSON closer (response truncated?). Raw length: ${text.length}, first 500 chars: ${text.slice(0, 500)}`,
+    );
+  }
+  return JSON.parse(stripped.slice(start, end + 1));
 }
 
 function buildEnrichedQuestion(
@@ -252,19 +343,47 @@ async function callGenerator(input: RecipeInput): Promise<GeneratorOutput> {
 
   const ai = getAI();
 
+  // Bypass Genkit's output parsing — pedirle solo text crudo y extraer JSON
+  // nosotros mismos con `extractJsonObject` (balanced-brace matcher que
+  // ignora `}` dentro de strings escapados).
   const response = await ai.generate({
     system: SYSTEM_PROMPT,
     prompt: buildUserPrompt(input),
-    output: {
-      schema: generatorResponseSchema,
-    },
     config: {
-      temperature: 0.7,
+      temperature: 0.4,
+      // 4096 output tokens. Sin thinkingConfig porque Lite/Flash
+      // actuales no soportan thinkingBudget=0 (vuelve 400).
       maxOutputTokens: 4096,
+      responseMimeType: 'application/json',
     },
   });
 
-  const parsed = generatorResponseSchema.parse(response.output);
+  // Extraer JSON del text crudo.
+  const rawText = response.text ?? '';
+  let parsedJson: unknown;
+  try {
+    parsedJson = extractJsonObject(rawText);
+  } catch (e) {
+    throw new Error(
+      `Gemini response was not valid JSON. Raw (first 500 chars): ${rawText.slice(0, 500)}... | Parse error: ${(e as Error).message}`,
+    );
+  }
+
+  // Normalizar al shape { questions, refusal }.
+  interface RawShape {
+    questions?: unknown[];
+    refusal?: unknown;
+  }
+  let rawShape: RawShape;
+  if (Array.isArray(parsedJson)) {
+    rawShape = { questions: parsedJson, refusal: null };
+  } else if (parsedJson && typeof parsedJson === 'object') {
+    const wrapped = parsedJson as RawShape;
+    rawShape = { questions: wrapped.questions ?? [], refusal: wrapped.refusal ?? null };
+  } else {
+    rawShape = { questions: [], refusal: null };
+  }
+  const parsed = generatorResponseSchema.parse(rawShape);
 
   if (parsed.refusal) {
     return {

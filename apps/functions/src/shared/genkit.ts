@@ -57,12 +57,12 @@ export function getAI(): Genkit {
     );
   }
 
-  logger.info('Inicializando Genkit singleton (googleAI + gemini-flash-latest)');
+  logger.info('Inicializando Genkit singleton (googleAI + gemini-flash-lite-latest)');
   _ai = genkit({
     plugins: [googleAI({ apiKey })],
-    model: googleAI.model('gemini-flash-latest'),
+    model: googleAI.model('gemini-flash-lite-latest'),
   });
   return _ai;
 }
 
-export const GEMINI_MODEL = 'gemini-flash-latest';
+export const GEMINI_MODEL = 'gemini-flash-lite-latest';
