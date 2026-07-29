@@ -15,13 +15,25 @@ determinístico anterior y se invoca desde los 3 Cloud Functions de preview
     ```
     Esto guarda la key en Cloud Secret Manager y la expone al runtime
     como la env var `GEMINI_API_KEY`.
-3.  Para el emulador local: exportá la env var antes de levantar:
+3.  Para el emulador local: la key puede estar en cualquiera de estas 3
+    env vars (orden de búsqueda, mismo que el plugin nativo):
     ```bash
-    export GEMINI_API_KEY=<tu-key>
-    firebase emulators:start
+    GEMINI_API_KEY=<tu-key>          # preferido (alineado con docs)
+    GOOGLE_GENAI_API_KEY=<tu-key>    # alias Google
+    GOOGLE_API_KEY=<tu-key>          # alias Google
     ```
-    O bien, creá un archivo `apps/functions/.secret.local` con
-    `GEMINI_API_KEY=<key>` y cargalo con `set -a; source .secret.local`.
+    El emulador de firebase-tools auto-loads `apps/functions/.secret.local`
+    (un archivo `KEY=value` por línea). Ejemplo de `.secret.local` ya
+    presente en el repo:
+    ```
+    SESSION_COOKIE_SECRET=...
+    GOOGLE_GENAI_API_KEY=AIzaSy...
+    ```
+
+> Si la key no está configurada (en ninguna de las 3 vars),
+> `v1TemplatePreviewGenerate` responde `internal — GEMINI_API_KEY /
+> GOOGLE_API_KEY / GOOGLE_GENAI_API_KEY no configurada...`. Tests de
+> integración no se ven afectados porque mockean `generator-client.ts`.
 
 > Si la key no está configurada, `v1TemplatePreviewGenerate` responde
 > `internal — GEMINI_API_KEY no configurada...` (mensaje explícito desde
@@ -35,8 +47,9 @@ Para correr el Dev UI de Genkit sobre los flows:
 ```bash
 cd apps/functions
 pnpm genkit:start
-# o con API key inline:
+# o con API key inline (cualquiera de los 3 nombres):
 GEMINI_API_KEY=<key> pnpm genkit:start
+# o: GOOGLE_GENAI_API_KEY=<key> pnpm genkit:start
 ```
 
 El Dev UI abre en el puerto que imprima el comando (usualmente 4000).
@@ -50,8 +63,10 @@ sólo en modo `genkit:start`; en deploy normal se importa como helper de
 ## Estructura
 
 - `src/shared/genkit.ts` — singleton `getAI()`. Lazy initialization,
-  valida `GEMINI_API_KEY` antes de construir el `ai` instance de Genkit
-  con el plugin `googleAI` + modelo `gemini-flash-latest`.
+  valida que exista una API key (busca en `GEMINI_API_KEY`,
+  `GOOGLE_API_KEY`, `GOOGLE_GENAI_API_KEY` en ese orden) antes de
+  construir el `ai` instance de Genkit con el plugin `googleAI` +
+  modelo `gemini-flash-latest`.
 - `src/shared/generator-client.ts` — wrapper `generateQuestionsForPreview`
   que arma el prompt (system + user), llama a `ai.generate({output: {schema: ...}})`,
   valida con `previewQuestionSchema`, retorna `GeneratorOutput`.
