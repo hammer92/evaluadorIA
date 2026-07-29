@@ -18,7 +18,7 @@
  *   pnpm seed:emulators
  */
 
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 import { getAdminApp, getAdminAuth, getAdminDb } from '../apps/functions/src/firebase-admin.js';
 
@@ -136,13 +136,129 @@ async function main(): Promise<void> {
   // Touch app para forzar inicialización lazy y detectar errores temprano.
   void getAdminApp();
 
-  console.log('Seed complete: 1 organization + 3 users');
+  // ============ 3. Templates seed ============
+  await seedBackendNodeTemplate(db);
+
+  console.log('Seed complete: 1 organization + 3 users + 1 template');
   console.log(`  ${ORG_ID.padEnd(11)}  (Empresa Demo)`);
   for (const u of SEED_USERS) {
     const pwd = u.password ? ` pass=${u.password}` : '';
     console.log(`  ${u.uid.padEnd(11)}  ${u.email.padEnd(28)} role=${u.role}${pwd}`);
   }
+  console.log('  template    Backend Node.js — Senior');
   console.log('UI del emulador: http://localhost:4000');
+}
+
+/**
+ * Crea el template "Backend Node.js — Senior" si no existe.
+ * 4 recetas (node core, HTTP/REST, DB, security/auth), 23 preguntas
+ * totales. Estado `approved` para que esté inmediatamente usable en el
+ * flujo de preview + simulator (SDD-11).
+ *
+ * Idempotente: si el doc existe, no lo sobreescribe (merge:false en
+ * .set con Timestamp.now() resetea created_at; en su lugar usamos
+ * `get().exists` para skip).
+ */
+async function seedBackendNodeTemplate(
+  db: ReturnType<typeof getAdminDb>,
+): Promise<void> {
+  const templateId = 'tpl_backend_node';
+  const ref = db.collection('organizations').doc(ORG_ID).collection('templates').doc(templateId);
+  const snap = await ref.get();
+  if (snap.exists) {
+    return;
+  }
+
+  const now = Timestamp.now();
+  await ref.set({
+    organization_id: ORG_ID,
+    name: 'Backend Node.js — Senior',
+    description:
+      'Evaluación técnica para perfil backend senior con Node.js (runtime, HTTP/REST, persistencia, seguridad y autenticación). Idoneo para screening inicial y baseline de upgrade.',
+    niche: 'exam_practice',
+    time_limit_minutes: 90,
+    max_retries: 1,
+    passing_score: 75,
+    recipes: [
+      {
+        recipe_id: 'r_node_core',
+        competency_name: 'Node.js Core & Async',
+        competency_context:
+          'Event loop, microtasks/macrotasks, Promises, async/await, streams (Readable/Writable/Transform), Buffers, EventEmitter, workers/worker_threads, error propagation en promesas, unhandledRejection, AbortController, child_process. El examinado debe distinguir cuando bloquea el event loop, como backpressure funciona, y las trampas async comunes.',
+        qty_multiple_choice: 4,
+        qty_multi_choice: 2,
+        difficulty: 'hard',
+        topics_covered: [
+          'event-loop',
+          'promises',
+          'streams',
+          'buffer',
+          'workers',
+          'error-handling',
+        ],
+      },
+      {
+        recipe_id: 'r_http_api',
+        competency_name: 'API HTTP con Express / Fastify',
+        competency_context:
+          'Diseño de APIs RESTful, routing, middleware, validación de input (zod, joi, ajv), manejo centralizado de errores, status codes correctos, versionado, idempotency keys, paginación (cursor vs offset), CORS, helmet, logging estructurado (pino), request id tracing. Patrones para separar transport de dominio.',
+        qty_multiple_choice: 5,
+        qty_multi_choice: 1,
+        difficulty: 'medium',
+        topics_covered: [
+          'routing',
+          'middleware',
+          'validation',
+          'rest-conventions',
+          'http-status',
+          'observability',
+        ],
+      },
+      {
+        recipe_id: 'r_database',
+        competency_name: 'Persistencia y base de datos',
+        competency_context:
+          'Modelado relacional, índices (composite, partial, unique), ACID vs eventual consistency, transacciones, isolation levels, N+1 queries, connection pooling, migraciones forward/backward, ORM vs query builder (Prisma, Drizzle, Knex), raw SQL cuando hace falta, locks pesimistas vs optimistas, deadlocks.',
+        qty_multiple_choice: 4,
+        qty_multi_choice: 2,
+        difficulty: 'hard',
+        topics_covered: [
+          'sql',
+          'orm',
+          'transactions',
+          'migrations',
+          'indexing',
+          'connection-pool',
+        ],
+      },
+      {
+        recipe_id: 'r_security_auth',
+        competency_name: 'Seguridad y autenticación',
+        competency_context:
+          'Hashing de passwords (argon2id, bcrypt cost), JWT (algoritmos, claims estándar, exp/iat/nbf), refresh tokens con rotación, OAuth 2.0 / OIDC, OWASP Top 10 (injection, XSS, CSRF, SSRF), rate limiting por IP/uid, secrets management, secure cookies (httpOnly, SameSite, Secure), input sanitization, output encoding.',
+        qty_multiple_choice: 4,
+        qty_multi_choice: 1,
+        difficulty: 'hard',
+        topics_covered: [
+          'jwt',
+          'oauth',
+          'password-hashing',
+          'owasp',
+          'rate-limiting',
+          'cors',
+        ],
+      },
+    ],
+    status: 'approved',
+    created_by: 'u_admin',
+    created_by_role: 'admin',
+    created_at: now,
+    updated_at: now,
+    approved_by: 'u_admin',
+    approved_at: now,
+    deleted_at: null,
+    version: 1,
+  });
 }
 
 main().catch((e: unknown) => {
