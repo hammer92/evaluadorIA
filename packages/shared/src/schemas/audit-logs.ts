@@ -31,10 +31,12 @@ export const auditActionSchema = z.enum([
   'template.deleted',
   'template.edited',
   'template.expert_edited',
+  'template.preview_generated',
+  'template.preview_answered',
 ]);
 export type AuditAction = z.infer<typeof auditActionSchema>;
 
-export const auditTargetTypeSchema = z.enum(['user', 'organization', 'system']);
+export const auditTargetTypeSchema = z.enum(['user', 'organization', 'system', 'template']);
 export type AuditTargetType = z.infer<typeof auditTargetTypeSchema>;
 
 export const auditLogSchema = z.object({

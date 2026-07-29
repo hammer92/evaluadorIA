@@ -26,6 +26,8 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   'template.deleted': 'archivó el template',
   'template.edited': 'editó el template',
   'template.expert_edited': 'ajustó parámetros técnicos del template',
+  'template.preview_generated': 'generó una vista previa de preguntas',
+  'template.preview_answered': 'completó una simulación de examen',
 };
 
 const ACTION_TONE: Record<AuditAction, 'info' | 'success' | 'warning' | 'error' | 'neutral'> = {
@@ -52,6 +54,8 @@ const ACTION_TONE: Record<AuditAction, 'info' | 'success' | 'warning' | 'error' 
   'template.deleted': 'error',
   'template.edited': 'info',
   'template.expert_edited': 'info',
+  'template.preview_generated': 'info',
+  'template.preview_answered': 'info',
 };
 
 const TONE_DOT: Record<'info' | 'success' | 'warning' | 'error' | 'neutral', string> = {
