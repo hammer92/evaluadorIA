@@ -39,6 +39,8 @@ import { SubmitForReviewButton } from '@/features/review/components/submit-for-r
 import { ReviewHistoryList } from '@/features/templates/components/review-history-list';
 import { useReviewHistory, useTemplate } from '@/features/templates/hooks/use-templates';
 
+import { getAvailableTransitions } from '@shared/state-machines/templates';
+
 function formatDate(value: string | Date | null | undefined): string {
   if (value == null || value === '') return '—';
   const d = typeof value === 'string' ? new Date(value) : value;
@@ -141,22 +143,39 @@ export function TemplateDetail({ templateId }: { templateId: string }) {
       (role === 'recruiter' &&
         (template.status === 'draft' || template.status === 'changes_requested')));
   const canDelete = !isDeleted && role === 'admin';
-  const canSubmitForReview =
-    !isDeleted &&
-    role === 'recruiter' &&
-    (template.status === 'draft' || template.status === 'changes_requested');
-  const canReview = !isDeleted && role === 'admin' && template.status === 'in_review';
+  // canSubmitForReview se calcula desde el state machine (source of truth) en vez
+  // de hardcodear role === 'admin' acá — así si el state machine cambia, el UI
+  // sigue sincronizado (mismo path que apps/functions/src/v1/templates/transition-template.ts).
+  const canSubmitForReview = (() => {
+    if (isDeleted) return false;
+    if (!role) return false;
+    const available = getAvailableTransitions(template.status, role);
+    return available.some((t) => t.to === 'in_review');
+  })();
+  const canReview = (() => {
+    if (isDeleted) return false;
+    if (!role) return false;
+    if (template.status !== 'in_review') return false;
+    const available = getAvailableTransitions(template.status, role);
+    return available.length > 0;
+  })();
 
   const status = template.status as StatusKey;
-  const totalQuestions = template.recipes.reduce(
+  // Defensive: el cache del detalle puede haber sido poblado con una versión
+  // parcial del Template (ej. durante transitions concurrentes o setQueryData
+  // con respuesta incompleta del servidor). `recipes` debería ser siempre un
+  // array por el zod schema, pero si llegara undefined, defendemos con `[]`
+  // para no crashear el render.
+  const recipes = template.recipes ?? [];
+  const totalQuestions = recipes.reduce(
     (sum, r) => sum + r.qtyMultipleChoice + r.qtyMultiChoice,
     0,
   );
-  const totalMultipleChoice = template.recipes.reduce((sum, r) => sum + r.qtyMultipleChoice, 0);
-  const totalMultiChoice = template.recipes.reduce((sum, r) => sum + r.qtyMultiChoice, 0);
-  const recipesCount = template.recipes.length;
+  const totalMultipleChoice = recipes.reduce((sum, r) => sum + r.qtyMultipleChoice, 0);
+  const totalMultiChoice = recipes.reduce((sum, r) => sum + r.qtyMultiChoice, 0);
+  const recipesCount = recipes.length;
   const historyCount = historyEvents?.length ?? 0;
-  const allTopics = Array.from(new Set(template.recipes.flatMap((r) => r.topicsCovered)));
+  const allTopics = Array.from(new Set(recipes.flatMap((r) => r.topicsCovered)));
   const { index: flowIndex, isRejected } = flowStateIndex(status);
   const lastReview = historyEvents?.[0];
 
@@ -310,7 +329,7 @@ export function TemplateDetail({ templateId }: { templateId: string }) {
                     </p>
                   ) : (
                     <ul className="divide-y divide-border-standard">
-                      {template.recipes.map((recipe) => (
+                      {recipes.map((recipe) => (
                         <li
                           key={recipe.recipeId}
                           className="flex items-start gap-stack-md py-stack-md first:pt-0 last:pb-0"
@@ -401,7 +420,7 @@ export function TemplateDetail({ templateId }: { templateId: string }) {
                   </CardContent>
                 </Card>
               ) : (
-                template.recipes.map((recipe, idx) => (
+                recipes.map((recipe, idx) => (
                   <Card
                     key={recipe.recipeId}
                     className="transition-shadow hover:shadow-md motion-reduce:transition-none"
