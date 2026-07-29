@@ -169,11 +169,13 @@ function ActionDialog({
 export interface ReviewDecisionPanelProps {
   templateId: string;
   onEditAndApprove: () => void;
+  disabled?: boolean;
 }
 
 export function ReviewDecisionPanel({
   templateId,
   onEditAndApprove,
+  disabled = false,
 }: ReviewDecisionPanelProps): React.JSX.Element {
   const [openAction, setOpenAction] = useState<Action | null>(null);
 
@@ -188,11 +190,18 @@ export function ReviewDecisionPanel({
         <p className="text-body-sm text-navy/60">
           Aprobá, solicitá cambios, o rechazá este template.
         </p>
+        {disabled && (
+          <p className="mt-1 text-body-sm text-status-warning">
+            Primero revisá el preview y marcá &quot;Ya revisé el preview&quot; para habilitar las
+            acciones.
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-1 gap-stack-sm sm:grid-cols-2 lg:grid-cols-4">
         <Button
           variant="default"
           onClick={() => setOpenAction('approve')}
+          disabled={disabled}
           className="bg-status-success text-white hover:bg-status-success/90"
         >
           <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -201,6 +210,7 @@ export function ReviewDecisionPanel({
         <Button
           variant="outline"
           onClick={() => setOpenAction('request_changes')}
+          disabled={disabled}
           className="border-status-warning text-status-warning hover:bg-status-warning/10"
         >
           <MessageSquareWarning className="mr-2 h-4 w-4" />
@@ -209,12 +219,13 @@ export function ReviewDecisionPanel({
         <Button
           variant="outline"
           onClick={() => setOpenAction('reject')}
+          disabled={disabled}
           className="border-status-error text-status-error hover:bg-status-error/10"
         >
           <XCircle className="mr-2 h-4 w-4" />
           Rechazar
         </Button>
-        <Button variant="ghost" onClick={onEditAndApprove}>
+        <Button variant="ghost" onClick={onEditAndApprove} disabled={disabled}>
           <Edit3 className="mr-2 h-4 w-4" />
           Editar y aprobar
         </Button>

@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, FileText, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertTriangle, Check, FileText, RefreshCw, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 
 import { useGeneratePreview, usePreview } from '../hooks/use-preview';
@@ -18,18 +18,22 @@ import { Skeleton } from '@/components/ui/skeleton';
 //  - never generated: botón "Generar preview"
 //  - fresh: lista de preguntas + CTA "Tomar simulación"
 //  - stale: warning banner + botón "Regenerar"
-// Optional requireAcknowledgement: si es true, expone checkbox (no implementado
-// en este slice — el gating del approve se hace en PR-4 integration).
+// Optional requireAcknowledgement: si es true, expone checkbox "Ya revisé el preview"
+// controlado por el parent via onAcknowledgedChange.
 // =============================================================================
 
 interface PreviewPanelProps {
   templateId: string;
   requireAcknowledgement?: boolean;
+  acknowledged?: boolean;
+  onAcknowledgedChange?: (acknowledged: boolean) => void;
 }
 
 export function PreviewPanel({
   templateId,
-  requireAcknowledgement: _requireAcknowledgement = false,
+  requireAcknowledgement = false,
+  acknowledged = false,
+  onAcknowledgedChange,
 }: PreviewPanelProps): React.JSX.Element {
   const [simulatorOpen, setSimulatorOpen] = useState(false);
   const { data, isLoading, isError } = usePreview(templateId);
@@ -55,7 +59,7 @@ export function PreviewPanel({
         role="alert"
       >
         <p className="font-medium text-status-error">No se pudo cargar el preview.</p>
-        <Button variant="outline" size="sm" onClick={() => generate.mutate(false)}>
+        <Button variant="outline" size="sm" onClick={() => generate.mutate({})}>
           <RefreshCw className="mr-2 h-4 w-4" aria-hidden />
           Reintentar
         </Button>
@@ -79,7 +83,7 @@ export function PreviewPanel({
           </p>
         </div>
         <Button
-          onClick={() => generate.mutate(false)}
+onClick={() => generate.mutate({})}
           disabled={generate.isPending}
           aria-busy={generate.isPending}
         >
@@ -110,7 +114,7 @@ export function PreviewPanel({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => generate.mutate(true)}
+              onClick={() => generate.mutate({ forceRegenerate: true })}
               disabled={generate.isPending}
             >
               <RefreshCw className="mr-1.5 h-4 w-4" aria-hidden />
@@ -132,7 +136,8 @@ export function PreviewPanel({
             <div>
               <p className="font-medium text-on-surface">Preview desactualizado</p>
               <p className="text-body-sm text-on-surface-variant">
-                {data.message ?? 'La receta cambió desde que se generó este preview. Regenerá para ver la versión actual.'}
+                {data.message ??
+                  'La receta cambió desde que se generó este preview. Regenerá para ver la versión actual.'}
               </p>
             </div>
           </div>
@@ -150,6 +155,22 @@ export function PreviewPanel({
             </p>
           )}
         </div>
+
+        {requireAcknowledgement && (
+          <label className="flex cursor-pointer items-start gap-stack-sm rounded-tv border border-border-standard bg-white p-stack-md">
+            <input
+              type="checkbox"
+              checked={acknowledged}
+              onChange={(e) => onAcknowledgedChange?.(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-border-standard text-navy focus:ring-navy"
+              aria-label="Confirmar que revisé el preview"
+            />
+            <span className="text-body-sm text-on-surface">
+              <Check className="mr-1 inline h-4 w-4 text-status-success" aria-hidden />
+              Ya revisé el preview y las preguntas generadas son aceptables.
+            </span>
+          </label>
+        )}
       </section>
 
       {simulatorOpen && (

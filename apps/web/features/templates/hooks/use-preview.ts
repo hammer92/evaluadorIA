@@ -38,8 +38,8 @@ export function usePreview(templateId: string | undefined) {
 export function useGeneratePreview(templateId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (forceRegenerate = false) =>
-      generatePreview(templateId, forceRegenerate),
+    mutationFn: (input: { forceRegenerate?: boolean } = {}) =>
+      generatePreview(templateId, input.forceRegenerate ?? false),
     onSuccess: (data) => {
       qc.setQueryData(KEYS.detail(templateId), {
         preview: data,

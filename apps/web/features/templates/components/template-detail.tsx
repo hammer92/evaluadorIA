@@ -1,6 +1,7 @@
 'use client';
 
 import { DIFFICULTY_LABELS, NICHE_LABELS } from '@shared/schemas/templates';
+import { getAvailableTransitions } from '@shared/state-machines/templates';
 import {
   ArrowLeft,
   Calendar,
@@ -36,10 +37,10 @@ import { useRole } from '@/features/auth/components/role-provider';
 import { ExpertEditModal } from '@/features/review/components/expert-edit-modal';
 import { ReviewDecisionPanel } from '@/features/review/components/review-decision-panel';
 import { SubmitForReviewButton } from '@/features/review/components/submit-for-review-button';
+import { PreviewPanel } from '@/features/templates/components/preview-panel';
 import { ReviewHistoryList } from '@/features/templates/components/review-history-list';
 import { useReviewHistory, useTemplate } from '@/features/templates/hooks/use-templates';
 
-import { getAvailableTransitions } from '@shared/state-machines/templates';
 
 function formatDate(value: string | Date | null | undefined): string {
   if (value == null || value === '') return '—';
@@ -56,7 +57,7 @@ function formatDate(value: string | Date | null | undefined): string {
 
 type StatusKey = 'draft' | 'in_review' | 'changes_requested' | 'approved' | 'rejected';
 
-const REVIEW_FLOW: Array<{ key: StatusKey; label: string }> = [
+const REVIEW_FLOW: { key: StatusKey; label: string }[] = [
   { key: 'draft', label: 'Borrador' },
   { key: 'in_review', label: 'Enviado' },
   { key: 'changes_requested', label: 'En revisión' },
@@ -104,6 +105,7 @@ export function TemplateDetail({ templateId }: { templateId: string }) {
   const { data: template, isLoading, isError, error } = useTemplate(templateId);
   const { data: historyEvents } = useReviewHistory(templateId);
   const [expertEditing, setExpertEditing] = useState(false);
+  const [previewAcknowledged, setPreviewAcknowledged] = useState(false);
   const role = useRole();
 
   if (isLoading) return <TemplateDetailSkeleton />;
@@ -160,7 +162,7 @@ export function TemplateDetail({ templateId }: { templateId: string }) {
     return available.length > 0;
   })();
 
-  const status = template.status as StatusKey;
+  const status = template.status;
   // Defensive: el cache del detalle puede haber sido poblado con una versión
   // parcial del Template (ej. durante transitions concurrentes o setQueryData
   // con respuesta incompleta del servidor). `recipes` debería ser siempre un
@@ -272,10 +274,18 @@ export function TemplateDetail({ templateId }: { templateId: string }) {
         </div>
       </section>
 
+      <PreviewPanel
+        templateId={template.templateId}
+        requireAcknowledgement={canReview}
+        acknowledged={previewAcknowledged}
+        onAcknowledgedChange={setPreviewAcknowledged}
+      />
+
       {canReview && (
         <ReviewDecisionPanel
           templateId={template.templateId}
           onEditAndApprove={() => setExpertEditing(true)}
+          disabled={!previewAcknowledged}
         />
       )}
 
