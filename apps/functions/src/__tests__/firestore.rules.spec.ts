@@ -567,6 +567,131 @@ describe('firestore.rules — review_comments sub-collection', () => {
 });
 
 // =============================================================================
+// Tests: preview sub-colecciones (SDD-11 §8)
+// =============================================================================
+describe('firestore.rules — preview sub-colecciones', () => {
+  async function seedPreviewDoc(previewId: string): Promise<void> {
+    await seedTemplate(TEMPLATE_ID, { status: 'in_review' });
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(
+        doc(db, `organizations/${ORG_ID}/templates/${TEMPLATE_ID}/previewQuestions/${previewId}`),
+        {
+          previewId,
+          templateId: TEMPLATE_ID,
+          isValid: true,
+        },
+      );
+    });
+  }
+
+  it('admin puede leer previewQuestions', async () => {
+    await seedPreviewDoc('pv_latest');
+    const db = adminCtx().firestore();
+    await assertSucceeds(
+      getDoc(
+        doc(db, `organizations/${ORG_ID}/templates/${TEMPLATE_ID}/previewQuestions/pv_latest`),
+      ),
+    );
+  });
+
+  it('expert puede leer previewQuestions', async () => {
+    await seedPreviewDoc('pv_latest');
+    const db = expertCtx().firestore();
+    await assertSucceeds(
+      getDoc(
+        doc(db, `organizations/${ORG_ID}/templates/${TEMPLATE_ID}/previewQuestions/pv_latest`),
+      ),
+    );
+  });
+
+  it('recruiter NO puede leer previewQuestions', async () => {
+    await seedPreviewDoc('pv_latest');
+    const db = recruiterCtx().firestore();
+    await assertFails(
+      getDoc(
+        doc(db, `organizations/${ORG_ID}/templates/${TEMPLATE_ID}/previewQuestions/pv_latest`),
+      ),
+    );
+  });
+
+  it('admin NO puede escribir previewQuestions desde cliente (solo CFs)', async () => {
+    await seedTemplate(TEMPLATE_ID, { status: 'in_review' });
+    const db = adminCtx().firestore();
+    await assertFails(
+      setDoc(
+        doc(db, `organizations/${ORG_ID}/templates/${TEMPLATE_ID}/previewQuestions/pv_latest`),
+        { previewId: 'pv_latest', templateId: TEMPLATE_ID, isValid: true },
+      ),
+    );
+  });
+
+  it('cross-org: user de otra org NO puede leer previewQuestions', async () => {
+    await seedPreviewDoc('pv_latest');
+    const db = expertCtx('expert-uid', 'org_other');
+    await assertFails(
+      getDoc(
+        doc(db, `organizations/${ORG_ID}/templates/${TEMPLATE_ID}/previewQuestions/pv_latest`),
+      ),
+    );
+  });
+
+  it('admin puede leer previewRegenerations (rate limit tracker)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(
+        doc(db, `organizations/${ORG_ID}/templates/${TEMPLATE_ID}/previewRegenerations/u_x`),
+        {
+          templateId: TEMPLATE_ID,
+          userId: 'u_x',
+          windowStart: new Date().toISOString(),
+          count: 1,
+        },
+      );
+    });
+    const db = adminCtx().firestore();
+    await assertSucceeds(
+      getDoc(
+        doc(db, `organizations/${ORG_ID}/templates/${TEMPLATE_ID}/previewRegenerations/u_x`),
+      ),
+    );
+  });
+
+  it('admin NO puede escribir previewRegenerations desde cliente (solo CFs)', async () => {
+    await seedTemplate(TEMPLATE_ID, { status: 'in_review' });
+    const db = adminCtx().firestore();
+    await assertFails(
+      setDoc(
+        doc(db, `organizations/${ORG_ID}/templates/${TEMPLATE_ID}/previewRegenerations/u_x`),
+        { templateId: TEMPLATE_ID, userId: 'u_x', windowStart: '', count: 1 },
+      ),
+    );
+  });
+
+  it('admin puede leer previewSessions (analytics secundario)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(
+        doc(db, `organizations/${ORG_ID}/templates/${TEMPLATE_ID}/previewSessions/sess_1`),
+        {
+          uid: 'admin-uid',
+          previewId: 'pv_latest',
+          score: 80,
+          total: 10,
+          correct: 8,
+        },
+      );
+    });
+    const db = adminCtx().firestore();
+    await assertSucceeds(
+      getDoc(
+        doc(db, `organizations/${ORG_ID}/templates/${TEMPLATE_ID}/previewSessions/sess_1`),
+      ),
+    );
+  });
+});
+
+// =============================================================================
 // Sanity check: que testEnv se inicializo OK
 // =============================================================================
 describe('firestore.rules.spec — environment', () => {

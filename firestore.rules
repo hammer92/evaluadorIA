@@ -152,6 +152,33 @@ service cloud.firestore {
         // Escritura: NUNCA desde cliente. Solo Cloud Functions (Admin SDK bypassa).
         allow write: if false;
       }
+
+      // Sub-colección previewQuestions (SDD-11 §8).
+      // Cache del output del Generator Agent. Lectura: admin/expert (mismo org).
+      // Escritura: solo Cloud Functions (Admin SDK bypassa reglas).
+      match /previewQuestions/{previewId} {
+        allow read: if isSignedIn() && isMemberOfOrg(orgId)
+          && hasAnyRole(['admin', 'expert']);
+        allow write: if false;
+      }
+
+      // Sub-colección previewRegenerations (rate limit tracker).
+      // Doc por user. Lectura: admin/expert (para UX debugging).
+      // Escritura: solo Cloud Functions.
+      match /previewRegenerations/{userId} {
+        allow read: if isSignedIn() && isMemberOfOrg(orgId)
+          && hasAnyRole(['admin', 'expert']);
+        allow write: if false;
+      }
+
+      // Sub-colección previewSessions (analytics secundario, SDD-11 §4.1).
+      // Score del reviewer al tomar la simulación. Lectura: admin/expert.
+      // Escritura: solo Cloud Functions.
+      match /previewSessions/{sessionId} {
+        allow read: if isSignedIn() && isMemberOfOrg(orgId)
+          && hasAnyRole(['admin', 'expert']);
+        allow write: if false;
+      }
     }
 
     // ============ Helpers ============
