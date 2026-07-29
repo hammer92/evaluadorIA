@@ -1614,3 +1614,64 @@ Recovery via reflog: hashes de stash (bd58318, 43b595c, aab4339, 8226a1f) y comm
 - `41c739f` feat(web): integrate PreviewPanel in template detail + requireAcknowledgement gate (SDD-11 §5.3)
 
 ---
+
+---
+
+## Sprint SDD-GENKIT-01 — CLOSE
+
+**Timestamp**: 2026-07-29T21:45:00Z
+**AI Prompt**: "instalá y configurá Genkit de Google [https://genkit.dev/docs/js/deployment/firebase/]"
+**Status**: SPRINT COMPLETE
+
+**Decisiones lockeadas (interview-me, 4 Q&A)**:
+- Provider: **Google AI Studio + Gemini Flash** (free tier, baja latencia)
+- Sin API key: **error explícito** `GEMINI_API_KEY no configurada` (sin fallback a stub)
+- Arquitectura: **mantener `onCall + withAuth`** (no refactor a `onCallGenkit` — preserva compatibilidad con SDD-11)
+- Dev UI: **`genkit:start` script** + docs en `genkit.md`
+
+**Verification**:
+- typecheck apps/functions PASS
+- lint --max-warnings 0 PASS (no errors nuevos)
+- pnpm test: unit 71/71 PASS (13 files)
+- pnpm test:integration: 103/103 PASS (14 files, **incluyendo pre-existing failures de get-review-history que pasan gracias al cleanup audit_logs**)
+- Smoke test con `GEMINI_API_KEY=invalid`: CF reach Gemini, devuelve `internal — API key not valid...` (= pipeline Genkit→Google AI Studio→response es correcto end-to-end)
+- Smoke test sin key: `internal — GEMINI_API_KEY no configurada...` (= UX clara para admin)
+
+**Sprint scorecard**:
+| Metric | Value |
+|---|---|
+| Nuevos packages | `genkit@1.40.1`, `@genkit-ai/google-genai@1.40.1` |
+| Nuevos archivos | 2 (`genkit.ts`, `genkit.md`) |
+| Archivos reescritos | 1 (`generator-client.ts` stub → real) |
+| Archivos modificados | 5 (`package.json` script+deps, `integration-setup.ts` cleanup, 2 integration tests paths+feedback, `firestore.rules.spec.ts` N/A) |
+| Atomic commits | 4 (1 install + 3 code) |
+| Tests nuevos | 0 (existing tests pasan gracias a cleanup fix) |
+| Bugs pre-existentes arreglados | 2 (import paths + feedback mock data) |
+| Bugs pre-existentes descubiertos | 1 (`cleanupTemplatesIntegration` no cascada subcolecciones — corregido via collection-group) |
+
+**Acceptance criteria SDD-GENKIT-01**:
+- [x] Genkit instalado y configurado
+- [x] Singleton lazy con validación de API key
+- [x] Flow con output estructurado (Zod schema)
+- [x] API pública backwards-compat (`generateQuestionsForPreview` signature)
+- [x] CFs SDD-11 usan el flow real (no el stub)
+- [x] Tests sin API key siguen pasando (mockean `generator-client`)
+- [x] Con key inválida, error llega al cliente con detalle
+- [x] Sin key, error claro en cliente
+- [x] Dev UI script + docs
+
+**Files created**:
+- `apps/functions/src/shared/genkit.ts` — 49 lines, singleton Genkit con googleAI plugin + gemini-flash-latest
+- `apps/functions/src/shared/genkit.md` — 80 lines, setup + Dev UI + cost/observability
+
+**Files modified**:
+- `apps/functions/src/shared/generator-client.ts` — stub determinístico → `ai.generate({...})` con structured output. Public API `generateQuestionsForPreview(template) -> GeneratorOutput` preservada.
+- `apps/functions/package.json` — `+genkit, +@genkit-ai/google-genai`, `+"genkit:start": "genkit start -- npx tsx --watch src/index.ts"`
+- `apps/functions/src/v1/templates/__tests__/helpers/integration-setup.ts` — cleanup extendido para borrar subcolecciones huérfanas via `collectionGroup()`
+- `apps/functions/src/v1/templates/__tests__/preview-generate.integration.test.ts` — import paths corregidos `../preview/generate-preview.js`, feedback mock data >=50 chars
+- `apps/functions/src/v1/templates/__tests__/preview-get.integration.test.ts` — idem
+
+**Out of scope**:
+- Real `GEMINI_API_KEY` testing — user debe setear en su `.secret.local`
+- E2E Playwright tests del flow completo (no instalado)
+- `onCallGenkit` refactor — decisión conscientemente diferida para preservar compatibilidad con SDD-11

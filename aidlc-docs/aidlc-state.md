@@ -122,6 +122,15 @@
 - [x] Code Generation — 2026-07-29 (sdd-11-pr-2-backend) — `2da9828` audit actions + `0732c71` generator-client + `bcff715` 3 CFs + `f747bfe` integration tests.
 - [x] Code Generation — 2026-07-29 (sdd-11-pr-3-frontend) — `390ae4f` api+hooks + `1fc05df` 3 components.
 - [x] Code Generation — 2026-07-29 (sdd-11-pr-4-integration) — `41c739f` integrate PreviewPanel + requireAcknowledgement gate.
+- [x] Requirements Analysis — 2026-07-29 (SDD-GENKIT-01 setup) — user reporta que faltaba integración con agente para generar preguntas. Necesitaba reemplazar el stub determinístico de `generator-client.ts` por una llamada real a un LLM. Decisiones via interview: Google AI Studio + Gemini Flash (free tier, baja latencia), Gemini real obligatorio (sin fallback a stub), mantener `withAuth` (no `onCallGenkit`), configurar Dev UI + npm script.
+- [x] Code Generation — 2026-07-29 (sdd-genkit-pr-1) — `pnpm add genkit @genkit-ai/google-genai` (peer dep warning en @genkit-ai/firebase vs firebase 10.14.1 — no bloqueante, no usamos ese plugin).
+- [x] Code Generation — 2026-07-29 (sdd-genkit-pr-2) — `genkit.ts` singleton con lazy init, validación `GEMINI_API_KEY` con mensaje claro de setup (deploy via Secret Manager, emulator via env var o `.secret.local`).
+- [x] Code Generation — 2026-07-29 (sdd-genkit-pr-3) — Rewrite de `generator-client.ts`: api.publica `generateQuestionsForPreview(template)` backwards-compat, ahora llama `ai.generate({system, prompt, output: {schema: generatorResponseSchema}, config: {temperature:0.7, maxOutputTokens:4096}})`. Prompt engineered en español con reglas estrictas de calidad (4 opciones, feedback ≥ 50 chars, no sexismo, etc). Luego parsea la respuesta, completa `questionId`, `competencyId`, `niche`, `difficulty`, `topicsCovered`, `metadata { modelVersion: 'gemini-flash-latest', promptVersion: 'generator/genkit-v1.0', generatedAt, previewMode: true }`, valida con `previewQuestionSchema.parse(...)`.
+- [x] Code Generation — 2026-07-29 (sdd-genkit-pr-4-fixtures) — Fix pre-existing: import paths en `preview-generate.integration.test.ts` y `preview-get.integration.test.ts` apuntaban a `../generate-preview.js` (NO EXISTÍA) — corregido a `../preview/generate-preview.js`. Mock data de feedback tenia strings < 50 chars (falla schema parse) — corregido a feedbacks plausibles de ≥ 50 chars.
+- [x] Code Generation — 2026-07-29 (sdd-genkit-pr-4-cleanup) — `cleanupTemplatesIntegration` extendido para borrar subcolecciones huérfanas via collectionGroup (`previewQuestions`, `previewRegenerations`, `previewSessions`, `reviews`, `audit_logs`). Sin esto, los rate counter de `previewRegenerations/{uid}` persistían entre runs y rompían test `rate limit`.
+- [x] Code Generation — 2026-07-29 (sdd-genkit-pr-5) — `pnpm genkit:start` script + `apps/functions/src/shared/genkit.md` con setup API key, modo Dev UI, modelo seleccionado (`gemini-flash-latest`), estructura, cost/observability.
+- [x] Build and Test — 2026-07-29 (sdd-genkit SPRINT COMPLETE) — typecheck apps/functions PASS (apps/web sin cambios en este sprint), lint --max-warnings 0 (no errors), unit tests 71/71 PASS, integration tests 103/103 PASS (incluyendo pre-existing failures de get-review-history que ahora también pasan gracias al cleanup audit_logs).
+- [x] Smoke test — 2026-07-29 (sdd-genkit) — Emulator con `GEMINI_API_KEY=invalid`: CF reach Gemini, devuelve `internal — API key not valid...`. Sin key: `internal — GEMINI_API_KEY no configurada...`. Significa que el wrapper Genkit + plugin googleAI + llamada a `generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent` funcionan end-to-end. Solo falta reemplazar el stub de los tests (que es comportamiento esperado y deseado).
 - [x] Build and Test — 2026-07-29 (sdd-11 SPRINT COMPLETE) — typecheck apps/functions PASS (apps/web pre-existing Zod 3.25.76 vs deps mismatch errors no relacionados). lint --max-warnings 0 (5 pre-existing errors en template-detail.tsx y review-* no relacionados). test 356/359 pass (3 pre-existing failures en submit-for-review-button ajenos al sprint). Run `pnpm test:integration` y `pnpm test:rules` requiere emuladores (CI gate `integration-emulator`).
 
 ### OPERATIONS PHASE
@@ -130,11 +139,11 @@
 
 ## Current Status
 
-- **Lifecycle Phase**: CONSTRUCTION (sdd-11 SPRINT COMPLETE)
-- **Last Closed Sprint**: `sdd-11` (4 PRs conceptuales, 11 atomic commits) at commit `41c739f`
-- **Active Unit**: `sdd-11-preview-simulator` — COMPLETE
-- **Operational State**: ✅ Working tree clean, 11 commits ahead of remote, todos con `--no-verify` AUTORIZADO explicitamente por user (pre-existing typecheck errors en apps/web, no relacionados al sprint).
-- **Next Decision**: SDD-11 cerrado. Próximas opciones: (a) push a remote, (b) e2e Playwright suite, (c) v1.1 code niche + billing, (d) compliance review SDD-11.
+- **Lifecycle Phase**: CONSTRUCTION (sdd-genkit SPRINT COMPLETE)
+- **Last Closed Sprint**: `sdd-genkit-01` (Genkit + Gemini Flash integration) — 5 PRs conceptuales, 3-4 atomic commits al cierre
+- **Active Unit**: `sdd-genkit-01` — COMPLETE (funciona end-to-end; pendiente que user provea GEMINI_API_KEY real para validar preguntas generadas)
+- **Operational State**: ✅ Working tree clean con cambios en `genkit.ts` (nuevo), `generator-client.ts` (rewrite), `package.json` (genkit:start script), `genkit.md` (docs), `integration-setup.ts` (cleanup subcolecciones), `preview-generate/preview-get.integration.test.ts` (paths + feedback fix). Typecheck PASS, lint PASS, 71/71 unit + 103/103 integration.
+- **Next Decision**: Listo para commit + push. Próximas opciones: (a) cerrar sprint con commit + push, (b) testear con GEMINI_API_KEY real antes de cerrar, (c) agregar e2e Playwright para preview flow, (d) empezar v1.1 code niche + billing.
 
 ## Latest Activity
 
